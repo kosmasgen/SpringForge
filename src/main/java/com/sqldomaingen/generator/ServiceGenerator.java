@@ -784,9 +784,6 @@ public class ServiceGenerator {
 
         stringBuilder.append("        return GeneratedRuntimeException.builder()\n");
         stringBuilder.append("                .code(ErrorCodes.NOT_FOUND)\n");
-        stringBuilder.append("                .entity(\"")
-                .append(entityName)
-                .append("\")\n");
         stringBuilder.append("                .message(\"")
                 .append(entityName)
                 .append(" not found with ")
@@ -1529,7 +1526,6 @@ public class ServiceGenerator {
                     .append(")) {\n");
             stringBuilder.append("            throw GeneratedRuntimeException.builder()\n");
             stringBuilder.append("                    .code(ErrorCodes.BAD_REQUEST)\n");
-            stringBuilder.append("                    .entity(\"").append(entityName).append("\")\n");
             stringBuilder.append("                    .message(\"").append(entityName)
                     .append(" already exists with ").append(propertyName).append(": \" + ")
                     .append(dtoAccessExpression).append(")\n");
@@ -1616,7 +1612,6 @@ public class ServiceGenerator {
         stringBuilder.append("        if (exists) {\n");
         stringBuilder.append("            throw GeneratedRuntimeException.builder()\n");
         stringBuilder.append("                    .code(ErrorCodes.BAD_REQUEST)\n");
-        stringBuilder.append("                    .entity(\"").append(entityName).append("\")\n");
         stringBuilder.append("                    .message(\"").append(entityName)
                 .append(" already exists with \"\n");
         stringBuilder.append("                            + ")
@@ -1993,9 +1988,6 @@ public class ServiceGenerator {
                 .append(" already exists with composite id: {}\", compositeId);\n\n");
         stringBuilder.append("            throw GeneratedRuntimeException.builder()\n");
         stringBuilder.append("                    .code(ErrorCodes.BAD_REQUEST)\n");
-        stringBuilder.append("                    .entity(\"")
-                .append(entityName)
-                .append("\")\n");
         stringBuilder.append("                    .message(\"")
                 .append(entityName)
                 .append(" already exists with composite id: \" + compositeId)\n");

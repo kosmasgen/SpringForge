@@ -406,7 +406,6 @@ public class ServiceImplTestGenerator {
         content.append("        GeneratedRuntimeException exception =\n");
         content.append("                assertThrows(GeneratedRuntimeException.class, executable::run);\n");
         content.append("        assertEquals(ErrorCodes.NOT_FOUND, exception.getCode());\n");
-        content.append("        assertEquals(\"").append(entityName).append("\", exception.getEntity());\n");
         content.append("    }\n\n");
     }
 
@@ -949,9 +948,7 @@ public class ServiceImplTestGenerator {
                             .append(serviceVar).append(".create").append(entityName)
                             .append("(requestDto));\n\n");
 
-                    content.append("        assertEquals(ErrorCodes.BAD_REQUEST, exception.getCode());\n");
-                    content.append("        assertEquals(\"").append(entityName)
-                            .append("\", exception.getEntity());\n\n");
+                    content.append("        assertEquals(ErrorCodes.BAD_REQUEST, exception.getCode());\n\n");
 
                     content.append("        verify(").append(repositoryVar).append(", never()).save(any());\n");
                     content.append("    }\n\n");

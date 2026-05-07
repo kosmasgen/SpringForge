@@ -684,7 +684,6 @@ public class ControllerTestGenerator {
         content.append("        given(").append(serviceVar).append(".get").append(entityName).append("ById(id))\n");
         content.append("                .willThrow(GeneratedRuntimeException.builder()\n");
         content.append("                        .code(ErrorCodes.NOT_FOUND)\n");
-        content.append("                        .entity(\"").append(entityName).append("\")\n");
         content.append("                        .message(\"").append(entityName).append(" not found with id: \" + id)\n");
         content.append("                        .build());\n\n");
 
@@ -751,7 +750,6 @@ public class ControllerTestGenerator {
                 .append("(any(").append(dtoName).append(".class)))\n");
         content.append("                .willThrow(GeneratedRuntimeException.builder()\n");
         content.append("                        .code(ErrorCodes.BAD_REQUEST)\n");
-        content.append("                        .entity(\"").append(entityName).append("\")\n");
         content.append("                        .message(\"Invalid payload\")\n");
         content.append("                        .build());\n\n");
 
@@ -810,7 +808,6 @@ public class ControllerTestGenerator {
                 .append("(eq(id), any(").append(dtoName).append(".class)))\n");
         content.append("                .willThrow(GeneratedRuntimeException.builder()\n");
         content.append("                        .code(ErrorCodes.NOT_FOUND)\n");
-        content.append("                        .entity(\"").append(entityName).append("\")\n");
         content.append("                        .message(\"").append(entityName).append(" not found with id: \" + id)\n");
         content.append("                        .build());\n\n");
 
@@ -895,7 +892,6 @@ public class ControllerTestGenerator {
         content.append("        ").append(primaryKeyType).append(" id = ").append(sampleId).append(";\n");
         content.append("        willThrow(GeneratedRuntimeException.builder()\n");
         content.append("                .code(ErrorCodes.NOT_FOUND)\n");
-        content.append("                .entity(\"").append(entityName).append("\")\n");
         content.append("                .message(\"").append(entityName).append(" not found with id: \" + id)\n");
         content.append("                .build())\n");
         content.append("                .given(").append(serviceVar).append(").delete").append(entityName).append("(id);\n\n");
@@ -948,7 +944,6 @@ public class ControllerTestGenerator {
                 .append("ById(").append(serviceArguments).append("))\n");
         content.append("                .willThrow(GeneratedRuntimeException.builder()\n");
         content.append("                        .code(ErrorCodes.NOT_FOUND)\n");
-        content.append("                        .entity(\"").append(entityName).append("\")\n");
         content.append("                        .message(\"").append(entityName).append(" not found\")\n");
         content.append("                        .build());\n\n");
 
@@ -1014,7 +1009,6 @@ public class ControllerTestGenerator {
                 .append("(any(").append(dtoName).append(".class)))\n");
         content.append("                .willThrow(GeneratedRuntimeException.builder()\n");
         content.append("                        .code(ErrorCodes.BAD_REQUEST)\n");
-        content.append("                        .entity(\"").append(entityName).append("\")\n");
         content.append("                        .message(\"Invalid payload\")\n");
         content.append("                        .build());\n\n");
 
@@ -1334,7 +1328,6 @@ public class ControllerTestGenerator {
                 .append("(").append(serviceEqArguments).append(", any(").append(dtoName).append(".class)))\n");
         content.append("                .willThrow(GeneratedRuntimeException.builder()\n");
         content.append("                        .code(ErrorCodes.NOT_FOUND)\n");
-        content.append("                        .entity(\"").append(entityName).append("\")\n");
         content.append("                        .message(\"").append(entityName).append(" not found\")\n");
         content.append("                        .build());\n\n");
 
@@ -1417,7 +1410,6 @@ public class ControllerTestGenerator {
         appendCompositePrimaryKeyDeclarations(content, primaryKeyColumns);
         content.append("        willThrow(GeneratedRuntimeException.builder()\n");
         content.append("                .code(ErrorCodes.NOT_FOUND)\n");
-        content.append("                .entity(\"").append(entityName).append("\")\n");
         content.append("                .message(\"").append(entityName).append(" not found\")\n");
         content.append("                .build())\n");
         content.append("                .given(").append(serviceVar).append(").delete")
