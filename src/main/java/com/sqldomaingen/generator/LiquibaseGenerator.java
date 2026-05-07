@@ -10,10 +10,7 @@ import com.sqldomaingen.util.GeneratorSupport;
 import lombok.extern.log4j.Log4j2;
 
 import java.nio.file.Path;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 
 /**
@@ -52,7 +49,7 @@ public class LiquibaseGenerator {
 
         GeneratorSupport.writeFile(
                 versionDir.resolve("audit.xml"),
-                buildAuditChangelogContent(tables, author),
+                buildAuditChangelogContent(author,tables),
                 overwrite
         );
 
@@ -916,24 +913,20 @@ public class LiquibaseGenerator {
     }
 
     /**
-     * Builds the Liquibase audit changelog content and creates all required schemas.
+     * Builds the Liquibase audit changelog content.
      *
-     * <p>This changelog always creates the {@code audit} schema and the Envers
-     * infrastructure objects. It also creates every non-audit schema referenced
-     * by the parsed tables before any application tables are created.
+     * <p>This changelog creates only the {@code audit} schema and the Envers
+     * infrastructure objects required for audit revision tracking.
      *
-     * <p>Schema creation is emitted once per distinct schema name and keeps the
-     * generation order stable based on first appearance in the parsed table list.
-     *
-     * @param tables parsed tables used to discover required schemas
      * @param author liquibase author
-     * @return generated audit and schema bootstrap changelog XML
+     * @param tables parsed tables
+     * @return generated audit changelog XML
      */
-    private String buildAuditChangelogContent(List<Table> tables, String author) {
+    private String buildAuditChangelogContent(String author, List<Table> tables) {
         String resolvedAuthor = resolveLiquibaseAuthor(author);
-        StringBuilder builder = new StringBuilder();
+        String revisionSequenceSchema = resolveRevisionSequenceSchema(tables);
 
-        builder.append("""
+        return """
 <?xml version="1.0" encoding="utf-8"?>
 <databaseChangeLog
         xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
@@ -946,51 +939,9 @@ public class LiquibaseGenerator {
         </sql>
     </changeSet>
 
-""".formatted(resolvedAuthor));
-
-        java.util.Set<String> schemaNames = new java.util.LinkedHashSet<>();
-
-        if (tables != null) {
-            for (Table table : tables) {
-                if (table == null || table.getName() == null || table.getName().isBlank()) {
-                    continue;
-                }
-
-                String schemaName = extractSchemaNameFromTable(table.getName());
-
-                if (schemaName == null || schemaName.isBlank() || "audit".equalsIgnoreCase(schemaName)) {
-                    continue;
-                }
-
-                schemaNames.add(schemaName);
-            }
-        }
-
-        for (String schemaName : schemaNames) {
-            String changeSetId = "create_" + schemaName.toLowerCase() + "_schema";
-
-            builder.append("""
-        <changeSet id="%s" author="%s">
-            <sql>
-                CREATE SCHEMA IF NOT EXISTS %s;
-            </sql>
-        </changeSet>
-
-""".formatted(
-                    escapeXml(changeSetId),
-                    escapeXml(resolvedAuthor),
-                    escapeXml(schemaName)
-            ));
-        }
-
-        String sequenceSchemaName = schemaNames.isEmpty()
-                ? "public"
-                : schemaNames.iterator().next();
-
-        builder.append("""
     <changeSet id="create_revision_info_table" author="%s">
         <createTable tableName="REVINFO" schemaName="audit">
-            <column name="REV" type="BIGINT">
+            <column name="REV" type="INT">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
             <column name="REVTSTMP" type="BIGINT"/>
@@ -1008,10 +959,35 @@ public class LiquibaseGenerator {
 """.formatted(
                 resolvedAuthor,
                 resolvedAuthor,
-                escapeXml(sequenceSchemaName)
-        ));
+                resolvedAuthor,
+                revisionSequenceSchema
+        );
+    }
 
-        return builder.toString();
+    /**
+     * Resolves the schema where Hibernate Envers expects the default revision sequence.
+     *
+     * @param tables parsed tables
+     * @return schema name for the Envers revision sequence
+     */
+    private String resolveRevisionSequenceSchema(List<Table> tables) {
+        if (tables == null || tables.isEmpty()) {
+            return "public";
+        }
+
+        for (Table table : tables) {
+            if (table == null || table.getName() == null || table.getName().isBlank()) {
+                continue;
+            }
+
+            String schemaName = extractSchemaNameFromTable(table.getName());
+
+            if (schemaName != null && !schemaName.isBlank()) {
+                return schemaName;
+            }
+        }
+
+        return "public";
     }
 
     /**
@@ -1633,7 +1609,7 @@ public class LiquibaseGenerator {
             return "";
         }
 
-        String normalized = sqlType.trim().toLowerCase(java.util.Locale.ROOT);
+        String normalized = sqlType.trim().toLowerCase(Locale.ROOT);
 
         switch (normalized) {
             case "bigserial":

@@ -25,11 +25,11 @@ public class Constants {
     );
 
     public static final Pattern TYPE_PATTERN =
-            Pattern.compile("^\\s*([A-Z0-9 ]+?)\\s*(?:\\((\\d+)(?:\\s*,\\s*(\\d+))?\\))?\\s*(\\[\\])?\\s*$");
+            Pattern.compile("^\\s*([A-Z0-9 ]+?)\\s*(?:\\((\\d+)(?:\\s*,\\s*(\\d+))?\\))?\\s*(\\[])?\\s*$");
 
 
     public static final Path SCHEMA_PATH = Path.of("input", "test_script.sql");
-    public static final Path GENERATED_JAVA_ROOT = Path.of("output", "PepTest", "src", "main", "java");
+    public static final Path GENERATED_JAVA_ROOT = Path.of("output", "PepsiTest", "src", "main", "java");
 
     public static final Set<String> JAVA_EXCLUDED_TABLES = Set.of(
             "audit",
