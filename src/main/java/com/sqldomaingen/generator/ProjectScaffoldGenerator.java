@@ -52,6 +52,7 @@ public class ProjectScaffoldGenerator {
         writePom(projectRoot, pkg, artifactId, overwrite);
         writeApplication(projectRoot, pkg, overwrite);
         createApplicationProperties(projectRoot, artifactId, defaultSchemaName, overwrite);
+        createMessageProperties(projectRoot, overwrite);
         writeGitignore(projectRoot, overwrite);
 
         GeneratorSupport.ensureDirectory(resolveBaseJavaDir(projectRoot, pkg, true));
@@ -341,10 +342,7 @@ public class ProjectScaffoldGenerator {
      * @param defaultSchemaName default database schema name
      * @param overwrite whether existing files should be overwritten
      */
-    private void createApplicationProperties(Path root,
-                                             String applicationName,
-                                             String defaultSchemaName,
-                                             boolean overwrite) {
+    private void createApplicationProperties(Path root, String applicationName, String defaultSchemaName, boolean overwrite) {
         String name = (applicationName == null || applicationName.isBlank())
                 ? "generated-app"
                 : applicationName.trim();
@@ -399,6 +397,46 @@ springdoc.writer-with-order-by-keys=true
 
         Path file = root.resolve("src/main/resources/application.properties");
         GeneratorSupport.writeFile(file, props, overwrite);
+    }
+
+    /**
+     * Creates the message bundle files for the generated project.
+     *
+     * @param root project root directory
+     * @param overwrite whether existing files should be overwritten
+     */
+    private void createMessageProperties(Path root, boolean overwrite) {
+        String messages = """
+# Generic entity messages
+entity.notFoundById={0} not found with id: {1}
+entity.notFoundByCompositeId={0} not found with composite id: {1}
+entity.alreadyExistsById={0} already exists with id: {1}
+entity.uniqueConstraintViolation={0} already exists with {1}
+
+# Generic validation messages
+validation.badRequest=Bad request
+validation.required=Field is required
+validation.invalidValue=Invalid value
+""";
+
+        String greekMessages = """
+# Generic entity messages
+entity.notFoundById=Δεν βρέθηκε {0} με id: {1}
+entity.notFoundByCompositeId=Δεν βρέθηκε {0} με σύνθετο id: {1}
+entity.alreadyExistsById=Το {0} υπάρχει ήδη με id: {1}
+entity.uniqueConstraintViolation=Το {0} υπάρχει ήδη με {1}
+
+# Generic validation messages
+validation.badRequest=Μη έγκυρο αίτημα
+validation.required=Το πεδίο είναι υποχρεωτικό
+validation.invalidValue=Μη έγκυρη τιμή
+""";
+
+        Path messagesFile = root.resolve("src/main/resources/messages.properties");
+        Path greekMessagesFile = root.resolve("src/main/resources/messages_el.properties");
+
+        GeneratorSupport.writeFile(messagesFile, messages, overwrite);
+        GeneratorSupport.writeFile(greekMessagesFile, greekMessages, overwrite);
     }
 
 
