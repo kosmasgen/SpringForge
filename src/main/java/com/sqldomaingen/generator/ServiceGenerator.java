@@ -1614,7 +1614,9 @@ public class ServiceGenerator {
                 .append(entityName)
                 .append(" already exists with \"");
 
-        for (Column column : uniqueColumns) {
+        for (int index = 0; index < uniqueColumns.size(); index++) {
+            Column column = uniqueColumns.get(index);
+
             String propertyName = NamingConverter.toCamelCase(
                     GeneratorSupport.unquoteIdentifier(column.getName())
             );
@@ -1628,8 +1630,11 @@ public class ServiceGenerator {
             stringBuilder.append("\n                        + \"")
                     .append(propertyName)
                     .append("=\" + ")
-                    .append(accessExpression)
-                    .append(" + \", \"");
+                    .append(accessExpression);
+
+            if (index < uniqueColumns.size() - 1) {
+                stringBuilder.append(" + \", \"");
+            }
         }
 
         stringBuilder.append(")\n");
