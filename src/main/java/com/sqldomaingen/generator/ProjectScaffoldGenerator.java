@@ -1,5 +1,6 @@
 package com.sqldomaingen.generator;
 
+import com.sqldomaingen.util.PackageResolver;
 import lombok.extern.log4j.Log4j2;
 
 import com.sqldomaingen.util.GeneratorSupport;
@@ -53,6 +54,7 @@ public class ProjectScaffoldGenerator {
         writeApplication(projectRoot, pkg, overwrite);
         createApplicationProperties(projectRoot, artifactId, defaultSchemaName, overwrite);
         createMessageProperties(projectRoot, overwrite);
+        createMessageResolver(projectRoot, pkg, overwrite);
         writeGitignore(projectRoot, overwrite);
 
         GeneratorSupport.ensureDirectory(resolveBaseJavaDir(projectRoot, pkg, true));
@@ -271,6 +273,62 @@ public class ProjectScaffoldGenerator {
         );
 
         GeneratorSupport.writeFile(pom, content, overwrite);
+    }
+
+    /**
+     * Creates the MessageResolver utility class for resolving internationalized messages.
+     *
+     * @param projectRoot project root directory
+     * @param basePackage base Java package
+     * @param overwrite whether existing files should be overwritten
+     */
+    private void createMessageResolver(Path projectRoot, String basePackage, boolean overwrite) {
+        Path utilDir = PackageResolver.resolvePath(
+                projectRoot.toString(),
+                basePackage,
+                "util"
+        );
+
+        GeneratorSupport.ensureDirectory(utilDir);
+
+        Path file = utilDir.resolve("MessageResolver.java");
+
+        String utilPackage = PackageResolver.resolvePackageName(basePackage, "util");
+
+        String content = """
+package %s;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.stereotype.Component;
+
+import java.util.Locale;
+
+/**
+ * Resolves internationalized application messages.
+ */
+@Component
+@RequiredArgsConstructor
+public class MessageResolver {
+
+    private final MessageSource messageSource;
+
+    /**
+     * Resolves a message by key using the current request locale.
+     *
+     * @param key message key
+     * @param arguments message arguments
+     * @return resolved message
+     */
+    public String resolve(String key, Object... arguments) {
+        Locale locale = LocaleContextHolder.getLocale();
+        return messageSource.getMessage(key, arguments, key, locale);
+    }
+}
+""".formatted(utilPackage);
+
+        GeneratorSupport.writeFile(file, content, overwrite);
     }
 
 

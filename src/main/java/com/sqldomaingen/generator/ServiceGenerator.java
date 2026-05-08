@@ -283,6 +283,7 @@ public class ServiceGenerator {
         String repositoryPackage = PackageResolver.resolvePackageName(basePackage, "repository");
         String servicePackage = PackageResolver.resolvePackageName(basePackage, "service");
         String exceptionPackage = PackageResolver.resolvePackageName(basePackage, "exception");
+        String utilPackage = PackageResolver.resolvePackageName(basePackage, "util");
 
         List<Column> primaryKeyColumns = table.getColumns().stream()
                 .filter(Objects::nonNull)
@@ -340,6 +341,7 @@ public class ServiceGenerator {
                 servicePackage,
                 serviceName,
                 exceptionPackage,
+                utilPackage,
                 primaryKeyImportLine,
                 additionalImportLines
         );
@@ -496,6 +498,7 @@ public class ServiceGenerator {
      * @param servicePackage service package name
      * @param serviceName service interface simple name
      * @param exceptionPackage exception package name
+     * @param utilPackage util package name
      * @param primaryKeyImportLine optional primary key import line
      * @param additionalImportLines additional import lines required by composite PK parameters
      */
@@ -512,12 +515,12 @@ public class ServiceGenerator {
             String servicePackage,
             String serviceName,
             String exceptionPackage,
+            String utilPackage,
             String primaryKeyImportLine,
             java.util.Collection<String> additionalImportLines
     ) {
         java.util.LinkedHashSet<String> imports = new java.util.LinkedHashSet<>();
 
-        // Core imports
         imports.add("import " + dtoPackage + "." + dtoName + ";");
         imports.add("import " + mapperPackage + "." + mapperName + ";");
         imports.add("import " + modelPackage + "." + entityName + ";");
@@ -525,8 +528,8 @@ public class ServiceGenerator {
         imports.add("import " + servicePackage + "." + serviceName + ";");
         imports.add("import " + exceptionPackage + ".ErrorCodes;");
         imports.add("import " + exceptionPackage + ".GeneratedRuntimeException;");
+        imports.add("import " + utilPackage + ".MessageResolver;");
 
-        // PK import
         if (primaryKeyImportLine != null && !primaryKeyImportLine.isBlank()) {
             imports.add(primaryKeyImportLine);
         }
@@ -539,7 +542,6 @@ public class ServiceGenerator {
             }
         }
 
-        // Framework imports
         imports.add("import jakarta.transaction.Transactional;");
         imports.add("import lombok.RequiredArgsConstructor;");
         imports.add("import lombok.extern.log4j.Log4j2;");
@@ -579,7 +581,7 @@ public class ServiceGenerator {
     }
 
     /**
-     * Appends repository and mapper fields for the generated ServiceImpl.
+     * Appends repository, mapper, and message resolver fields for the generated ServiceImpl.
      *
      * @param stringBuilder target source builder
      * @param repositoryName repository simple name
@@ -597,7 +599,8 @@ public class ServiceGenerator {
         stringBuilder.append("    private final ").append(repositoryName).append(" ")
                 .append(repositoryVariableName).append(";\n");
         stringBuilder.append("    private final ").append(mapperName).append(" ")
-                .append(mapperVariableName).append(";\n\n");
+                .append(mapperVariableName).append(";\n");
+        stringBuilder.append("    private final MessageResolver messageResolver;\n\n");
     }
 
     /**
