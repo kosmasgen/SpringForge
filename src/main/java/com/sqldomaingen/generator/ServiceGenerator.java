@@ -1016,9 +1016,6 @@ public class ServiceGenerator {
         stringBuilder.append("     */\n");
         stringBuilder.append("    private void ").append(methodName)
                 .append("(").append(dtoName).append(" dto) {\n\n");
-        stringBuilder.append("        if (dto == null) {\n");
-        stringBuilder.append("            return;\n");
-        stringBuilder.append("        }\n\n");
 
         appendCreateUniqueValidation(
                 stringBuilder,
@@ -1562,15 +1559,6 @@ public class ServiceGenerator {
             return;
         }
 
-        String nullCheckExpression = uniqueColumns.stream()
-                .map(column -> buildDtoPresenceCheckExpressionForColumn(table, column, compositePrimaryKey))
-                .reduce((left, right) -> left + " && " + right)
-                .orElse("");
-
-        if (compositePrimaryKey && !nullCheckExpression.isBlank()) {
-            nullCheckExpression = "dto.getId() != null && " + nullCheckExpression;
-        }
-
         String repositoryMethodName = buildExistsByMethodName(table, uniqueConstraint.getColumns());
 
         String repositoryArguments = uniqueColumns.stream()
@@ -1578,25 +1566,32 @@ public class ServiceGenerator {
                 .reduce((left, right) -> left + ", " + right)
                 .orElse("");
 
-        String messageExpression = uniqueColumns.stream()
-                .map(column -> "\"" + NamingConverter.toCamelCase(
-                        GeneratorSupport.unquoteIdentifier(column.getName())
-                ) + "=\" + " + buildDtoAccessExpressionForColumn(table, column, compositePrimaryKey))
-                .reduce((left, right) -> left + " + \", \" + " + right)
-                .orElse("\"unique constraint\"");
-
-        if (nullCheckExpression.isBlank() || repositoryArguments.isBlank()) {
+        if (repositoryArguments.isBlank()) {
             return;
         }
 
-        stringBuilder.append("        boolean hasRequiredFields =\n");
-        stringBuilder.append("                ")
-                .append(nullCheckExpression.replace(" && ", " &&\n                "))
-                .append(";\n\n");
+        if (compositePrimaryKey) {
+            stringBuilder.append("        if (dto == null || dto.getId() == null) {\n");
+            stringBuilder.append("            return;\n");
+            stringBuilder.append("        }\n\n");
+            stringBuilder.append("        ")
+                    .append(entityName)
+                    .append("Key id = dto.getId();\n\n");
+        }
 
-        stringBuilder.append("        if (!hasRequiredFields) {\n");
-        stringBuilder.append("            return;\n");
-        stringBuilder.append("        }\n\n");
+        String requiredFieldsCheckExpression = uniqueColumns.stream()
+                .map(column -> buildDtoAccessExpressionForColumn(table, column, compositePrimaryKey)
+                        .replace("dto.getId()", "id") + " == null")
+                .reduce((left, right) -> left + " || " + right)
+                .orElse("");
+
+        if (!requiredFieldsCheckExpression.isBlank()) {
+            stringBuilder.append("        if (")
+                    .append(requiredFieldsCheckExpression)
+                    .append(") {\n");
+            stringBuilder.append("            return;\n");
+            stringBuilder.append("        }\n\n");
+        }
 
         stringBuilder.append("        boolean exists = ")
                 .append(repositoryVariableName)
@@ -1605,20 +1600,40 @@ public class ServiceGenerator {
                 .append(repositoryMethodName)
                 .append("(\n");
         stringBuilder.append("                        ")
-                .append(repositoryArguments.replace(", ", ",\n                        "))
+                .append(repositoryArguments.replace("dto.getId()", "id").replace(", ", ",\n                        "))
                 .append("\n");
         stringBuilder.append("                );\n\n");
 
-        stringBuilder.append("        if (exists) {\n");
-        stringBuilder.append("            throw GeneratedRuntimeException.builder()\n");
-        stringBuilder.append("                    .code(ErrorCodes.BAD_REQUEST)\n");
-        stringBuilder.append("                    .message(\"").append(entityName)
-                .append(" already exists with \"\n");
-        stringBuilder.append("                            + ")
-                .append(messageExpression.replace(" + ", "\n                            + "))
-                .append(")\n");
-        stringBuilder.append("                    .build();\n");
-        stringBuilder.append("        }\n");
+        stringBuilder.append("        if (!exists) {\n");
+        stringBuilder.append("            return;\n");
+        stringBuilder.append("        }\n\n");
+
+        stringBuilder.append("        throw GeneratedRuntimeException.builder()\n");
+        stringBuilder.append("                .code(ErrorCodes.BAD_REQUEST)\n");
+        stringBuilder.append("                .message(\"")
+                .append(entityName)
+                .append(" already exists with \"");
+
+        for (Column column : uniqueColumns) {
+            String propertyName = NamingConverter.toCamelCase(
+                    GeneratorSupport.unquoteIdentifier(column.getName())
+            );
+
+            String accessExpression = buildDtoAccessExpressionForColumn(
+                    table,
+                    column,
+                    compositePrimaryKey
+            ).replace("dto.getId()", "id");
+
+            stringBuilder.append("\n                        + \"")
+                    .append(propertyName)
+                    .append("=\" + ")
+                    .append(accessExpression)
+                    .append(" + \", \"");
+        }
+
+        stringBuilder.append(")\n");
+        stringBuilder.append("                .build();\n");
     }
 
     /**
