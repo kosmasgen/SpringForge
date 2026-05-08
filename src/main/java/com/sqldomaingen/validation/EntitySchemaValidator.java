@@ -3,6 +3,7 @@ package com.sqldomaingen.validation;
 import com.sqldomaingen.model.Column;
 import com.sqldomaingen.util.Constants;
 import com.sqldomaingen.util.TypeMapper;
+import lombok.RequiredArgsConstructor;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -24,7 +25,11 @@ import java.util.stream.Collectors;
 /**
  * Executes entity/schema validation without depending on test classes.
  */
+@RequiredArgsConstructor
 public class EntitySchemaValidator {
+
+    private final Path schemaPath;
+    private final Path generatedJavaRoot;
 
     /**
      * Runs validation and returns violations.
@@ -35,17 +40,17 @@ public class EntitySchemaValidator {
         List<String> violations = new ArrayList<>();
 
         try {
-            if (!Files.exists(Constants.SCHEMA_PATH)) {
-                violations.add("Missing schema file: " + Constants.SCHEMA_PATH.toAbsolutePath());
+            if (!Files.exists(schemaPath)) {
+                violations.add("Missing schema file: " + schemaPath.toAbsolutePath());
                 return violations;
             }
 
-            if (!Files.exists(Constants.GENERATED_JAVA_ROOT)) {
-                violations.add("Missing generated Java root: " + Constants.GENERATED_JAVA_ROOT.toAbsolutePath());
+            if (!Files.exists(generatedJavaRoot)) {
+                violations.add("Missing generated Java root: " + generatedJavaRoot.toAbsolutePath());
                 return violations;
             }
 
-            String sql = Files.readString(Constants.SCHEMA_PATH);
+            String sql = Files.readString(schemaPath);
             Map<String, TableDefinition> schemaTables = parseSchema(sql);
 
             List<JavaEntityDefinition> entityDefinitions = findGeneratedEntityDefinitions(violations);
@@ -53,7 +58,7 @@ public class EntitySchemaValidator {
 
             if (entityDefinitions.isEmpty()) {
                 violations.add("No generated entity source files were found under: "
-                        + Constants.GENERATED_JAVA_ROOT.toAbsolutePath());
+                        + generatedJavaRoot.toAbsolutePath());
                 return violations;
             }
 
@@ -78,7 +83,7 @@ public class EntitySchemaValidator {
     private List<JavaEntityDefinition> findGeneratedEntityDefinitions(List<String> violations) throws IOException {
         List<JavaEntityDefinition> entityDefinitions = new ArrayList<>();
 
-        try (var paths = Files.walk(Constants.GENERATED_JAVA_ROOT)) {
+        try (var paths = Files.walk(generatedJavaRoot)) {
             List<Path> javaFiles = paths
                     .filter(Files::isRegularFile)
                     .filter(path -> path.toString().endsWith(".java"))

@@ -51,11 +51,11 @@ public class GenerationValidationRunner {
 
         appendLiquibaseSection(report, outputDir);
 
-        appendSchemaValidationChecklistSection(report);
+        appendSchemaValidationChecklistSection(report, inputFile, outputDir);
 
-        appendTodoEntitiesSection(report);
+        appendTodoEntitiesSection(report, inputFile, outputDir);
 
-        appendSchemaValidationSection(report);
+        appendSchemaValidationSection(report, inputFile, outputDir);
 
         return report;
     }
@@ -168,13 +168,23 @@ public class GenerationValidationRunner {
      * Appends the schema validation checklist section.
      *
      * @param report target report
+     * @param inputFile input SQL file path
+     * @param outputDir output project directory
      */
-    private void appendSchemaValidationChecklistSection(GenerationValidationReport report) {
+    private void appendSchemaValidationChecklistSection(
+            GenerationValidationReport report,
+            String inputFile,
+            String outputDir
+    ) {
         List<String> details = new ArrayList<>();
         List<String> violations = new ArrayList<>();
 
         try {
-            EntitySchemaValidator validator = new EntitySchemaValidator();
+            EntitySchemaValidator validator = new EntitySchemaValidator(
+                    Paths.get(inputFile),
+                    Paths.get(outputDir, "src", "main", "java")
+            );
+
             List<String> checklist = validator.getValidationChecklistLines();
 
             details.add("Total checks: " + checklist.size());
@@ -191,13 +201,23 @@ public class GenerationValidationRunner {
      * The section is added ONLY when violations exist.
      *
      * @param report target report
+     * @param inputFile input SQL file path
+     * @param outputDir output project directory
      */
-    private void appendSchemaValidationSection(GenerationValidationReport report) {
+    private void appendSchemaValidationSection(
+            GenerationValidationReport report,
+            String inputFile,
+            String outputDir
+    ) {
         List<String> details = new ArrayList<>();
         List<String> violations = new ArrayList<>();
 
         try {
-            EntitySchemaValidationService service = new EntitySchemaValidationService();
+            EntitySchemaValidationService service = new EntitySchemaValidationService(
+                    Paths.get(inputFile),
+                    Paths.get(outputDir, "src", "main", "java")
+            );
+
             List<String> results = service.validate();
 
             if (!results.isEmpty()) {
@@ -308,13 +328,23 @@ public class GenerationValidationRunner {
      * Appends the generated entities with TODO comments section.
      *
      * @param report target report
+     * @param inputFile input SQL file path
+     * @param outputDir output project directory
      */
-    private void appendTodoEntitiesSection(GenerationValidationReport report) {
+    private void appendTodoEntitiesSection(
+            GenerationValidationReport report,
+            String inputFile,
+            String outputDir
+    ) {
         List<String> details = new ArrayList<>();
         List<String> violations = new ArrayList<>();
 
         try {
-            EntitySchemaValidator validator = new EntitySchemaValidator();
+            EntitySchemaValidator validator = new EntitySchemaValidator(
+                    Paths.get(inputFile),
+                    Paths.get(outputDir, "src", "main", "java")
+            );
+
             List<String> todoEntities = validator.findEntityDisplayNamesWithTodoComments();
 
             details.add("Total classes with TODO: " + todoEntities.size());
@@ -325,7 +355,8 @@ public class GenerationValidationRunner {
                 details.addAll(todoEntities);
             }
         } catch (Exception exception) {
-            violations.add("Could not collect generated entity classes with TODO comments: " + exception.getMessage());
+            violations.add("Could not collect generated entity classes with TODO comments: "
+                    + exception.getMessage());
         }
 
         report.addSection("Generated Entity Classes With TODO Comments", details, violations);

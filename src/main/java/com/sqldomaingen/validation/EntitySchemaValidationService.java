@@ -1,8 +1,9 @@
 package com.sqldomaingen.validation;
 
-import com.sqldomaingen.util.Constants;
+import lombok.RequiredArgsConstructor;
 
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -10,7 +11,11 @@ import java.util.List;
 /**
  * Core validation service extracted from test logic.
  */
+@RequiredArgsConstructor
 public class EntitySchemaValidationService {
+
+    private final Path schemaPath;
+    private final Path generatedJavaRoot;
 
     /**
      * Executes validation logic.
@@ -21,17 +26,21 @@ public class EntitySchemaValidationService {
         List<String> violations = new ArrayList<>();
 
         try {
-            if (!Files.exists(Constants.SCHEMA_PATH)) {
-                violations.add("Missing schema file: " + Constants.SCHEMA_PATH.toAbsolutePath());
+            if (!Files.exists(schemaPath)) {
+                violations.add("Missing schema file: " + schemaPath.toAbsolutePath());
                 return violations;
             }
 
-            if (!Files.exists(Constants.GENERATED_JAVA_ROOT)) {
-                violations.add("Missing generated Java root: " + Constants.GENERATED_JAVA_ROOT.toAbsolutePath());
+            if (!Files.exists(generatedJavaRoot)) {
+                violations.add("Missing generated Java root: " + generatedJavaRoot.toAbsolutePath());
                 return violations;
             }
 
-            EntitySchemaValidator validator = new EntitySchemaValidator();
+            EntitySchemaValidator validator = new EntitySchemaValidator(
+                    schemaPath,
+                    generatedJavaRoot
+            );
+
             return validator.validate();
         } catch (Exception exception) {
             violations.add("Validation execution failed: " + exception.getMessage());
