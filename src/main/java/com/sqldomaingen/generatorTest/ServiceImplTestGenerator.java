@@ -329,9 +329,11 @@ public class ServiceImplTestGenerator {
      */
     private void appendFrameworkImports(StringBuilder content, String basePackage) {
         String exceptionPackage = PackageResolver.resolvePackageName(basePackage, "exception");
+        String utilPackage = PackageResolver.resolvePackageName(basePackage, "util");
 
         content.append("import ").append(exceptionPackage).append(".ErrorCodes;\n");
         content.append("import ").append(exceptionPackage).append(".GeneratedRuntimeException;\n");
+        content.append("import ").append(utilPackage).append(".MessageResolver;\n");
         content.append("import org.junit.jupiter.api.Test;\n");
         content.append("import org.junit.jupiter.api.extension.ExtendWith;\n");
         content.append("import org.mockito.InjectMocks;\n");
@@ -381,6 +383,9 @@ public class ServiceImplTestGenerator {
         content.append("    @Mock\n");
         content.append("    private ").append(mapperName).append(" ").append(mapperVar).append(";\n\n");
 
+        content.append("    @Mock\n");
+        content.append("    private MessageResolver messageResolver;\n\n");
+
         content.append("    @InjectMocks\n");
         content.append("    private ").append(serviceImplName).append(" ").append(serviceVar).append(";\n\n");
     }
@@ -407,6 +412,65 @@ public class ServiceImplTestGenerator {
         content.append("                assertThrows(GeneratedRuntimeException.class, executable::run);\n");
         content.append("        assertEquals(ErrorCodes.NOT_FOUND, exception.getCode());\n");
         content.append("    }\n\n");
+    }
+
+    /**
+     * Appends a MessageResolver stub for NOT FOUND exception messages.
+     *
+     * @param content generated test content
+     * @param table current table
+     * @param entityName entity simple name
+     */
+    private void appendNotFoundMessageResolverStub(
+            StringBuilder content,
+            Table table,
+            String entityName
+    ) {
+        if (hasCompositePrimaryKey(table)) {
+            content.append("        given(messageResolver.resolve(\n");
+            content.append("                \"entity.notFoundByCompositeId\",\n");
+            content.append("                \"").append(entityName).append("\",\n");
+            content.append("                ")
+                    .append(buildCompositePrimaryKeyExpectedMessageExpression(table))
+                    .append("\n");
+            content.append("        )).willReturn(\"").append(entityName).append(" not found\");\n\n");
+            return;
+        }
+
+        content.append("        given(messageResolver.resolve(\n");
+        content.append("                \"entity.notFoundById\",\n");
+        content.append("                \"").append(entityName).append("\",\n");
+        content.append("                id\n");
+        content.append("        )).willReturn(\"").append(entityName).append(" not found\");\n\n");
+    }
+
+    /**
+     * Builds the generated expression used for composite primary key message stubbing.
+     *
+     * @param table current table
+     * @return generated Java expression content for composite id
+     */
+    private String buildCompositePrimaryKeyExpectedMessageExpression(Table table) {
+        StringBuilder builder = new StringBuilder();
+
+        List<Column> primaryKeyColumns = getPrimaryKeyColumns(table);
+
+        for (int index = 0; index < primaryKeyColumns.size(); index++) {
+            Column primaryKeyColumn = primaryKeyColumns.get(index);
+            String variableName = resolvePrimaryKeyComponentVariableName(primaryKeyColumn);
+
+            if (index == 0) {
+                builder.append("\"");
+            } else {
+                builder.append(" + \", ");
+            }
+
+            builder.append(variableName)
+                    .append("=\" + ")
+                    .append(variableName);
+        }
+
+        return builder.toString();
     }
 
     /**
@@ -573,6 +637,8 @@ public class ServiceImplTestGenerator {
             content.append("        given(").append(repositoryVar)
                     .append(".findById(id)).willReturn(Optional.empty());\n\n");
         }
+
+        appendNotFoundMessageResolverStub(content, table, entityName);
 
         content.append("        assertNotFound(() -> ").append(serviceVar).append(".get")
                 .append(entityName).append("ById(").append(serviceArguments).append("));\n\n");
@@ -766,6 +832,8 @@ public class ServiceImplTestGenerator {
                     .append(".findById(id)).willReturn(Optional.empty());\n\n");
         }
 
+        appendNotFoundMessageResolverStub(content, table, entityName);
+
         content.append("        assertNotFound(() -> ").append(serviceVar).append(".update")
                 .append(entityName).append("(").append(serviceArguments).append(", requestDto));\n\n");
 
@@ -889,6 +957,8 @@ public class ServiceImplTestGenerator {
             content.append("        given(").append(repositoryVar)
                     .append(".findById(id)).willReturn(Optional.empty());\n\n");
         }
+
+        appendNotFoundMessageResolverStub(content, table, entityName);
 
         content.append("        assertNotFound(() -> ").append(serviceVar).append(".delete")
                 .append(entityName).append("(").append(serviceArguments).append("));\n\n");
