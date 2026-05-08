@@ -269,7 +269,7 @@ SpringForge follows a multi-step generation pipeline:
 2. **Model Transformation**
    The parsed schema is converted into an internal domain model.
 
-3. **Code Generation**
+3. **Code Generation**  
    Based on the model, SpringForge generates:
 
    * Entities
@@ -279,6 +279,7 @@ SpringForge follows a multi-step generation pipeline:
    * Services and service implementations
    * Controllers
    * Liquibase changelogs
+   * i18n support through default message bundles and a reusable message resolver
    * Tests
 
 4. **Project Assembly**
@@ -292,30 +293,35 @@ SpringForge generates a complete Spring Boot project:
 
 ```text
 src/main/java/com/example/project/
- ├── entity/
+ ├── config/
+ ├── controller/
  ├── dto/
+ ├── entity/
+ ├── exception/
  ├── mapper/
  ├── repository/
  ├── service/
  ├── serviceImpl/
- ├── controller/
- ├── config/
- ├── exception/
+ ├── util/
+ │   └── MessageResolver.java
+ └── Application.java
 
 src/main/resources/
  ├── application.properties
- ├── db/migration/changelogs/v0.1.0/
+ ├── messages.properties
+ ├── messages_el.properties
+ └── db/migration/changelogs/v0.1.0/
 
 src/test/java/com/example/project/
  ├── controller/
- ├── service/
- ├── mapper/
- ├── entity/
  ├── dto/
+ ├── entity/
+ ├── mapper/
+ └── serviceImpl/
 
 validation/
  ├── validation-report.xml
- ├── validation-report.pdf
+ └── validation-report.pdf
 
 pom.xml
 .gitignore
