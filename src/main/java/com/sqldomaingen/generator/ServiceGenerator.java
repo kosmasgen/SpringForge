@@ -705,7 +705,6 @@ public class ServiceGenerator {
     }
 
 
-
     /**
      * Creates a NOT_FOUND exception for the entity.
      *
@@ -787,14 +786,25 @@ public class ServiceGenerator {
 
         stringBuilder.append("        return GeneratedRuntimeException.builder()\n");
         stringBuilder.append("                .code(ErrorCodes.NOT_FOUND)\n");
-        stringBuilder.append("                .message(\"")
-                .append(entityName)
-                .append(" not found with ")
-                .append(compositePrimaryKey ? "composite id: \" + compositeId" : "id: \" + id")
-                .append(")\n");
+
+        if (compositePrimaryKey) {
+            stringBuilder.append("                .message(messageResolver.resolve(\n");
+            stringBuilder.append("                        \"entity.notFoundByCompositeId\",\n");
+            stringBuilder.append("                        \"").append(entityName).append("\",\n");
+            stringBuilder.append("                        compositeId\n");
+            stringBuilder.append("                ))\n");
+        } else {
+            stringBuilder.append("                .message(messageResolver.resolve(\n");
+            stringBuilder.append("                        \"entity.notFoundById\",\n");
+            stringBuilder.append("                        \"").append(entityName).append("\",\n");
+            stringBuilder.append("                        id\n");
+            stringBuilder.append("                ))\n");
+        }
+
         stringBuilder.append("                .build();\n");
         stringBuilder.append("    }\n\n");
     }
+
 
     /**
      * Appends the update service method.
@@ -1526,9 +1536,15 @@ public class ServiceGenerator {
                     .append(")) {\n");
             stringBuilder.append("            throw GeneratedRuntimeException.builder()\n");
             stringBuilder.append("                    .code(ErrorCodes.BAD_REQUEST)\n");
-            stringBuilder.append("                    .message(\"").append(entityName)
-                    .append(" already exists with ").append(propertyName).append(": \" + ")
-                    .append(dtoAccessExpression).append(")\n");
+            stringBuilder.append("                    .message(messageResolver.resolve(\n");
+            stringBuilder.append("                            \"entity.uniqueConstraintViolation\",\n");
+            stringBuilder.append("                            \"").append(entityName).append("\",\n");
+            stringBuilder.append("                            \"")
+                    .append(propertyName)
+                    .append("=\" + ")
+                    .append(dtoAccessExpression)
+                    .append("\n");
+            stringBuilder.append("                    ))\n");
             stringBuilder.append("                    .build();\n");
             stringBuilder.append("        }\n");
         }
@@ -1613,9 +1629,9 @@ public class ServiceGenerator {
 
         stringBuilder.append("        throw GeneratedRuntimeException.builder()\n");
         stringBuilder.append("                .code(ErrorCodes.BAD_REQUEST)\n");
-        stringBuilder.append("                .message(\"")
-                .append(entityName)
-                .append(" already exists with \"");
+        stringBuilder.append("                .message(messageResolver.resolve(\n");
+        stringBuilder.append("                        \"entity.uniqueConstraintViolation\",\n");
+        stringBuilder.append("                        \"").append(entityName).append("\",\n");
 
         for (int index = 0; index < uniqueColumns.size(); index++) {
             Column column = uniqueColumns.get(index);
@@ -1630,19 +1646,27 @@ public class ServiceGenerator {
                     compositePrimaryKey
             ).replace("dto.getId()", "id");
 
-            stringBuilder.append("\n                        + \"")
-                    .append(propertyName)
+            if (index == 0) {
+                stringBuilder.append("                        \"");
+            } else {
+                stringBuilder.append("                                + \", ");
+            }
+
+            stringBuilder.append(propertyName)
                     .append("=\" + ")
                     .append(accessExpression);
 
             if (index < uniqueColumns.size() - 1) {
-                stringBuilder.append(" + \", \"");
+                stringBuilder.append("\n");
             }
         }
 
-        stringBuilder.append(")\n");
+        stringBuilder.append("\n");
+        stringBuilder.append("                ))\n");
         stringBuilder.append("                .build();\n");
     }
+
+
 
     /**
      * Builds the DTO presence-check expression for a column.
@@ -2011,9 +2035,11 @@ public class ServiceGenerator {
                 .append(" already exists with composite id: {}\", compositeId);\n\n");
         stringBuilder.append("            throw GeneratedRuntimeException.builder()\n");
         stringBuilder.append("                    .code(ErrorCodes.BAD_REQUEST)\n");
-        stringBuilder.append("                    .message(\"")
-                .append(entityName)
-                .append(" already exists with composite id: \" + compositeId)\n");
+        stringBuilder.append("                    .message(messageResolver.resolve(\n");
+        stringBuilder.append("                            \"entity.alreadyExistsByCompositeId\",\n");
+        stringBuilder.append("                            \"").append(entityName).append("\",\n");
+        stringBuilder.append("                            compositeId\n");
+        stringBuilder.append("                    ))\n");
         stringBuilder.append("                    .build();\n");
         stringBuilder.append("        }\n");
         stringBuilder.append("    }\n\n");

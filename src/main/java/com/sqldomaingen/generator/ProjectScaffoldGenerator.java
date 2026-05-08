@@ -488,6 +488,7 @@ entity.notFoundById={0} not found with id: {1}
 entity.notFoundByCompositeId={0} not found with composite id: {1}
 entity.alreadyExistsById={0} already exists with id: {1}
 entity.uniqueConstraintViolation={0} already exists with {1}
+entity.alreadyExistsByCompositeId={0} already exists with composite id: {1}
 
 # Generic validation messages
 validation.badRequest=Bad request
@@ -501,6 +502,7 @@ entity.notFoundById=Δεν βρέθηκε {0} με id: {1}
 entity.notFoundByCompositeId=Δεν βρέθηκε {0} με σύνθετο id: {1}
 entity.alreadyExistsById=Το {0} υπάρχει ήδη με id: {1}
 entity.uniqueConstraintViolation=Το {0} υπάρχει ήδη με {1}
+entity.alreadyExistsByCompositeId=Το {0} υπάρχει ήδη με σύνθετο id: {1}
 
 # Generic validation messages
 validation.badRequest=Μη έγκυρο αίτημα
