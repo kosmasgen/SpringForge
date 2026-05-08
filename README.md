@@ -6,13 +6,14 @@ It generates a full backend project structure, not just individual classes.
 
 It automatically generates:
 
-* JPA entities (with Envers auditing)
+* JPA entities with Envers auditing
 * DTOs
-* Mappers (ModelMapper)
+* Mappers with ModelMapper
 * Repositories
 * Services and service implementations
 * REST controllers
 * Liquibase changelogs
+* i18n support with default message bundles and a reusable message resolver
 * Tests for controller, DTO, entity, mapper, and service implementation layers
   
 ---
@@ -21,7 +22,7 @@ It automatically generates:
 
 Building backend layers manually is repetitive and error-prone.
 
-SpringForge generates a structured Spring Boot backend directly from your SQL schema, including entities, DTOs, mappers, repositories, services, controllers, Liquibase changelogs, and tests.
+SpringForge generates a structured Spring Boot backend directly from your SQL schema, including entities, DTOs, mappers, repositories, services, controllers, Liquibase changelogs, i18n support, and tests.
 
 It reduces boilerplate and accelerates backend development.
 
@@ -137,11 +138,12 @@ SpringForge generates:
 
 * `IncomeTransaction`, `IncomeType`, and `IncomePayment` entities
 * DTOs with validation annotations
-* Base mapper and mappers (ModelMapper)
+* Base mapper and mappers with ModelMapper
 * Repositories with proper key mappings
 * Service and service implementation layers
 * REST controllers
-* Liquibase changelogs (versioned)
+* Liquibase changelogs
+* i18n support with default English/Greek message bundles and a reusable message resolver
 * Unit and integration tests
  
 ---
@@ -240,17 +242,18 @@ All generated components are validated for:
 
 ## Features
 
-* Parses SQL DDL (ANTLR-based)
+* Parses SQL DDL with an ANTLR-based parser
+* Transforms SQL schema into an intermediate domain model before code generation
 * Supports foreign keys and relationships
-* Supports table-level constraints (UNIQUE, CHECK, FOREIGN KEY)
+* Supports table-level constraints such as UNIQUE, CHECK, and FOREIGN KEY
 * Supports index detection and generation
 * Handles composite primary keys
 * Generates validation annotations
+* Generates default i18n message bundles and a reusable message resolver
 * Produces Liquibase-ready output
 * Follows a clean layered architecture
 * Applies consistent naming conventions
 * Generates test-ready code
-* Transforms SQL schema into a domain model before code generation
 
 ---
 
