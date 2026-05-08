@@ -29,7 +29,7 @@ public class Constants {
 
 
     public static final Path SCHEMA_PATH = Path.of("input", "test_script.sql");
-    public static final Path GENERATED_JAVA_ROOT = Path.of("output", "PepsiTest", "src", "main", "java");
+    public static final Path GENERATED_JAVA_ROOT = Path.of("output", "PepTest", "src", "main", "java");
 
     public static final Set<String> JAVA_EXCLUDED_TABLES = Set.of(
             "audit",

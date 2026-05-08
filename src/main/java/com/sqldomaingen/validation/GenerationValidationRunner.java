@@ -43,6 +43,8 @@ public class GenerationValidationRunner {
 
         appendInfrastructureSection(report, outputDir, basePackage);
 
+        appendI18nSupportSection(report, outputDir, basePackage);
+
         appendParsedTableNamesSection(report, parsedTables);
 
         appendGeneratedModelsSection(report, models);
@@ -407,6 +409,86 @@ public class GenerationValidationRunner {
     private String stripSchemaPrefix(String tableName) {
         int dotIndex = tableName.indexOf('.');
         return dotIndex >= 0 ? tableName.substring(dotIndex + 1) : tableName;
+    }
+
+    /**
+     * Appends the i18n support section using actual generated files.
+     *
+     * @param report target report
+     * @param outputDir output directory
+     * @param basePackage base package
+     */
+    private void appendI18nSupportSection(
+            GenerationValidationReport report,
+            String outputDir,
+            String basePackage
+    ) {
+        List<String> details = new ArrayList<>();
+        List<String> violations = new ArrayList<>();
+
+        Path utilDir = PackageResolver.resolvePath(outputDir, basePackage, "util");
+        Path messageResolverFile = utilDir.resolve("MessageResolver.java");
+
+        Path messagesFile = Paths.get(
+                outputDir,
+                "src",
+                "main",
+                "resources",
+                "messages.properties"
+        );
+
+        Path greekMessagesFile = Paths.get(
+                outputDir,
+                "src",
+                "main",
+                "resources",
+                "messages_el.properties"
+        );
+
+        boolean messageResolverExists = Files.exists(messageResolverFile);
+        boolean defaultMessagesExists = Files.exists(messagesFile);
+        boolean greekMessagesExists = Files.exists(greekMessagesFile);
+
+        details.add("MessageResolver generated: " + messageResolverExists);
+        details.add("Default message bundle generated: " + defaultMessagesExists);
+        details.add("Greek message bundle generated: " + greekMessagesExists);
+        details.add("Message bundle files: " + countExistingFiles(messagesFile, greekMessagesFile));
+
+        if (!messageResolverExists) {
+            violations.add("MessageResolver.java was not found: " + messageResolverFile.toAbsolutePath());
+        }
+
+        if (!defaultMessagesExists) {
+            violations.add("messages.properties was not found: " + messagesFile.toAbsolutePath());
+        }
+
+        if (!greekMessagesExists) {
+            violations.add("messages_el.properties was not found: " + greekMessagesFile.toAbsolutePath());
+        }
+
+        report.addSection("I18n Support", details, violations);
+    }
+
+    /**
+     * Counts existing files from the provided paths.
+     *
+     * @param paths file paths
+     * @return number of existing regular files
+     */
+    private int countExistingFiles(Path... paths) {
+        int count = 0;
+
+        if (paths == null) {
+            return count;
+        }
+
+        for (Path path : paths) {
+            if (path != null && Files.isRegularFile(path)) {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     /**
