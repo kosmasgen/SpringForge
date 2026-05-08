@@ -104,9 +104,6 @@ public class ControllerGenerator {
         importCollector.addImport("import " + dtoPackage + "." + dtoName + ";");
         importCollector.addImport("import " + servicePackage + "." + serviceName + ";");
         importCollector.addImport("import io.swagger.v3.oas.annotations.Operation;");
-        importCollector.addImport("import io.swagger.v3.oas.annotations.Parameter;");
-        importCollector.addImport("import io.swagger.v3.oas.annotations.responses.ApiResponse;");
-        importCollector.addImport("import io.swagger.v3.oas.annotations.responses.ApiResponses;");
         importCollector.addImport("import io.swagger.v3.oas.annotations.tags.Tag;");
         importCollector.addImport("import jakarta.validation.Valid;");
         importCollector.addImport("import lombok.RequiredArgsConstructor;");
@@ -225,10 +222,6 @@ public class ControllerGenerator {
         stringBuilder.append("     */\n");
 
         stringBuilder.append("    @Operation(summary = \"Get ").append(displayLabel).append(" by id\")\n");
-        stringBuilder.append("    @ApiResponses({\n");
-        stringBuilder.append("            @ApiResponse(responseCode = \"400\", description = \"Bad request\"),\n");
-        stringBuilder.append("            @ApiResponse(responseCode = \"404\", description = \"Not found\")\n");
-        stringBuilder.append("    })\n");
 
         if (compositePrimaryKey) {
             stringBuilder.append("    @GetMapping(\"");
@@ -240,11 +233,7 @@ public class ControllerGenerator {
                 Column primaryKeyColumn = primaryKeyColumns.get(index);
                 String parameterName = resolvePkParamName(primaryKeyColumn);
                 String parameterType = detectJavaTypeForPkColumn(primaryKeyColumn);
-                String readableParameterLabel = NamingConverter.toLogLabel(parameterName);
 
-                stringBuilder.append("            @Parameter(description = \"")
-                        .append(readableParameterLabel)
-                        .append(" identifier\", required = true)\n");
                 stringBuilder.append("            @PathVariable ")
                         .append(parameterType)
                         .append(" ")
@@ -272,9 +261,6 @@ public class ControllerGenerator {
 
         stringBuilder.append("    @GetMapping(\"/{id}\")\n");
         stringBuilder.append("    public ResponseEntity<").append(dtoName).append("> getById(\n");
-        stringBuilder.append("            @Parameter(description = \"")
-                .append(lowerDisplayLabel)
-                .append(" identifier\", required = true)\n");
         stringBuilder.append("            @PathVariable ").append(primaryKeyType).append(" id) {\n");
         stringBuilder.append("        return ResponseEntity.ok(")
                 .append(serviceName)
@@ -309,9 +295,6 @@ public class ControllerGenerator {
         stringBuilder.append("     * @return created ").append(dtoName).append("\n");
         stringBuilder.append("     */\n");
         stringBuilder.append("    @Operation(summary = \"Create ").append(displayLabel).append("\")\n");
-        stringBuilder.append("    @ApiResponses({\n");
-        stringBuilder.append("            @ApiResponse(responseCode = \"201\", description = \"Created\")\n");
-        stringBuilder.append("    })\n");
         stringBuilder.append("    @PostMapping\n");
         stringBuilder.append("    public ResponseEntity<").append(dtoName).append("> create(\n");
         stringBuilder.append("            @Valid @RequestBody ").append(dtoName).append(" dto) {\n");
@@ -374,10 +357,6 @@ public class ControllerGenerator {
         stringBuilder.append("     */\n");
 
         stringBuilder.append("    @Operation(summary = \"Patch ").append(displayLabel).append("\")\n");
-        stringBuilder.append("    @ApiResponses({\n");
-        stringBuilder.append("            @ApiResponse(responseCode = \"400\", description = \"Bad request\"),\n");
-        stringBuilder.append("            @ApiResponse(responseCode = \"404\", description = \"Not found\")\n");
-        stringBuilder.append("    })\n");
 
         if (compositePrimaryKey) {
             stringBuilder.append("    @PatchMapping(\"");
@@ -389,20 +368,15 @@ public class ControllerGenerator {
                 Column primaryKeyColumn = primaryKeyColumns.get(index);
                 String parameterName = resolvePkParamName(primaryKeyColumn);
                 String parameterType = detectJavaTypeForPkColumn(primaryKeyColumn);
-                String readableParameterLabel = NamingConverter.toLogLabel(parameterName);
 
-                stringBuilder.append("            @Parameter(description = \"")
-                        .append(readableParameterLabel)
-                        .append(" identifier\", required = true)\n");
                 stringBuilder.append("            @PathVariable ")
                         .append(parameterType)
                         .append(" ")
-                        .append(parameterName);
-
-                stringBuilder.append(",\n");
+                        .append(parameterName)
+                        .append(",\n");
             }
 
-            stringBuilder.append("             @RequestBody ").append(dtoName).append(" dto) {\n");
+            stringBuilder.append("            @RequestBody ").append(dtoName).append(" dto) {\n");
             stringBuilder.append("        return ResponseEntity.ok(")
                     .append(serviceName)
                     .append(".update")
@@ -418,11 +392,8 @@ public class ControllerGenerator {
 
         stringBuilder.append("    @PatchMapping(\"/{id}\")\n");
         stringBuilder.append("    public ResponseEntity<").append(dtoName).append("> patch(\n");
-        stringBuilder.append("            @Parameter(description = \"")
-                .append(label)
-                .append(" identifier\", required = true)\n");
         stringBuilder.append("            @PathVariable ").append(primaryKeyType).append(" id,\n");
-        stringBuilder.append("             @RequestBody ").append(dtoName).append(" dto) {\n");
+        stringBuilder.append("            @RequestBody ").append(dtoName).append(" dto) {\n");
         stringBuilder.append("        return ResponseEntity.ok(")
                 .append(serviceName)
                 .append(".update")
@@ -471,12 +442,9 @@ public class ControllerGenerator {
             stringBuilder.append("     * @param id ").append(lowerDisplayLabel).append(" identifier\n");
         }
 
-        stringBuilder.append("     * @return no content\n");
+        stringBuilder.append("     * @return HTTP 204 No Content response\n");
         stringBuilder.append("     */\n");
         stringBuilder.append("    @Operation(summary = \"Delete ").append(displayLabel).append("\")\n");
-        stringBuilder.append("    @ApiResponses({\n");
-        stringBuilder.append("            @ApiResponse(responseCode = \"404\", description = \"Not found\")\n");
-        stringBuilder.append("    })\n");
 
         if (compositePrimaryKey) {
             stringBuilder.append("    @DeleteMapping(\"");
@@ -488,11 +456,7 @@ public class ControllerGenerator {
                 Column primaryKeyColumn = primaryKeyColumns.get(index);
                 String parameterName = resolvePkParamName(primaryKeyColumn);
                 String parameterType = detectJavaTypeForPkColumn(primaryKeyColumn);
-                String readableParameterLabel = NamingConverter.toLogLabel(parameterName);
 
-                stringBuilder.append("            @Parameter(description = \"")
-                        .append(readableParameterLabel)
-                        .append(" identifier\", required = true)\n");
                 stringBuilder.append("            @PathVariable ")
                         .append(parameterType)
                         .append(" ")
@@ -515,9 +479,6 @@ public class ControllerGenerator {
 
         stringBuilder.append("    @DeleteMapping(\"/{id}\")\n");
         stringBuilder.append("    public ResponseEntity<Void> deleteById(\n");
-        stringBuilder.append("            @Parameter(description = \"")
-                .append(lowerDisplayLabel)
-                .append(" identifier\", required = true)\n");
         stringBuilder.append("            @PathVariable ").append(primaryKeyType).append(" id) {\n");
         stringBuilder.append("        ").append(serviceName).append(".delete").append(entityName).append("(id);\n");
         stringBuilder.append("        return ResponseEntity.noContent().build();\n");
