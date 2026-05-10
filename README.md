@@ -43,6 +43,29 @@ mvn spring-boot:run
 # after it starts, run:
 generate-entity -i "path/to/input.sql" -o "path/to/output" -p "com.example.project" -w true -b true -a "your@email.com"
 ```
+
+## Lookup Table Configuration
+
+Optional `generator-config.yml` configuration:
+
+```yaml
+lookupTables:
+  - country
+  - region
+  - roles
+```
+
+Lookup tables generate:
+- Entity
+- DTO
+- Mapper
+- Repository
+- Liquibase
+
+  But skip:
+- Service
+- Controller
+- CRUD test
 ---
 
 
@@ -247,10 +270,16 @@ All generated components are validated for:
 * Supports foreign keys and relationships
 * Supports table-level constraints such as UNIQUE, CHECK, and FOREIGN KEY
 * Supports index detection and generation
+* Supports expression, functional, and partial PostgreSQL indexes
 * Handles composite primary keys
 * Generates validation annotations
 * Generates default i18n message bundles and a reusable message resolver
 * Produces Liquibase-ready output
+* Supports lookup table configuration for selective CRUD generation
+* Separates business tables from lookup/reference tables
+* Generates relation-aware DTOs and mappers
+* Generates controller, service, mapper, entity, and DTO tests
+* Includes schema-aware validation reports
 * Follows a clean layered architecture
 * Applies consistent naming conventions
 * Generates test-ready code
