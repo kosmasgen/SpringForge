@@ -17,20 +17,21 @@ import java.util.*;
  * <p>This test focuses on parser/model correctness before entity and Liquibase generation.
  * It verifies:
  * <ul>
- *     <li>all parsed tables are structurally valid,</li>
- *     <li>all columns have stable metadata,</li>
+ *     <li>parsed tables are structurally valid,</li>
+ *     <li>parsed columns expose stable metadata,</li>
  *     <li>foreign keys point to valid or external tables,</li>
  *     <li>indexes are attached to the correct tables,</li>
+ *     <li>index column references are valid when applicable,</li>
  *     <li>optional schema-specific scenarios when detected.</li>
  * </ul>
  */
 class SchemaModelValidationTest {
 
     /**
-     * Validates that the real schema is parsed into a consistent in-memory table model
-     * and prints a report instead of failing on validation mismatches.
+     * Validates that the schema is parsed into a consistent in-memory table model
+     * and prints a structured validation report.
      *
-     * @throws Exception if schema loading fails unexpectedly
+     * @throws Exception if schema loading or parsing fails unexpectedly
      */
     @Test
     void shouldParseRealSchemaIntoConsistentTableModel() throws Exception {

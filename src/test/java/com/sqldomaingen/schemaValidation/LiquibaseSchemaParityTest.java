@@ -28,10 +28,12 @@ class LiquibaseSchemaParityTest {
     Path tempDir;
 
     /**
-     * Generates Liquibase files into an isolated temporary directory, validates the output,
-     * and produces a human-readable report without modifying the project's real generated files.
+     * Generates Liquibase files into an isolated temporary directory,
+     * validates the generated changelogs against the parsed schema model,
+     * and produces a structured validation report without modifying
+     * the project's real generated files.
      *
-     * @throws Exception if file IO, parsing, or generation fails unexpectedly
+     * @throws Exception if file IO, parsing, generation, or validation fails unexpectedly
      */
     @Test
     void shouldGenerateLiquibaseFilesThatMatchParsedSqlSchema() throws Exception {
