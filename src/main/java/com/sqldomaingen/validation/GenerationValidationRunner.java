@@ -1,5 +1,7 @@
 package com.sqldomaingen.validation;
 
+import com.sqldomaingen.config.GeneratorConfig;
+import com.sqldomaingen.config.GeneratorConfigLoader;
 import com.sqldomaingen.model.Table;
 import com.sqldomaingen.util.PackageResolver;
 
@@ -84,8 +86,10 @@ public class GenerationValidationRunner {
         int serviceCount = countJavaFiles(serviceDir);
         int serviceImplCount = countJavaFiles(serviceImplDir);
         int controllerCount = countJavaFiles(controllerDir);
+        int lookupTableCount = countLookupTables(parsedTables);
 
         details.add("Parsed tables: " + safeSize(parsedTables));
+        details.add("Lookup tables: " + lookupTableCount);
         details.add("Generated files:");
         details.add("Entities: " + entityCount);
         details.add("Dto: " + dtoCount);
@@ -123,6 +127,26 @@ public class GenerationValidationRunner {
         report.addSection("Generation Summary", details, violations);
     }
 
+    /**
+     * Counts parsed tables configured as lookup tables.
+     *
+     * @param parsedTables parsed tables
+     * @return lookup table count
+     */
+    private int countLookupTables(List<Table> parsedTables) {
+        if (parsedTables == null || parsedTables.isEmpty()) {
+            return 0;
+        }
+
+        GeneratorConfig generatorConfig = GeneratorConfigLoader.load();
+
+        return (int) parsedTables.stream()
+                .filter(Objects::nonNull)
+                .map(Table::getName)
+                .filter(Objects::nonNull)
+                .filter(generatorConfig::isLookupTable)
+                .count();
+    }
     /**
      * Appends the infrastructure section using actual filesystem counts.
      *
