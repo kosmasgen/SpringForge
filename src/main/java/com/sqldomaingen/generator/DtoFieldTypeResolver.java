@@ -2,6 +2,7 @@ package com.sqldomaingen.generator;
 
 import com.sqldomaingen.model.Field;
 import com.sqldomaingen.util.GeneratorSupport;
+import com.sqldomaingen.util.JavaTypeSupport;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -104,7 +105,7 @@ public final class DtoFieldTypeResolver {
             return "Object";
         }
 
-        if (isScalarType(normalizedType)) {
+        if (JavaTypeSupport.isScalarType(normalizedType)) {
             return normalizedType;
         }
 
@@ -169,46 +170,7 @@ public final class DtoFieldTypeResolver {
 
 
 
-    /**
-     * Determines whether the given type is treated as a scalar DTO field type.
-     *
-     * @param simpleType simplified type name
-     * @return true when the type is scalar
-     */
-    public static boolean isScalarType(String simpleType) {
-        String normalizedType = GeneratorSupport.trimToEmpty(simpleType);
 
-        return normalizedType.equals("Object")
-                || normalizedType.equals("String")
-                || normalizedType.equals("Long")
-                || normalizedType.equals("Integer")
-                || normalizedType.equals("Boolean")
-                || normalizedType.equals("Double")
-                || normalizedType.equals("Float")
-                || normalizedType.equals("Short")
-                || normalizedType.equals("Byte")
-                || normalizedType.equals("Character")
-                || normalizedType.equals("long")
-                || normalizedType.equals("int")
-                || normalizedType.equals("boolean")
-                || normalizedType.equals("double")
-                || normalizedType.equals("float")
-                || normalizedType.equals("short")
-                || normalizedType.equals("byte")
-                || normalizedType.equals("char")
-                || normalizedType.equals("UUID")
-                || normalizedType.equals("BigDecimal")
-                || normalizedType.equals("BigInteger")
-                || normalizedType.equals("LocalDate")
-                || normalizedType.equals("LocalTime")
-                || normalizedType.equals("LocalDateTime")
-                || normalizedType.equals("Instant")
-                || normalizedType.equals("OffsetDateTime")
-                || normalizedType.equals("ZonedDateTime")
-                || normalizedType.equals("List")
-                || normalizedType.equals("Set")
-                || normalizedType.equals("Map");
-    }
 
 
 

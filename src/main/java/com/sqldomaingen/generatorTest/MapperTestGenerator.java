@@ -5,10 +5,7 @@ import com.sqldomaingen.model.Column;
 import com.sqldomaingen.model.Entity;
 import com.sqldomaingen.model.Field;
 import com.sqldomaingen.model.Table;
-import com.sqldomaingen.util.GeneratorSupport;
-import com.sqldomaingen.util.NamingConverter;
-import com.sqldomaingen.util.PackageResolver;
-import com.sqldomaingen.util.ProjectTypeImportSupport;
+import com.sqldomaingen.util.*;
 import lombok.extern.log4j.Log4j2;
 
 import java.nio.file.Path;
@@ -611,11 +608,11 @@ public class MapperTestGenerator {
             return false;
         }
 
-        if (DtoFieldTypeResolver.isScalarType(fieldType)) {
+        if (JavaTypeSupport.isScalarType(fieldType)) {
             return false;
         }
 
-        if (isListType(fieldType) || isSetType(fieldType) || isMapType(fieldType)) {
+        if (JavaTypeSupport.isCollectionType(fieldType)) {
             return true;
         }
 
@@ -1257,7 +1254,7 @@ public class MapperTestGenerator {
                 continue;
             }
 
-            if (DtoFieldTypeResolver.isScalarType(token)) {
+            if (JavaTypeSupport.isScalarType(token)) {
                 continue;
             }
 
@@ -1387,7 +1384,7 @@ public class MapperTestGenerator {
             return false;
         }
 
-        if (DtoFieldTypeResolver.isScalarType(simpleType)) {
+        if (JavaTypeSupport.isScalarType(simpleType)) {
             return false;
         }
 
@@ -1420,7 +1417,7 @@ public class MapperTestGenerator {
                 continue;
             }
 
-            if (DtoFieldTypeResolver.isScalarType(token)) {
+            if (JavaTypeSupport.isScalarType(token)) {
                 continue;
             }
 

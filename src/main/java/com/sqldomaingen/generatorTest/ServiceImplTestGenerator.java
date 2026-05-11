@@ -6,6 +6,7 @@ import com.sqldomaingen.model.Entity;
 import com.sqldomaingen.model.Field;
 import com.sqldomaingen.model.Table;
 import com.sqldomaingen.util.GeneratorSupport;
+import com.sqldomaingen.util.JavaTypeSupport;
 import com.sqldomaingen.util.NamingConverter;
 import com.sqldomaingen.util.PackageResolver;
 import lombok.extern.log4j.Log4j2;
@@ -1962,15 +1963,7 @@ public class ServiceImplTestGenerator {
      * @return import lines
      */
     private List<String> buildImportsForFields(List<Field> fields) {
-        boolean needsUuid = false;
-        boolean needsBigDecimal = false;
-        boolean needsBigInteger = false;
-        boolean needsLocalDate = false;
-        boolean needsLocalTime = false;
-        boolean needsLocalDateTime = false;
-        boolean needsInstant = false;
-        boolean needsOffsetDateTime = false;
-        boolean needsZonedDateTime = false;
+        Set<String> imports = new LinkedHashSet<>();
 
         for (Field field : fields) {
             if (field == null) {
@@ -1983,49 +1976,14 @@ public class ServiceImplTestGenerator {
                 continue;
             }
 
-            switch (GeneratorSupport.trimToEmpty(javaType)) {
-                case "UUID" -> needsUuid = true;
-                case "BigDecimal" -> needsBigDecimal = true;
-                case "BigInteger" -> needsBigInteger = true;
-                case "LocalDate" -> needsLocalDate = true;
-                case "LocalTime" -> needsLocalTime = true;
-                case "LocalDateTime" -> needsLocalDateTime = true;
-                case "Instant" -> needsInstant = true;
-                case "OffsetDateTime" -> needsOffsetDateTime = true;
-                case "ZonedDateTime" -> needsZonedDateTime = true;
-                default -> {
-                }
+            String importLine = JavaTypeSupport.resolveImportLine(javaType);
+
+            if (importLine != null && !importLine.isBlank()) {
+                imports.add(importLine);
             }
         }
 
-        List<String> imports = new ArrayList<>();
-
-        if (needsBigDecimal) {
-            imports.add("import java.math.BigDecimal;");
-        }
-        if (needsBigInteger) {
-            imports.add("import java.math.BigInteger;");
-        }
-        if (needsLocalDate) {
-            imports.add("import java.time.LocalDate;");
-        }
-        if (needsLocalTime) {
-            imports.add("import java.time.LocalTime;");
-        }
-        if (needsLocalDateTime) {
-            imports.add("import java.time.LocalDateTime;");
-        }
-        if (needsInstant) {
-            imports.add("import java.time.Instant;");
-        }
-        if (needsOffsetDateTime) {
-            imports.add("import java.time.OffsetDateTime;");
-        }
-        if (needsZonedDateTime) {
-            imports.add("import java.time.ZonedDateTime;");
-        }
-
-        return imports;
+        return new ArrayList<>(imports);
     }
 
     /**
