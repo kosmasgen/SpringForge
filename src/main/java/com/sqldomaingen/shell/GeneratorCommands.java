@@ -29,6 +29,8 @@ import org.antlr.v4.runtime.TokenStream;
 import org.springframework.shell.standard.ShellComponent;
 import org.springframework.shell.standard.ShellMethod;
 import org.springframework.shell.standard.ShellOption;
+import com.sqldomaingen.config.GeneratorConfig;
+import com.sqldomaingen.config.GeneratorConfigLoader;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -86,6 +88,9 @@ public class GeneratorCommands {
                 log.warn("No eligible Java generation tables remained after exclusions.");
             }
 
+            GeneratorConfig generatorConfig = GeneratorConfigLoader.load();
+            List<Table> businessGenerationTables = filterLookupTablesForCrudGeneration(javaGenerationTables, generatorConfig);
+
             log.info("Starting generation pipeline...");
 
             String defaultSchemaName = resolveDefaultSchemaName(parsedTables);
@@ -110,9 +115,10 @@ public class GeneratorCommands {
 
             new MapperGenerator(tableMap).generateMappers(outputDir, packageName);
             new RepositoryGenerator().generateRepositories(javaGenerationTables, outputDir, packageName);
-            new ServiceGenerator().generateAllServices(javaGenerationTables, outputDir, packageName);
-            new ControllerGenerator().generateControllers(javaGenerationTables, outputDir, packageName, overwrite);
-            new TestGenerator().generateTests(javaGenerationTables, models, outputDir, packageName, overwrite);
+            new ServiceGenerator().generateAllServices(businessGenerationTables, outputDir, packageName);
+            new ControllerGenerator().generateControllers(businessGenerationTables, outputDir, packageName, overwrite);
+            new TestGenerator().generateTests(businessGenerationTables, javaGenerationTables, models, outputDir,
+                    packageName, overwrite);
 
             new LiquibaseGenerator().generateLiquibaseFiles(outputDir, parsedTables, overwrite, author);
 
@@ -194,9 +200,9 @@ public class GeneratorCommands {
     }
 
     /**
-     * Normalizes a physical table name by removing the schema prefix and lowercasing it.
+     * Normalizes a table name by removing the schema prefix and lowercasing it.
      *
-     * @param tableName raw physical table name
+     * @param tableName raw table name
      * @return normalized table name
      */
     private String normalizeTableName(String tableName) {
@@ -332,4 +338,40 @@ public class GeneratorCommands {
 
         return "public";
     }
+
+    /**
+     * Filters lookup tables out of CRUD generation.
+     *
+     * @param tables Java generation tables
+     * @param generatorConfig generator configuration
+     * @return tables eligible for service, controller, and CRUD test generation
+     */
+    private List<Table> filterLookupTablesForCrudGeneration(List<Table> tables, GeneratorConfig generatorConfig) {
+        if (tables == null || tables.isEmpty()) {
+            return List.of();
+        }
+
+        if (generatorConfig == null) {
+            return tables;
+        }
+
+        List<Table> filteredTables = new ArrayList<>();
+
+        for (Table table : tables) {
+            if (table == null || table.getName() == null || table.getName().isBlank()) {
+                continue;
+            }
+
+            if (generatorConfig.isLookupTable(table.getName())) {
+                log.info("Skipping CRUD generation for lookup table: {}", table.getName());
+                continue;
+            }
+
+            filteredTables.add(table);
+        }
+
+        return filteredTables;
+    }
+
+
 }

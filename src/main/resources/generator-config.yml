@@ -1,0 +1,20 @@
+lookupTables:
+  - architectural_styles
+  - country
+  - diocese
+  - event_types
+  - feature_types
+  - historical_period
+  - materials
+  - media_types
+  - ownership_type
+  - phase_material
+  - phase_technique
+  - region
+  - roles
+  - structure_types
+  - use_of_building
+  - regional_unit
+  - unit
+  - greek_prefecture
+  - greek_prefecture_subdivision
