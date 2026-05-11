@@ -4,10 +4,12 @@ import com.sqldomaingen.model.Entity;
 import com.sqldomaingen.model.Field;
 import com.sqldomaingen.util.GeneratorSupport;
 import com.sqldomaingen.util.JavaImportCollector;
+import com.sqldomaingen.util.JavaTypeSupport;
 import com.sqldomaingen.util.PackageResolver;
 import lombok.extern.log4j.Log4j2;
 
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -204,9 +206,9 @@ public class DTOGenerator {
                 .replace("[", " ")
                 .replace("]", " ");
 
-        return java.util.Arrays.stream(cleanedType.split("\\s+"))
+        return Arrays.stream(cleanedType.split("\\s+"))
                 .filter(token -> !token.isBlank())
-                .filter(token -> !DtoFieldTypeResolver.isScalarType(token))
+                .filter(token -> !JavaTypeSupport.isScalarType(token))
                 .filter(token -> !token.equals("List"))
                 .filter(token -> !token.equals("Set"))
                 .filter(token -> !token.equals("Map"))
