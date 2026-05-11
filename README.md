@@ -55,14 +55,16 @@ lookupTables:
   - roles
 ```
 
-Lookup tables generate:
+### Lookup tables generate
+
 - Entity
 - DTO
 - Mapper
 - Repository
 - Liquibase
 
-  But skip:
+### But skip
+
 - Service
 - Controller
 - CRUD test
