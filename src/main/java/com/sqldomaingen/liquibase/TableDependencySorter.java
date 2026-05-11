@@ -1,16 +1,6 @@
 package com.sqldomaingen.liquibase;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 
 /**
  * Sorts table names in deterministic topological order based on dependency graph.
@@ -260,13 +250,18 @@ public class TableDependencySorter {
      * @param ordered output order
      * @throws IllegalStateException if cycle detected
      */
-    private void validateNoCycle(Map<String, Set<String>> normalizedGraph, List<String> ordered) {
+    private void validateNoCycle(
+            Map<String, Set<String>> normalizedGraph,
+            List<String> ordered
+    ) {
         if (ordered.size() == normalizedGraph.size()) {
             return;
         }
 
         Set<String> unresolved = new TreeSet<>(normalizedGraph.keySet());
-        unresolved.removeAll(ordered);
+        Set<String> resolved = new HashSet<>(ordered);
+
+        unresolved.removeAll(resolved);
 
         throw new IllegalStateException(
                 "Cyclic dependency detected among tables: " + unresolved
