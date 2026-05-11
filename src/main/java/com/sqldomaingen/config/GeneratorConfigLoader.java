@@ -4,6 +4,8 @@ import com.sqldomaingen.util.Constants;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.InputStream;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Loads generator configuration from generator-config.yml.
@@ -33,7 +35,7 @@ public final class GeneratorConfigLoader {
 
         Object loadedObject = yaml.load(inputStream);
 
-        if (!(loadedObject instanceof java.util.Map<?, ?> yamlMap)) {
+        if (!(loadedObject instanceof Map<?, ?> yamlMap)) {
             return new GeneratorConfig();
         }
 
@@ -41,7 +43,7 @@ public final class GeneratorConfigLoader {
 
         Object lookupTables = yamlMap.get("lookupTables");
 
-        if (lookupTables instanceof java.util.List<?> tableList) {
+        if (lookupTables instanceof List<?> tableList) {
             config.setLookupTables(
                     tableList.stream()
                             .map(String::valueOf)

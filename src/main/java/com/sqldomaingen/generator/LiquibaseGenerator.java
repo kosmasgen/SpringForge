@@ -1270,10 +1270,6 @@ public class LiquibaseGenerator {
     }
 
 
-
-
-
-
     /**
      * Builds the onUpdate attribute when present.
      *
@@ -1287,9 +1283,6 @@ public class LiquibaseGenerator {
 
         return " onUpdate=\"" + escapeXml(column.getOnUpdate()) + "\"";
     }
-
-
-
 
 
     /**
@@ -1579,6 +1572,30 @@ public class LiquibaseGenerator {
                 .replaceAll("(?i)\\)\\s*(gin_trgm_ops|gist_trgm_ops)$", ") $1");
     }
 
+
+
+    private static final Map<String, String> LIQUIBASE_TYPE_MAPPINGS = Map.ofEntries(
+            Map.entry("bigserial", "BIGINT"),
+            Map.entry("int8", "BIGINT"),
+
+            Map.entry("serial", "INTEGER"),
+            Map.entry("int4", "INTEGER"),
+
+            Map.entry("smallserial", "SMALLINT"),
+            Map.entry("int2", "SMALLINT"),
+
+            Map.entry("float8", "DOUBLE"),
+            Map.entry("float4", "REAL"),
+
+            Map.entry("bool", "BOOLEAN"),
+
+            Map.entry("bpchar", "CHAR"),
+            Map.entry("char", "CHAR"),
+            Map.entry("character", "CHAR"),
+
+            Map.entry("text", "TEXT")
+    );
+
     /**
      * Normalizes a PostgreSQL SQL type into a Liquibase-safe type.
      *
@@ -1592,35 +1609,10 @@ public class LiquibaseGenerator {
 
         String normalized = sqlType.trim().toLowerCase(Locale.ROOT);
 
-        switch (normalized) {
-            case "bigserial":
-            case "int8":
-                return "BIGINT";
+        String mappedType = LIQUIBASE_TYPE_MAPPINGS.get(normalized);
 
-            case "serial":
-            case "int4":
-                return "INTEGER";
-
-            case "smallserial":
-            case "int2":
-                return "SMALLINT";
-
-            case "float8":
-                return "DOUBLE";
-
-            case "float4":
-                return "REAL";
-
-            case "bool":
-                return "BOOLEAN";
-
-            case "bpchar":
-            case "char":
-            case "character":
-                return "CHAR";
-
-            case "text":
-                return "TEXT";
+        if (mappedType != null) {
+            return mappedType;
         }
 
         if (normalized.startsWith("bpchar(")) {
@@ -1649,7 +1641,6 @@ public class LiquibaseGenerator {
 
         return normalized.toUpperCase();
     }
-
 
 
     /**

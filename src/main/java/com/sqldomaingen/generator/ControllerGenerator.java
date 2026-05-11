@@ -2,11 +2,7 @@ package com.sqldomaingen.generator;
 
 import com.sqldomaingen.model.Column;
 import com.sqldomaingen.model.Table;
-import com.sqldomaingen.util.GeneratorSupport;
-import com.sqldomaingen.util.JavaImportCollector;
-import com.sqldomaingen.util.JavaTypeSupport;
-import com.sqldomaingen.util.NamingConverter;
-import com.sqldomaingen.util.PackageResolver;
+import com.sqldomaingen.util.*;
 import lombok.extern.log4j.Log4j2;
 
 import java.nio.file.Path;
@@ -101,16 +97,11 @@ public class ControllerGenerator {
         String apiPath = "/api/" + NamingConverter.toKebabCase(normalizedEntityName);
 
         JavaImportCollector importCollector = new JavaImportCollector();
+
         importCollector.addImport("import " + dtoPackage + "." + dtoName + ";");
         importCollector.addImport("import " + servicePackage + "." + serviceName + ";");
-        importCollector.addImport("import io.swagger.v3.oas.annotations.Operation;");
-        importCollector.addImport("import io.swagger.v3.oas.annotations.tags.Tag;");
-        importCollector.addImport("import jakarta.validation.Valid;");
-        importCollector.addImport("import lombok.RequiredArgsConstructor;");
-        importCollector.addImport("import org.springframework.http.HttpStatus;");
-        importCollector.addImport("import org.springframework.http.ResponseEntity;");
-        importCollector.addImport("import org.springframework.web.bind.annotation.*;");
-        importCollector.addImport("import java.util.List;");
+
+        GeneratorImportSupport.addControllerFrameworkImports(importCollector);
 
         pkColumns.forEach(column ->
                 importCollector.addImportForType(detectJavaTypeForPkColumn(column))

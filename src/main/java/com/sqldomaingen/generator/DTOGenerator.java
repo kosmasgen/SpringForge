@@ -2,10 +2,7 @@ package com.sqldomaingen.generator;
 
 import com.sqldomaingen.model.Entity;
 import com.sqldomaingen.model.Field;
-import com.sqldomaingen.util.GeneratorSupport;
-import com.sqldomaingen.util.JavaImportCollector;
-import com.sqldomaingen.util.JavaTypeSupport;
-import com.sqldomaingen.util.PackageResolver;
+import com.sqldomaingen.util.*;
 import lombok.extern.log4j.Log4j2;
 
 import java.nio.file.Path;
@@ -99,11 +96,7 @@ public class DTOGenerator {
      * @param collector import collector
      */
     private void addFixedImports(JavaImportCollector collector) {
-        collector.addImport("import com.fasterxml.jackson.annotation.JsonInclude;");
-        collector.addImport("import lombok.AllArgsConstructor;");
-        collector.addImport("import lombok.Builder;");
-        collector.addImport("import lombok.Data;");
-        collector.addImport("import lombok.NoArgsConstructor;");
+        GeneratorImportSupport.addDtoFrameworkImports(collector);
     }
 
     /**

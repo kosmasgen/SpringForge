@@ -194,4 +194,47 @@ public final class GeneratorImportSupport {
             imports.add(importLine);
         }
     }
+
+    /**
+     * Adds framework imports required by generated REST controllers.
+     *
+     * <p>
+     * Includes:
+     * <ul>
+     *     <li>Swagger/OpenAPI annotations</li>
+     *     <li>Spring Web annotations and response types</li>
+     *     <li>Jakarta validation annotations</li>
+     *     <li>Lombok constructor support</li>
+     *     <li>Java collection types used by controllers</li>
+     * </ul>
+     *
+     * @param importCollector target import collector
+     */
+    public static void addControllerFrameworkImports(JavaImportCollector importCollector) {
+        Objects.requireNonNull(importCollector, "importCollector must not be null");
+
+        importCollector.addImport("import io.swagger.v3.oas.annotations.Operation;");
+        importCollector.addImport("import io.swagger.v3.oas.annotations.tags.Tag;");
+        importCollector.addImport("import jakarta.validation.Valid;");
+        importCollector.addImport("import lombok.RequiredArgsConstructor;");
+        importCollector.addImport("import org.springframework.http.HttpStatus;");
+        importCollector.addImport("import org.springframework.http.ResponseEntity;");
+        importCollector.addImport("import org.springframework.web.bind.annotation.*;");
+        importCollector.addImport("import java.util.List;");
+    }
+
+    /**
+     * Adds framework imports required by generated DTO classes.
+     *
+     * @param importCollector import collector
+     */
+    public static void addDtoFrameworkImports(JavaImportCollector importCollector) {
+        Objects.requireNonNull(importCollector, "importCollector must not be null");
+
+        importCollector.addImport("import com.fasterxml.jackson.annotation.JsonInclude;");
+        importCollector.addImport("import lombok.AllArgsConstructor;");
+        importCollector.addImport("import lombok.Builder;");
+        importCollector.addImport("import lombok.Data;");
+        importCollector.addImport("import lombok.NoArgsConstructor;");
+    }
 }
