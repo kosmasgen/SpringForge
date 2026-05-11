@@ -62,7 +62,7 @@ public class ColumnDefinition extends PostgreSQLBaseListener {
             throw new IllegalArgumentException("ColumnDefContext is null");
         }
 
-        log.info("Parsing column definition: {}", ctx.getText());
+        log.debug("Parsing column definition: {}", ctx.getText());
 
         ColumnDefinition columnDefinition = new ColumnDefinition();
         ParseTreeWalker.DEFAULT.walk(columnDefinition, ctx);
@@ -70,7 +70,7 @@ public class ColumnDefinition extends PostgreSQLBaseListener {
         Column column = columnDefinition.toColumn();
         columnDefinition.javaType = TypeMapper.mapToJavaType(column);
 
-        log.info("Parsed column -> name='{}', sqlType='{}', javaType='{}', pk={}",
+        log.debug("Parsed column -> name='{}', sqlType='{}', javaType='{}', pk={}",
                 columnDefinition.getColumnName(),
                 columnDefinition.getSqlType(),
                 columnDefinition.getJavaType(),
@@ -181,7 +181,7 @@ public class ColumnDefinition extends PostgreSQLBaseListener {
 
         if (normalizedConstraintText.contains("NOTNULL")) {
             this.nullable = false;
-            log.info("Column '{}' marked as NOT NULL", this.columnName);
+            log.debug("Column '{}' marked as NOT NULL", this.columnName);
         }
 
         if (normalizedConstraintText.contains("UNIQUE")) {
@@ -463,7 +463,7 @@ public class ColumnDefinition extends PostgreSQLBaseListener {
                 this.identityGeneration = "ALWAYS";
             }
 
-            log.info("Column '{}' marked as IDENTITY ({})",
+            log.debug("Column '{}' marked as IDENTITY ({})",
                     this.columnName,
                     this.identityGeneration);
         }
@@ -477,7 +477,7 @@ public class ColumnDefinition extends PostgreSQLBaseListener {
      * @return populated {@link Column}
      */
     public Column toColumn() {
-        log.info("Converting ColumnDefinition -> Column | name='{}'", this.columnName);
+        log.debug("Converting ColumnDefinition -> Column | name='{}'", this.columnName);
 
         Column column = new Column();
         column.setName(this.columnName);
@@ -514,7 +514,7 @@ public class ColumnDefinition extends PostgreSQLBaseListener {
                     this.foreignKeyConstraintName,
                     this.mappedBy);
 
-            log.info("Column is a FOREIGN KEY: {} -> {}.{} (constraintName={})",
+            log.debug("Column is a FOREIGN KEY: {} -> {}.{} (constraintName={})",
                     column.getName(),
                     column.getReferencedTable(),
                     column.getReferencedColumn(),

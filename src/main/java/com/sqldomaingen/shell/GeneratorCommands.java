@@ -285,7 +285,7 @@ public class GeneratorCommands {
                 if (table != null) {
                     table.getIndexes().add(indexDefinition);
 
-                    log.info("Attached index '{}' to table '{}'",
+                    log.debug("Attached index '{}' to table '{}'",
                             indexDefinition.getName(),
                             table.getName());
                 } else {
@@ -348,7 +348,7 @@ public class GeneratorCommands {
             }
 
             if (generatorConfig.isLookupTable(table.getName())) {
-                log.info("Skipping CRUD generation for lookup table: {}", table.getName());
+                log.debug("Skipping CRUD generation for lookup table: {}", table.getName());
                 continue;
             }
 

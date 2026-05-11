@@ -46,7 +46,7 @@ public class ExceptionGenerator {
         writeGeneratedRuntimeException(exceptionDirectory, exceptionPackage, overwrite);
         writeGlobalExceptionHandler(exceptionDirectory, exceptionPackage, overwrite);
 
-        log.info("✅ Exception handling generated under: {}", exceptionDirectory.toAbsolutePath());
+        log.debug(" Exception handling generated under: {}", exceptionDirectory.toAbsolutePath());
     }
 
     /**
@@ -207,7 +207,7 @@ public class ExceptionGenerator {
         String content = buildErrorCodesContent(exceptionPackage);
 
         GeneratorSupport.writeFile(file, content, overwrite);
-        log.info("✅ ErrorCodes generated: {}", file.toAbsolutePath());
+        log.debug(" ErrorCodes generated: {}", file.toAbsolutePath());
     }
 
     /**
@@ -252,7 +252,7 @@ public class ExceptionGenerator {
         String content = buildGeneratedRuntimeExceptionContent(exceptionPackage);
 
         GeneratorSupport.writeFile(file, content, overwrite);
-        log.info("✅ GeneratedRuntimeException generated: {}", file.toAbsolutePath());
+        log.debug(" GeneratedRuntimeException generated: {}", file.toAbsolutePath());
     }
 
     /**

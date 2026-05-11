@@ -53,7 +53,7 @@ public class EntityPojoTestGenerator {
             GeneratorSupport.writeFile(entityTestDir.resolve(testName + ".java"), content, overwrite);
         }
 
-        log.info("Entity POJO test classes generated under: {}", entityTestDir.toAbsolutePath());
+        log.debug("Entity POJO test classes generated under: {}", entityTestDir.toAbsolutePath());
     }
 
     /**

@@ -82,7 +82,7 @@ public class ConfigGenerator {
             """.formatted(configPackage);
 
         GeneratorSupport.writeFile(file, content, overwrite);
-        log.info(" ModelMapperConfig generated: {}", file.toAbsolutePath());
+        log.debug(" ModelMapperConfig generated: {}", file.toAbsolutePath());
     }
 
     /**
@@ -145,7 +145,7 @@ public class ConfigGenerator {
             """.formatted(configPackage);
 
         GeneratorSupport.writeFile(file, content, overwrite);
-        log.info("✅ CorsConfig generated: {}", file.toAbsolutePath());
+        log.debug("CorsConfig generated: {}", file.toAbsolutePath());
     }
 
     /**

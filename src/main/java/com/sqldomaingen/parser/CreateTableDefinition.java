@@ -43,8 +43,8 @@ public class CreateTableDefinition {
      * @return populated {@link Table}
      */
     public Table processCreateTable(PostgreSQLParser.CreateTableStatementContext ctx) {
-        log.info("Parse tree (CreateTableStatement): \n{}", ctx.toStringTree());
-        log.info("processCreateTable() - START | ctx: {}", ctx);
+        log.debug("Parse tree (CreateTableStatement): \n{}", ctx.toStringTree());
+        log.debug("processCreateTable() - START | ctx: {}", ctx);
 
         this.tableName = null;
         this.columnDefinitions = new ArrayList<>();
@@ -52,11 +52,11 @@ public class CreateTableDefinition {
         this.compositeUniqueConstraints = new ArrayList<>();
 
         this.tableName = extractTableName(ctx);
-        log.info("Extracted table name: {}", this.tableName);
+        log.debug("Extracted table name: {}", this.tableName);
 
         log.debug("Column definitions BEFORE extraction: {}", this.columnDefinitions);
         this.columnDefinitions = extractColumnDefinitions(ctx);
-        log.info("Column definitions AFTER extraction | count={}", this.columnDefinitions.size());
+        log.debug("Column definitions AFTER extraction | count={}", this.columnDefinitions.size());
 
         if (ctx.tableConstraint() != null) {
             for (PostgreSQLParser.TableConstraintContext constraintCtx : ctx.tableConstraint()) {
@@ -69,7 +69,7 @@ public class CreateTableDefinition {
         extractCheckConstraints(ctx);
 
         Table table = toTable();
-        log.info("processCreateTable() - END | Generated Table: {}", table.getName());
+        log.debug("processCreateTable() - END | Generated Table: {}", table.getName());
 
         return table;
     }
@@ -85,10 +85,10 @@ public class CreateTableDefinition {
      * @param ctx the CREATE TABLE parse context
      */
     public void extractCheckConstraints(PostgreSQLParser.CreateTableStatementContext ctx) {
-        log.info("extractCheckConstraints() - START");
+        log.debug("extractCheckConstraints() - START");
 
         if (ctx == null || ctx.tableConstraint() == null || ctx.tableConstraint().isEmpty()) {
-            log.info("extractCheckConstraints() - END (no table constraints)");
+            log.debug("extractCheckConstraints() - END (no table constraints)");
             return;
         }
 
@@ -124,10 +124,10 @@ public class CreateTableDefinition {
             }
 
             this.constraints.add(checkConstraintDefinition);
-            log.info("Table-level CHECK extracted: {}", checkConstraintDefinition);
+            log.debug("Table-level CHECK extracted: {}", checkConstraintDefinition);
         }
 
-        log.info("extractCheckConstraints() - END");
+        log.debug("extractCheckConstraints() - END");
     }
 
     /**
@@ -183,13 +183,13 @@ public class CreateTableDefinition {
         }
 
         this.tableName = ctx.tableName().getFirst().getText().replace("\"", "").trim();
-        log.info("Extracted physical table name: {}", this.tableName);
+        log.debug("Extracted physical table name: {}", this.tableName);
 
         return this.tableName;
     }
 
     public List<ColumnDefinition> extractColumnDefinitions(PostgreSQLParser.CreateTableStatementContext ctx) {
-        log.info("extractColumnDefinitions() - START");
+        log.debug("extractColumnDefinitions() - START");
 
         List<ColumnDefinition> extractedColumns = new ArrayList<>();
 
@@ -199,7 +199,7 @@ public class CreateTableDefinition {
                     ColumnDefinition column = ColumnDefinition.fromContext(columnCtx);
                     extractedColumns.add(column);
 
-                    log.info("Extracted column: '{}' | SQL type: '{}' | PK: {} | Default: {}",
+                    log.debug("Extracted column: '{}' | SQL type: '{}' | PK: {} | Default: {}",
                             column.getColumnName(), column.getSqlType(), column.isPrimaryKey(), column.getDefaultValue());
                 } catch (Exception e) {
                     log.error("Failed to extract column from: {}", columnCtx.getText(), e);
@@ -209,7 +209,7 @@ public class CreateTableDefinition {
             log.warn("No columns found in the CREATE TABLE statement.");
         }
 
-        log.info("extractColumnDefinitions() - END | Extracted {} columns.", extractedColumns.size());
+        log.debug("extractColumnDefinitions() - END | Extracted {} columns.", extractedColumns.size());
         return extractedColumns;
     }
 
@@ -227,11 +227,11 @@ public class CreateTableDefinition {
      * @param ctx the table constraint parse context
      */
     private void extractPrimaryKeyConstraint(PostgreSQLParser.TableConstraintContext ctx) {
-        log.info("extractPrimaryKeyConstraint() - START");
+        log.debug("extractPrimaryKeyConstraint() - START");
 
         if (ctx == null) {
             log.warn("TableConstraintContext is null.");
-            log.info("extractPrimaryKeyConstraint() - END");
+            log.debug("extractPrimaryKeyConstraint() - END");
             return;
         }
 
@@ -244,7 +244,7 @@ public class CreateTableDefinition {
                 ctx.PRIMARY_KEY() != null || normalizedConstraintText.contains("PRIMARYKEY");
 
         if (!primaryKeyConstraint) {
-            log.info("extractPrimaryKeyConstraint() - END");
+            log.debug("extractPrimaryKeyConstraint() - END");
             return;
         }
 
@@ -252,7 +252,7 @@ public class CreateTableDefinition {
 
         if (ctx.columnNameList() == null || ctx.columnNameList().isEmpty()) {
             log.warn("PRIMARY KEY constraint found but no column list was detected.");
-            log.info("extractPrimaryKeyConstraint() - END");
+            log.debug("extractPrimaryKeyConstraint() - END");
             return;
         }
 
@@ -273,14 +273,14 @@ public class CreateTableDefinition {
                             columnDefinition.setPrimaryKeyConstraintName(constraintName);
                         }
 
-                        log.info("PRIMARY KEY applied to column '{}' (constraintName={})",
+                        log.debug("PRIMARY KEY applied to column '{}' (constraintName={})",
                                 columnDefinition.getColumnName(),
                                 columnDefinition.getPrimaryKeyConstraintName());
                     }, () -> log.warn("PRIMARY KEY column '{}' not found in extracted column definitions.",
                             primaryKeyColumn));
         }
 
-        log.info("extractPrimaryKeyConstraint() - END");
+        log.debug("extractPrimaryKeyConstraint() - END");
     }
 
     /**
@@ -296,10 +296,10 @@ public class CreateTableDefinition {
      * @param ctx the CREATE TABLE parse context
      */
     public void extractForeignKeyConstraints(PostgreSQLParser.CreateTableStatementContext ctx) {
-        log.info("extractForeignKeyConstraints() - START");
+        log.debug("extractForeignKeyConstraints() - START");
 
         if (ctx == null || ctx.tableConstraint() == null || ctx.tableConstraint().isEmpty()) {
-            log.info("extractForeignKeyConstraints() - END (no table constraints)");
+            log.debug("extractForeignKeyConstraints() - END (no table constraints)");
             return;
         }
 
@@ -393,18 +393,18 @@ public class CreateTableDefinition {
                                 columnDefinition.setForeignKeyConstraintName(constraintName);
                             }
 
-                            log.info("Foreign key applied: {} -> {}.{} (constraintName={})",
+                            log.debug("Foreign key applied: {} -> {}.{} (constraintName={})",
                                     sourceColumn,
                                     referencedTable,
                                     referencedColumn,
                                     columnDefinition.getForeignKeyConstraintName());
 
                             if (onDeleteAction != null) {
-                                log.info("ON DELETE applied to column '{}': {}", sourceColumn, onDeleteAction);
+                                log.debug("ON DELETE applied to column '{}': {}", sourceColumn, onDeleteAction);
                             }
 
                             if (onUpdateAction != null) {
-                                log.info("ON UPDATE applied to column '{}': {}", sourceColumn, onUpdateAction);
+                                log.debug("ON UPDATE applied to column '{}': {}", sourceColumn, onUpdateAction);
                             }
                         }, () -> log.warn("Could not find source column '{}' for FK constraint '{}'",
                                 sourceColumn,
@@ -412,7 +412,7 @@ public class CreateTableDefinition {
             }
         }
 
-        log.info("extractForeignKeyConstraints() - END");
+        log.debug("extractForeignKeyConstraints() - END");
     }
 
     /**
@@ -485,13 +485,13 @@ public class CreateTableDefinition {
      * Parses all CREATE TABLE statements and returns a map keyed by the generated Table name.
      */
     public Map<String, Table> parseAllTables(List<PostgreSQLParser.CreateTableStatementContext> createTableStatements) {
-        log.info("parseAllTables() - START");
+        log.debug("parseAllTables() - START");
 
         Map<String, Table> tableMap = new HashMap<>();
         for (PostgreSQLParser.CreateTableStatementContext ctx : createTableStatements) {
             Table table = processCreateTable(ctx);
             tableMap.put(table.getName(), table);
-            log.info("Added table '{}' to tableMap", table.getName());
+            log.debug("Added table '{}' to tableMap", table.getName());
         }
 
         log.info("parseAllTables() - END | Total tables parsed: {}", tableMap.size());
@@ -507,10 +507,10 @@ public class CreateTableDefinition {
      * @param ctx the CREATE TABLE parse context
      */
     public void extractUniqueConstraints(PostgreSQLParser.CreateTableStatementContext ctx) {
-        log.info("extractUniqueConstraints() - START");
+        log.debug("extractUniqueConstraints() - START");
 
         if (ctx == null || ctx.tableConstraint() == null || ctx.tableConstraint().isEmpty()) {
-            log.info("extractUniqueConstraints() - END (no table constraints)");
+            log.debug("extractUniqueConstraints() - END (no table constraints)");
             return;
         }
 
@@ -571,7 +571,7 @@ public class CreateTableDefinition {
             log.info("Composite UNIQUE detected: {} -> {}", constraintName, uniqueColumns);
         }
 
-        log.info("extractUniqueConstraints() - END");
+        log.debug("extractUniqueConstraints() - END");
     }
 
 
@@ -622,7 +622,7 @@ public class CreateTableDefinition {
      * @return populated table model
      */
     public Table toTable() {
-        log.info("toTable() - START | tableName={}", this.tableName);
+        log.debug("toTable() - START | tableName={}", this.tableName);
 
         Table table = new Table();
         table.setName(this.tableName);
@@ -646,7 +646,7 @@ public class CreateTableDefinition {
             table.setCompositeKey(compositeKey);
         }
 
-        log.info("toTable() - END | Table '{}' with {} columns and {} composite unique constraints.",
+        log.debug("toTable() - END | Table '{}' with {} columns and {} composite unique constraints.",
                 table.getName(),
                 columns.size(),
                 table.getUniqueConstraints().size());

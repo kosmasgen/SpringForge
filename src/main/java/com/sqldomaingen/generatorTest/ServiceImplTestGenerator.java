@@ -188,7 +188,7 @@ public class ServiceImplTestGenerator {
             GeneratorSupport.writeFile(serviceTestDir.resolve(testName + ".java"), content.toString(), overwrite);
         }
 
-        log.info("Service implementation test classes generated under: {}", serviceTestDir.toAbsolutePath());
+        log.debug("Service implementation test classes generated under: {}", serviceTestDir.toAbsolutePath());
     }
 
     /**

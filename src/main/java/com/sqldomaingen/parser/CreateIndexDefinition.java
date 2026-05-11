@@ -33,7 +33,7 @@ public class CreateIndexDefinition {
         indexDefinition.setUsingMethod(extractUsingMethod(rawText));
         indexDefinition.setWhereClause(extractWhereClause(ctx));
 
-        log.info("Parsed index '{}' on table '{}' -> columns={}, unique={}, using={}, where={}",
+        log.debug("Parsed index '{}' on table '{}' -> columns={}, unique={}, using={}, where={}",
                 indexDefinition.getName(),
                 indexDefinition.getTableName(),
                 indexDefinition.getColumns(),

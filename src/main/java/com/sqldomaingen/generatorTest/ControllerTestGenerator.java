@@ -147,7 +147,7 @@ public class ControllerTestGenerator {
             );
         }
 
-        log.info("Controller test classes generated under: {}", controllerTestDir.toAbsolutePath());
+        log.debug("Controller test classes generated under: {}", controllerTestDir.toAbsolutePath());
     }
 
     /**

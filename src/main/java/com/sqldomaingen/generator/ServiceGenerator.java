@@ -59,7 +59,7 @@ public class ServiceGenerator {
             GeneratorSupport.writeFile(serviceImplDir.resolve(entityName + "ServiceImpl.java"), serviceImplCode);
         }
 
-        log.info("Services generated under: {}", serviceDir.getParent().toAbsolutePath());
+        log.debug("Services generated under: {}", serviceDir.getParent().toAbsolutePath());
     }
 
     /**

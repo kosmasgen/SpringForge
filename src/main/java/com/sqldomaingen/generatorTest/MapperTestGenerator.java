@@ -108,7 +108,7 @@ public class MapperTestGenerator {
             );
         }
 
-        log.info("Mapper test classes generated under: {}", mapperTestDir.toAbsolutePath());
+        log.debug("Mapper test classes generated under: {}", mapperTestDir.toAbsolutePath());
     }
 
     /**

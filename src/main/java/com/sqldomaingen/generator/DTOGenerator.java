@@ -34,17 +34,17 @@ public class DTOGenerator {
                 PackageResolver.resolvePath(outputDir, basePackage, "dto")
         );
 
-        log.info("Starting DTO generation...");
+        log.debug("Starting DTO generation...");
 
         for (Entity entity : entities) {
-            log.info("Generating DTO for entity: {}", entity.getName());
+            log.debug("Generating DTO for entity: {}", entity.getName());
 
             String dtoContent = createDtoContent(entity, dtoPackage);
             Path outputPath = dtoDir.resolve(entity.getName() + "Dto.java");
             GeneratorSupport.writeFile(outputPath, dtoContent);
         }
 
-        log.info("DTO generation complete. Output directory: {}", dtoDir.toAbsolutePath());
+        log.debug("DTO generation complete. Output directory: {}", dtoDir.toAbsolutePath());
     }
 
 

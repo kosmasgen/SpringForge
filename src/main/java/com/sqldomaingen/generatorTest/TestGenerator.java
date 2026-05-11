@@ -97,7 +97,7 @@ public class TestGenerator {
                 overwrite
         );
 
-        log.info("Test classes generated successfully.");
+        log.debug("Test classes generated successfully.");
     }
 
     /**

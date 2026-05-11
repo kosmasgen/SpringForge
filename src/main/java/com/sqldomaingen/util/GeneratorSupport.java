@@ -78,7 +78,7 @@ public final class GeneratorSupport {
             }
 
             Files.writeString(filePath, content, StandardCharsets.UTF_8);
-            log.info("Generated file: {}", filePath.toAbsolutePath());
+            log.debug("Generated file: {}", filePath.toAbsolutePath());
         } catch (IOException exception) {
             log.error("Failed to write file: {}", filePath.toAbsolutePath(), exception);
             throw new IllegalStateException("Failed to write file: " + filePath, exception);

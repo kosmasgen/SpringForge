@@ -53,7 +53,7 @@ public class RepositoryGenerator {
             GeneratorSupport.writeFile(filePath, repositoryCode, overwrite);
         }
 
-        log.info("Repository generation completed. Output directory: {}", repositoriesDir.toAbsolutePath());
+        log.debug("Repository generation completed. Output directory: {}", repositoriesDir.toAbsolutePath());
     }
 
     /**

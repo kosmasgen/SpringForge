@@ -137,7 +137,7 @@ public class TypeMapper {
         if (!sqlToJavaTypeMap.containsKey(baseType)) {
             log.warn("No specific mapping found for SQL type '{}'. Defaulting to 'String'.", baseType);
         } else {
-            log.info("Mapping SQL type '{}' to Java type '{}'", baseType, javaType);
+            log.debug("Mapping SQL type '{}' to Java type '{}'", baseType, javaType);
         }
 
         return javaType;

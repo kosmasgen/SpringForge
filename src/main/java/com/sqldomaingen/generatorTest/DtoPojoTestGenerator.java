@@ -587,7 +587,7 @@ public class DtoPojoTestGenerator {
             GeneratorSupport.writeFile(dtoTestDir.resolve(testName + ".java"), content, overwrite);
         }
 
-        log.info("DTO POJO test classes generated under: {}", dtoTestDir.toAbsolutePath());
+        log.debug("DTO POJO test classes generated under: {}", dtoTestDir.toAbsolutePath());
     }
 
     /**

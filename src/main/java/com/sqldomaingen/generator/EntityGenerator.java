@@ -75,7 +75,7 @@ public class EntityGenerator {
 
         RelationshipResolver resolver = new RelationshipResolver(this.tableMap);
         resolver.resolveRelationshipsForAllTables();
-        log.info("RelationshipResolver initialized and relationships resolved.");
+        log.debug("RelationshipResolver initialized and relationships resolved.");
 
         String entityPackage = PackageResolver.resolvePackageName(basePackage, "entity");
 
@@ -104,7 +104,7 @@ public class EntityGenerator {
             } else {
                 try {
                     writeToFile(entityOutputPath.toString(), entityContent);
-                    log.info("Generated entity for table: {}", resolvedTable.getName());
+                    log.debug("Generated entity for table: {}", resolvedTable.getName());
                 } catch (IOException exception) {
                     log.error("Failed to write entity file for table: {}", resolvedTable.getName(), exception);
                 }
@@ -120,7 +120,7 @@ public class EntityGenerator {
                 } else {
                     try {
                         writeToFile(pkOutputPath.toString(), pkContent);
-                        log.info("Generated composite PK class '{}' for table: {}", pkClassName, resolvedTable.getName());
+                        log.debug("Generated composite PK class '{}' for table: {}", pkClassName, resolvedTable.getName());
                     } catch (IOException exception) {
                         log.error("Failed to write composite PK file '{}' for table: {}", pkClassName, resolvedTable.getName(), exception);
                     }
@@ -128,7 +128,7 @@ public class EntityGenerator {
             }
         }
 
-        log.info("Entity generation complete. Output directory: {}", entityDir.toAbsolutePath());
+        log.debug("Entity generation complete. Output directory: {}", entityDir.toAbsolutePath());
     }
 
 

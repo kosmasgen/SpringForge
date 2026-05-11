@@ -39,7 +39,7 @@ public class MapperGenerator {
         Path mapperDir = GeneratorSupport.ensureDirectory(
                 PackageResolver.resolvePath(outputDir, basePackage, "mapper")
         );
-        log.info("Mappers output directory: {}", mapperDir.toAbsolutePath());
+        log.debug("Mappers output directory: {}", mapperDir.toAbsolutePath());
 
         generateBaseMapper(mapperDir, basePackage);
 
@@ -56,7 +56,7 @@ public class MapperGenerator {
             generateMapper(table, mapperDir, basePackage);
         }
 
-        log.info("Mapper generation completed under: {}", mapperDir.toAbsolutePath());
+        log.debug("Mapper generation completed under: {}", mapperDir.toAbsolutePath());
     }
 
     /**
@@ -69,7 +69,7 @@ public class MapperGenerator {
         Path file = mapperDir.resolve("BaseMapper.java");
 
         if (Files.exists(file)) {
-            log.info("BaseMapper already exists. Skipping: {}", file.toAbsolutePath());
+            log.debug("BaseMapper already exists. Skipping: {}", file.toAbsolutePath());
             return;
         }
 

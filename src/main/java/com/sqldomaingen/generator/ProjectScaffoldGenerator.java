@@ -52,7 +52,7 @@ public class ProjectScaffoldGenerator {
 
         writePom(projectRoot, pkg, artifactId, overwrite);
         writeApplication(projectRoot, pkg, overwrite);
-        createApplicationProperties(projectRoot, artifactId, defaultSchemaName, overwrite);
+        createApplicationProperties(projectRoot, artifactId, defaultSchemaName, pkg, overwrite);
         createMessageProperties(projectRoot, overwrite);
         createMessageResolver(projectRoot, pkg, overwrite);
         writeGitignore(projectRoot, overwrite);
@@ -416,9 +416,16 @@ public class MessageResolver {
      * @param root project root directory
      * @param applicationName Spring application name
      * @param defaultSchemaName default database schema name
+     * @param basePackage generated project base package
      * @param overwrite whether existing files should be overwritten
      */
-    private void createApplicationProperties(Path root, String applicationName, String defaultSchemaName, boolean overwrite) {
+    private void createApplicationProperties(
+            Path root,
+            String applicationName,
+            String defaultSchemaName,
+            String basePackage,
+            boolean overwrite
+    ) {
         String name = (applicationName == null || applicationName.isBlank())
                 ? "generated-app"
                 : applicationName.trim();
@@ -426,6 +433,10 @@ public class MessageResolver {
         String resolvedSchemaName = (defaultSchemaName == null || defaultSchemaName.isBlank())
                 ? "public"
                 : defaultSchemaName.trim();
+
+        String resolvedBasePackage = (basePackage == null || basePackage.isBlank())
+                ? "com.generated"
+                : basePackage.trim();
 
         String props = """
 spring.application.name=%s
@@ -469,7 +480,13 @@ springdoc.swagger-ui.enabled=true
 springdoc.swagger-ui.tagsSorter=alpha
 springdoc.swagger-ui.operationsSorter=alpha
 springdoc.writer-with-order-by-keys=true
-""".formatted(name, resolvedSchemaName, resolvedSchemaName);
+
+############################
+# Logging
+############################
+logging.level.root=INFO
+logging.level.%s=INFO
+""".formatted(name, resolvedSchemaName, resolvedSchemaName, resolvedBasePackage);
 
         Path file = root.resolve("src/main/resources/application.properties");
         GeneratorSupport.writeFile(file, props, overwrite);

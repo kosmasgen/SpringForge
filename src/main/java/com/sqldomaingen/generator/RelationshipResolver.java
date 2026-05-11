@@ -146,7 +146,7 @@ public class RelationshipResolver {
      * @return locally created owning-side relationships
      */
     private List<Relationship> handleForeignKeyRelationships(Table sourceTable) {
-        log.info("Handling foreign key relationships for table: {}", sourceTable.getName());
+        log.debug("Handling foreign key relationships for table: {}", sourceTable.getName());
 
         List<Relationship> localRelationships = new ArrayList<>();
         List<Column> foreignKeys = getForeignKeys(sourceTable);
@@ -234,7 +234,7 @@ public class RelationshipResolver {
         relationship.setOnDelete(column.getOnDelete());
         relationship.setOnUpdate(column.getOnUpdate());
 
-        log.info("Created relationship: {}", relationship);
+        log.debug("Created relationship: {}", relationship);
         return relationship;
     }
 
