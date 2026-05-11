@@ -1,5 +1,6 @@
 package com.sqldomaingen.shell;
 
+import com.sqldomaingen.util.GeneratorSupport;
 import com.sqldomaingen.validation.GenerationValidationReport;
 import com.sqldomaingen.validation.GenerationValidationRunner;
 import com.sqldomaingen.validation.ValidationReportPdfWriter;
@@ -186,7 +187,7 @@ public class GeneratorCommands {
                 continue;
             }
 
-            String normalizedTableName = normalizeTableName(table.getName());
+            String normalizedTableName = GeneratorSupport.normalizeTableName(table.getName());
 
             if (Constants.JAVA_EXCLUDED_TABLES.contains(normalizedTableName)) {
                 log.info("Skipping Java generation for excluded table: {}", table.getName());
@@ -199,22 +200,6 @@ public class GeneratorCommands {
         return filteredTables;
     }
 
-    /**
-     * Normalizes a table name by removing the schema prefix and lowercasing it.
-     *
-     * @param tableName raw table name
-     * @return normalized table name
-     */
-    private String normalizeTableName(String tableName) {
-        String trimmedTableName = tableName.trim();
-        int dotIndex = trimmedTableName.lastIndexOf('.');
-
-        if (dotIndex >= 0 && dotIndex < trimmedTableName.length() - 1) {
-            return trimmedTableName.substring(dotIndex + 1).toLowerCase();
-        }
-
-        return trimmedTableName.toLowerCase();
-    }
 
     /**
      * Ensures the output directory exists and is usable.

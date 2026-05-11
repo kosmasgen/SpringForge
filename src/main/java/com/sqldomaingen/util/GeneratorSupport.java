@@ -21,13 +21,14 @@ public final class GeneratorSupport {
     }
 
     /**
-     * Removes any schema or qualifier prefix from a table name.
+     * Removes any schema or qualifier prefix from a table name
+     * and normalizes it to lowercase.
      *
      * @param raw raw table name
      * @return normalized table name without schema prefix
      */
     public static String normalizeTableName(String raw) {
-        if (raw == null) {
+        if (raw == null || raw.isBlank()) {
             return "";
         }
 
@@ -38,7 +39,7 @@ public final class GeneratorSupport {
             normalizedValue = normalizedValue.substring(dotIndex + 1);
         }
 
-        return normalizedValue;
+        return normalizedValue.toLowerCase();
     }
 
     /**

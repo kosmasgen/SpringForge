@@ -4,6 +4,7 @@ import com.sqldomaingen.model.Column;
 import com.sqldomaingen.model.CompositeKeyDefinition;
 import com.sqldomaingen.model.Table;
 import com.sqldomaingen.model.UniqueConstraint;
+import com.sqldomaingen.util.GeneratorSupport;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -608,30 +609,11 @@ public class CreateTableDefinition {
             }
         }
 
-        return "uk_" + normalizeTableName(this.tableName);
+        return "uk_" + GeneratorSupport.normalizeTableName(this.tableName);
     }
 
 
-    /**
-     * Removes schema prefix from a physical table name.
-     *
-     * @param tableName raw table name
-     * @return schema-free table name
-     */
-    private String normalizeTableName(String tableName) {
-        if (tableName == null || tableName.isBlank()) {
-            return "";
-        }
 
-        String trimmedTableName = tableName.trim();
-        int dotIndex = trimmedTableName.lastIndexOf('.');
-
-        if (dotIndex >= 0 && dotIndex < trimmedTableName.length() - 1) {
-            return trimmedTableName.substring(dotIndex + 1);
-        }
-
-        return trimmedTableName;
-    }
 
 
     /**

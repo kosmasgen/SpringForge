@@ -4,6 +4,7 @@ import com.sqldomaingen.model.Column;
 import com.sqldomaingen.model.ManyToManyRelation;
 import com.sqldomaingen.model.Relationship;
 import com.sqldomaingen.model.Table;
+import com.sqldomaingen.util.GeneratorSupport;
 import com.sqldomaingen.util.NamingConverter;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -291,7 +292,7 @@ public class RelationshipResolver {
      * @return true only for explicitly supported synthetic many-to-many join tables
      */
     private boolean isExplicitSyntheticManyToManyTable(Table table) {
-        String normalizedTableName = normalizeTableName(table.getName());
+        String normalizedTableName = GeneratorSupport.normalizeTableName(table.getName());
 
         Set<String> syntheticManyToManyTables = Set.of(
                 "company_language"
@@ -345,7 +346,7 @@ public class RelationshipResolver {
         ManyToManyRelation owningRelation = ManyToManyRelation.builder()
                 .fieldName(owningFieldName)
                 .targetEntityName(toEntityName(inverseTable.getName()))
-                .joinTableName(normalizeTableName(joinTable.getName()))
+                .joinTableName(GeneratorSupport.normalizeTableName(joinTable.getName()))
                 .joinColumnName(owningColumn.getName())
                 .inverseJoinColumnName(inverseColumn.getName())
                 .owningSide(true)
@@ -395,7 +396,7 @@ public class RelationshipResolver {
      * @return the generated entity class name
      */
     private String toEntityName(String tableName) {
-        String normalized = normalizeTableName(tableName);
+        String normalized = GeneratorSupport.normalizeTableName(tableName);
         String[] parts = normalized.split("_");
         StringBuilder builder = new StringBuilder();
 
@@ -421,7 +422,7 @@ public class RelationshipResolver {
      * @return the collection field name
      */
     private String toCollectionFieldName(String tableName) {
-        String camelCaseName = NamingConverter.toCamelCase(normalizeTableName(tableName));
+        String camelCaseName = NamingConverter.toCamelCase(GeneratorSupport.normalizeTableName(tableName));
 
         if (camelCaseName.endsWith("s")) {
             return camelCaseName;
@@ -503,14 +504,14 @@ public class RelationshipResolver {
             return direct;
         }
 
-        String noSchema = normalizeTableName(raw);
+        String noSchema = GeneratorSupport.normalizeTableName(raw);
         Table noSchemaHit = tableMap.get(noSchema);
         if (noSchemaHit != null) {
             return noSchemaHit;
         }
 
         for (Map.Entry<String, Table> entry : tableMap.entrySet()) {
-            String keyNorm = normalizeTableName(entry.getKey());
+            String keyNorm = GeneratorSupport.normalizeTableName(entry.getKey());
             if (keyNorm.equalsIgnoreCase(noSchema)) {
                 return entry.getValue();
             }
@@ -520,27 +521,6 @@ public class RelationshipResolver {
         return null;
     }
 
-    /**
-     * Strips the schema prefix from a table name.
-     * Example: public.school -> school
-     *
-     * @param raw the raw table name
-     * @return the schema-free table name
-     */
-    private static String normalizeTableName(String raw) {
-        if (raw == null) {
-            return "";
-        }
-
-        String value = raw.trim();
-        int dot = value.lastIndexOf('.');
-
-        if (dot >= 0 && dot < value.length() - 1) {
-            value = value.substring(dot + 1);
-        }
-
-        return value;
-    }
 
     /**
      * Determines the relationship type for a standard FK column.

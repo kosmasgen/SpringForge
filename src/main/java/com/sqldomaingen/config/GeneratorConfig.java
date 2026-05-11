@@ -1,5 +1,6 @@
 package com.sqldomaingen.config;
 
+import com.sqldomaingen.util.GeneratorSupport;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -18,6 +19,7 @@ public class GeneratorConfig {
      */
     private List<String> lookupTables = new ArrayList<>();
 
+
     /**
      * Checks whether the given table is configured as lookup table.
      *
@@ -29,28 +31,12 @@ public class GeneratorConfig {
             return false;
         }
 
-        String normalizedInputTableName = normalizeTableName(tableName);
+        String normalizedInputTableName = GeneratorSupport.normalizeTableName(tableName);
 
         return lookupTables.stream()
-                .filter(configuredTableName -> configuredTableName != null && !configuredTableName.isBlank())
-                .map(this::normalizeTableName)
+                .filter(configuredTableName -> configuredTableName != null
+                        && !configuredTableName.isBlank())
+                .map(GeneratorSupport::normalizeTableName)
                 .anyMatch(configuredTableName -> configuredTableName.equals(normalizedInputTableName));
-    }
-
-    /**
-     * Normalizes a table name by removing the schema prefix and lowercasing it.
-     *
-     * @param tableName raw table name
-     * @return normalized table name
-     */
-    private String normalizeTableName(String tableName) {
-        String trimmedTableName = tableName.trim();
-        int dotIndex = trimmedTableName.lastIndexOf('.');
-
-        if (dotIndex >= 0 && dotIndex < trimmedTableName.length() - 1) {
-            return trimmedTableName.substring(dotIndex + 1).toLowerCase();
-        }
-
-        return trimmedTableName.toLowerCase();
     }
 }

@@ -111,7 +111,7 @@ public class LiquibaseGenerator {
             Set<String> availableTableReferences
     ) {
         String resolvedAuthor = resolveLiquibaseAuthor(author);
-        String tableName = normalizeTableName(table.getName());
+        String tableName = GeneratorSupport.normalizeTableName(table.getName());
         String changelogFileName = toTableChangelogFileName(table.getName());
         String auditTableName = tableName + "_aud";
         String changeSetId = buildCreateTableAndAuditChangeSetId(tableName);
@@ -219,7 +219,7 @@ public class LiquibaseGenerator {
      */
     private String buildQualifiedTableName(String rawTableName) {
         String schemaName = extractSchemaNameFromTable(rawTableName);
-        String tableName = normalizeTableName(rawTableName);
+        String tableName = GeneratorSupport.normalizeTableName(rawTableName);
 
         if (schemaName == null || schemaName.isBlank()) {
             return tableName;
@@ -286,7 +286,7 @@ public class LiquibaseGenerator {
             }
 
             String canonicalReference = canonicalizeTableReference(table.getName());
-            String plainTableName = normalizeIdentifier(normalizeTableName(table.getName()));
+            String plainTableName = normalizeIdentifier(GeneratorSupport.normalizeTableName(table.getName()));
 
             if (!canonicalReference.isBlank()) {
                 availableTableReferences.add(canonicalReference);
@@ -854,30 +854,11 @@ public class LiquibaseGenerator {
      * @return changelog file name
      */
     private String toTableChangelogFileName(String tableName) {
-        String normalizedTableName = normalizeTableName(tableName);
+        String normalizedTableName = GeneratorSupport.normalizeTableName(tableName);
         return toCamelCase(normalizedTableName) + ".xml";
     }
 
-    /**
-     * Removes schema prefix from a table name.
-     *
-     * @param tableName raw table name
-     * @return schema-free table name
-     */
-    private String normalizeTableName(String tableName) {
-        if (tableName == null || tableName.isBlank()) {
-            return "";
-        }
 
-        String trimmedTableName = tableName.trim();
-        int dotIndex = trimmedTableName.lastIndexOf('.');
-
-        if (dotIndex >= 0 && dotIndex < trimmedTableName.length() - 1) {
-            return trimmedTableName.substring(dotIndex + 1);
-        }
-
-        return trimmedTableName;
-    }
 
     /**
      * Converts a snake_case table name to camelCase.
@@ -1144,7 +1125,7 @@ public class LiquibaseGenerator {
      * @return plain table name
      */
     private String extractTableNameOnly(String qualifiedTableName) {
-        return normalizeTableName(qualifiedTableName);
+        return GeneratorSupport.normalizeTableName(qualifiedTableName);
     }
 
     /**
