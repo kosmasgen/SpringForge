@@ -1,14 +1,16 @@
 package com.sqldomaingen.validation;
 
+import lombok.Getter;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
 /**
  * Aggregates validation sections and overall metadata for one generation run.
  */
+@Getter
 public class GenerationValidationReport {
 
     private final String inputFile;
@@ -62,14 +64,6 @@ public class GenerationValidationReport {
         ));
     }
 
-    /**
-     * Returns all report sections.
-     *
-     * @return immutable sections
-     */
-    public List<Section> getSections() {
-        return Collections.unmodifiableList(sections);
-    }
 
     /**
      * Returns all violations across all sections.
@@ -96,45 +90,6 @@ public class GenerationValidationReport {
     }
 
 
-    /**
-     * Returns the input SQL file path.
-     *
-     * @return input file path
-     */
-    @SuppressWarnings("unused")
-    public String getInputFile() {
-        return inputFile;
-    }
-
-    /**
-     * Returns the generation output directory.
-     *
-     * @return output directory
-     */
-    @SuppressWarnings("unused")
-    public String getOutputDir() {
-        return outputDir;
-    }
-
-    /**
-     * Returns the generated base package.
-     *
-     * @return base package
-     */
-    @SuppressWarnings("unused")
-    public String getBasePackage() {
-        return basePackage;
-    }
-
-    /**
-     * Returns the generation timestamp.
-     *
-     * @return generation timestamp
-     */
-    @SuppressWarnings("unused")
-    public LocalDateTime getGeneratedAt() {
-        return generatedAt;
-    }
 
     /**
      * One logical validation section.
