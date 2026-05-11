@@ -2,6 +2,7 @@ package com.sqldomaingen.generatorTest;
 
 import com.sqldomaingen.model.Entity;
 import com.sqldomaingen.model.Table;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.Objects;
  * mapper, entity POJO, and DTO POJO tests.
  */
 @Log4j2
+@RequiredArgsConstructor
 public class TestGenerator {
 
     private final ControllerTestGenerator controllerTestGenerator;
@@ -33,43 +35,6 @@ public class TestGenerator {
         );
     }
 
-    /**
-     * Creates a test generator with injected sub-generators.
-     *
-     * @param controllerTestGenerator controller test generator
-     * @param serviceImplTestGenerator service implementation test generator
-     * @param mapperTestGenerator mapper test generator
-     * @param entityPojoTestGenerator entity POJO test generator
-     * @param dtoPojoTestGenerator DTO POJO test generator
-     */
-    public TestGenerator(
-            ControllerTestGenerator controllerTestGenerator,
-            ServiceImplTestGenerator serviceImplTestGenerator,
-            MapperTestGenerator mapperTestGenerator,
-            EntityPojoTestGenerator entityPojoTestGenerator,
-            DtoPojoTestGenerator dtoPojoTestGenerator
-    ) {
-        this.controllerTestGenerator = Objects.requireNonNull(
-                controllerTestGenerator,
-                "controllerTestGenerator must not be null"
-        );
-        this.serviceImplTestGenerator = Objects.requireNonNull(
-                serviceImplTestGenerator,
-                "serviceImplTestGenerator must not be null"
-        );
-        this.mapperTestGenerator = Objects.requireNonNull(
-                mapperTestGenerator,
-                "mapperTestGenerator must not be null"
-        );
-        this.entityPojoTestGenerator = Objects.requireNonNull(
-                entityPojoTestGenerator,
-                "entityPojoTestGenerator must not be null"
-        );
-        this.dtoPojoTestGenerator = Objects.requireNonNull(
-                dtoPojoTestGenerator,
-                "dtoPojoTestGenerator must not be null"
-        );
-    }
 
     /**
      * Main entry point used by the generation pipeline.
