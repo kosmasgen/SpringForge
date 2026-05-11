@@ -45,41 +45,60 @@ public class ValidationReportPdfWriter {
 
         lines.add("GENERATION VALIDATION REPORT");
         lines.add("");
+
         lines.add("Generated at: " + report.getGeneratedAt().format(formatter));
         lines.add("Author: " + report.getAuthor());
         lines.add("Input file: " + report.getInputFile());
         lines.add("Output dir: " + report.getOutputDir());
         lines.add("Base package: " + report.getBasePackage());
+
         lines.add("Total issues: " + report.getTotalViolationCount());
+        lines.add("Total warnings: " + report.getTotalWarningCount());
+
         lines.add("");
 
         for (GenerationValidationReport.Section section : report.getSections()) {
+
             lines.add("SECTION: " + section.title());
 
             if (!section.details().isEmpty()) {
+
                 lines.add("Details:");
 
                 if ("Schema Tables".equals(section.title())) {
+
                     int index = 1;
+
                     for (String detail : section.details()) {
                         lines.add(index + ". " + detail);
                         index++;
                     }
+
                 } else {
                     lines.addAll(section.details());
                 }
             }
 
-            if ("Infrastructure".equals(section.title())) {
-                lines.add("");
-                continue;
-            }
-
             if (section.violations().isEmpty()) {
                 lines.add("Violations: None");
             } else {
+
                 lines.add("Violations:");
-                lines.addAll(section.violations());
+
+                for (String violation : section.violations()) {
+                    lines.add("- " + violation);
+                }
+            }
+
+            if (section.warnings().isEmpty()) {
+                lines.add("Warnings: None");
+            } else {
+
+                lines.add("Warnings:");
+
+                for (String warning : section.warnings()) {
+                    lines.add("- " + warning);
+                }
             }
 
             lines.add("");
@@ -87,6 +106,9 @@ public class ValidationReportPdfWriter {
 
         return lines;
     }
+
+
+
     /**
      * Builds a minimal valid PDF byte array.
      *

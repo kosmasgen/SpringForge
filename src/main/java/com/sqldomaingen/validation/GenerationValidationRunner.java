@@ -24,8 +24,8 @@ public class GenerationValidationRunner {
      * @param basePackage base Java package
      * @param author Liquibase/generation author
      * @param parsedTables all parsed tables
-
      * @param models generated entity models
+     * @param liquibaseWarnings Liquibase generation warnings
      * @return unified validation report
      */
     public GenerationValidationReport run(
@@ -34,27 +34,22 @@ public class GenerationValidationRunner {
             String basePackage,
             String author,
             List<Table> parsedTables,
-            List<Entity> models
+            List<Entity> models,
+            List<String> liquibaseWarnings
     ) {
         GenerationValidationReport report =
                 new GenerationValidationReport(inputFile, outputDir, basePackage, author);
 
         appendGenerationSummarySection(report, outputDir, basePackage, parsedTables);
-
         appendInfrastructureSection(report, outputDir, basePackage);
-
         appendI18nSupportSection(report, outputDir, basePackage);
-
         appendParsedTableNamesSection(report, parsedTables);
-
         appendGeneratedModelsSection(report, models);
 
-        appendLiquibaseSection(report, outputDir);
+        appendLiquibaseSection(report, outputDir, liquibaseWarnings);
 
         appendSchemaValidationChecklistSection(report, inputFile, outputDir);
-
         appendTodoEntitiesSection(report, inputFile, outputDir);
-
         appendSchemaValidationSection(report, inputFile, outputDir);
 
         return report;
@@ -238,30 +233,23 @@ public class GenerationValidationRunner {
      *
      * @param report target report
      * @param outputDir output directory
+     * @param liquibaseWarnings Liquibase generation warnings
      */
     private void appendLiquibaseSection(
             GenerationValidationReport report,
-            String outputDir
+            String outputDir,
+            List<String> liquibaseWarnings
     ) {
         List<String> details = new ArrayList<>();
         List<String> violations = new ArrayList<>();
 
-        Path changelogRoot = Paths.get(
-                outputDir,
-                "src",
-                "main",
-                "resources",
-                "db",
-                "migration",
-                "changelogs",
-                "v0.1.0"
-        );
+        Path changelogRoot = Paths.get(outputDir, "src", "main", "resources", "db", "migration", "changelogs", "v0.1.0");
 
         details.add("Liquibase xml files: " + countXmlFiles(changelogRoot));
 
         validateDirectoryExists(changelogRoot, violations);
 
-        report.addSection("Liquibase Output", details, violations);
+        report.addSection("Liquibase Output", details, violations, liquibaseWarnings == null ? List.of() : liquibaseWarnings);
     }
 
     /**

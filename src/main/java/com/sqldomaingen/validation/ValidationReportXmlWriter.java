@@ -39,31 +39,73 @@ public class ValidationReportXmlWriter {
         xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
         xml.append("<generationValidationReport>\n");
 
-        xml.append("  <generatedAt>").append(report.getGeneratedAt().format(formatter)).append("</generatedAt>\n");
-        xml.append("  <author>").append(escape(report.getAuthor())).append("</author>\n");
-        xml.append("  <inputFile>").append(escape(report.getInputFile())).append("</inputFile>\n");
-        xml.append("  <outputDir>").append(escape(report.getOutputDir())).append("</outputDir>\n");
-        xml.append("  <basePackage>").append(escape(report.getBasePackage())).append("</basePackage>\n");
-        xml.append("  <totalIssues>").append(report.getTotalViolationCount()).append("</totalIssues>\n");
+        xml.append("  <generatedAt>")
+                .append(report.getGeneratedAt().format(formatter))
+                .append("</generatedAt>\n");
+
+        xml.append("  <author>")
+                .append(escape(report.getAuthor()))
+                .append("</author>\n");
+
+        xml.append("  <inputFile>")
+                .append(escape(report.getInputFile()))
+                .append("</inputFile>\n");
+
+        xml.append("  <outputDir>")
+                .append(escape(report.getOutputDir()))
+                .append("</outputDir>\n");
+
+        xml.append("  <basePackage>")
+                .append(escape(report.getBasePackage()))
+                .append("</basePackage>\n");
+
+        xml.append("  <totalIssues>")
+                .append(report.getTotalViolationCount())
+                .append("</totalIssues>\n");
+
+        xml.append("  <totalWarnings>")
+                .append(report.getTotalWarningCount())
+                .append("</totalWarnings>\n");
 
         xml.append("  <sections>\n");
 
         for (GenerationValidationReport.Section section : report.getSections()) {
+
             xml.append("    <section>\n");
 
-            xml.append("      <title>").append(escape(section.title())).append("</title>\n");
+            xml.append("      <title>")
+                    .append(escape(section.title()))
+                    .append("</title>\n");
 
             xml.append("      <details>\n");
+
             for (String detail : section.details()) {
-                xml.append("        <detail>").append(escape(detail)).append("</detail>\n");
+                xml.append("        <detail>")
+                        .append(escape(detail))
+                        .append("</detail>\n");
             }
+
             xml.append("      </details>\n");
 
             xml.append("      <violations>\n");
+
             for (String violation : section.violations()) {
-                xml.append("        <violation>").append(escape(violation)).append("</violation>\n");
+                xml.append("        <violation>")
+                        .append(escape(violation))
+                        .append("</violation>\n");
             }
+
             xml.append("      </violations>\n");
+
+            xml.append("      <warnings>\n");
+
+            for (String warning : section.warnings()) {
+                xml.append("        <warning>")
+                        .append(escape(warning))
+                        .append("</warning>\n");
+            }
+
+            xml.append("      </warnings>\n");
 
             xml.append("    </section>\n");
         }

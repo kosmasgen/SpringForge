@@ -28,7 +28,12 @@ public class GenerationValidationReport {
      * @param basePackage generated base package
      * @param author Liquibase/generation author
      */
-    public GenerationValidationReport(String inputFile, String outputDir, String basePackage, String author) {
+    public GenerationValidationReport(
+            String inputFile,
+            String outputDir,
+            String basePackage,
+            String author
+    ) {
         this.inputFile = inputFile == null ? "" : inputFile;
         this.outputDir = outputDir == null ? "" : outputDir;
         this.basePackage = basePackage == null ? "" : basePackage;
@@ -38,32 +43,46 @@ public class GenerationValidationReport {
     }
 
     /**
-     * Returns the generation author.
-     *
-     * @return generation author
-     */
-    @SuppressWarnings("unused")
-    public String getAuthor() {
-        return author;
-    }
-
-
-
-    /**
      * Adds one validation section to the report.
      *
      * @param title section title
      * @param details informational lines
      * @param violations validation violations
      */
-    public void addSection(String title, List<String> details, List<String> violations) {
+    public void addSection(
+            String title,
+            List<String> details,
+            List<String> violations
+    ) {
         sections.add(new Section(
                 Objects.requireNonNullElse(title, "Untitled Section"),
                 details == null ? List.of() : List.copyOf(details),
-                violations == null ? List.of() : List.copyOf(violations)
+                violations == null ? List.of() : List.copyOf(violations),
+                List.of()
         ));
     }
 
+    /**
+     * Adds one report section including warnings.
+     *
+     * @param title section title
+     * @param details informational lines
+     * @param violations validation violations
+     * @param warnings generation warnings
+     */
+    public void addSection(
+            String title,
+            List<String> details,
+            List<String> violations,
+            List<String> warnings
+    ) {
+        sections.add(new Section(
+                Objects.requireNonNullElse(title, "Untitled Section"),
+                details == null ? List.of() : List.copyOf(details),
+                violations == null ? List.of() : List.copyOf(violations),
+                warnings == null ? List.of() : List.copyOf(warnings)
+        ));
+    }
 
     /**
      * Returns all violations across all sections.
@@ -81,6 +100,21 @@ public class GenerationValidationReport {
     }
 
     /**
+     * Returns all warnings across all sections.
+     *
+     * @return flattened warnings
+     */
+    public List<String> getAllWarnings() {
+        List<String> allWarnings = new ArrayList<>();
+
+        for (Section section : sections) {
+            allWarnings.addAll(section.warnings());
+        }
+
+        return allWarnings;
+    }
+
+    /**
      * Returns the total number of violations.
      *
      * @return total violation count
@@ -89,17 +123,28 @@ public class GenerationValidationReport {
         return getAllViolations().size();
     }
 
-
+    /**
+     * Returns the total number of warnings.
+     *
+     * @return total warning count
+     */
+    public int getTotalWarningCount() {
+        return getAllWarnings().size();
+    }
 
     /**
-     * One logical validation section.
+     * One logical validation/report section.
      *
      * @param title section title
      * @param details informational lines
      * @param violations validation violations
+     * @param warnings generation warnings
      */
-    public record Section(String title, List<String> details, List<String> violations) {
+    public record Section(
+            String title,
+            List<String> details,
+            List<String> violations,
+            List<String> warnings
+    ) {
     }
-
-
 }

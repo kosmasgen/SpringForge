@@ -121,17 +121,13 @@ public class GeneratorCommands {
             new TestGenerator().generateTests(businessGenerationTables, javaGenerationTables, models, outputDir,
                     packageName, overwrite);
 
-            new LiquibaseGenerator().generateLiquibaseFiles(outputDir, parsedTables, overwrite, author);
+            LiquibaseGenerator liquibaseGenerator = new LiquibaseGenerator();
+            liquibaseGenerator.generateLiquibaseFiles(outputDir, parsedTables, overwrite, author);
 
             Path validationDir = createValidationOutputDirectory(outputDir);
 
             GenerationValidationReport validationReport = new GenerationValidationRunner().run(
-                    inputFile,
-                    outputDir,
-                    packageName,
-                    author,
-                    parsedTables,
-                    models
+                    inputFile, outputDir, packageName, author, parsedTables, models,liquibaseGenerator.getGenerationWarnings()
             );
 
             Path xmlPath = validationDir.resolve("validation-report.xml");

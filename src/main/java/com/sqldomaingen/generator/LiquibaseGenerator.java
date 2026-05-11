@@ -19,6 +19,16 @@ import java.util.*;
 @Log4j2
 public class LiquibaseGenerator {
 
+    private final List<String> generationWarnings = new ArrayList<>();
+
+    /**
+     * Returns generation warnings collected during Liquibase generation.
+     *
+     * @return immutable generation warnings
+     */
+    public List<String> getGenerationWarnings() {
+        return List.copyOf(generationWarnings);
+    }
 
     /**
      * Generates the initial Liquibase structure without table includes.
@@ -1330,17 +1340,20 @@ public class LiquibaseGenerator {
         String schemaName = extractSchemaNameFromTable(table.getName());
         String qualifiedTableName = buildQualifiedTableName(table.getName());
 
-        for (var index : table.getIndexes()) {
+        for (IndexDefinition index : table.getIndexes()) {
             if (index == null || index.getColumns() == null || index.getColumns().isEmpty()) {
                 continue;
             }
 
             if (requiresUnsupportedIndexDependency(index.getColumns())) {
-                log.warn(
-                        "Skipping index '{}' on table '{}' because it depends on PostgreSQL extensions or custom functions.",
+                String warningMessage = String.format(
+                        "Skipped index '%s' on table '%s' (unsupported PostgreSQL function/extension dependency).",
                         index.getName(),
                         tableName
                 );
+
+                generationWarnings.add(warningMessage);
+                log.warn("{}", warningMessage);
                 continue;
             }
 
