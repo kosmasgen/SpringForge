@@ -1,6 +1,5 @@
 package com.sqldomaingen.validation;
 
-import com.sqldomaingen.model.Entity;
 import com.sqldomaingen.model.Table;
 import com.sqldomaingen.util.PackageResolver;
 
@@ -24,7 +23,6 @@ public class GenerationValidationRunner {
      * @param basePackage base Java package
      * @param author Liquibase/generation author
      * @param parsedTables all parsed tables
-     * @param models generated entity models
      * @param liquibaseWarnings Liquibase generation warnings
      * @return unified validation report
      */
@@ -34,7 +32,6 @@ public class GenerationValidationRunner {
             String basePackage,
             String author,
             List<Table> parsedTables,
-            List<Entity> models,
             List<String> liquibaseWarnings
     ) {
         GenerationValidationReport report =
@@ -44,10 +41,10 @@ public class GenerationValidationRunner {
         appendInfrastructureSection(report, outputDir, basePackage);
         appendI18nSupportSection(report, outputDir, basePackage);
         appendParsedTableNamesSection(report, parsedTables);
-        appendGeneratedModelsSection(report, models);
+
+        appendGeneratedModelsSection(report, outputDir, basePackage);
 
         appendLiquibaseSection(report, outputDir, liquibaseWarnings);
-
         appendSchemaValidationChecklistSection(report, inputFile, outputDir);
         appendTodoEntitiesSection(report, inputFile, outputDir);
         appendSchemaValidationSection(report, inputFile, outputDir);
@@ -386,6 +383,7 @@ public class GenerationValidationRunner {
             return;
         }
 
+        details.add("Total tables: " + tableNames.size());
         details.addAll(tableNames);
 
         report.addSection("Schema Tables", details, violations);
@@ -393,30 +391,59 @@ public class GenerationValidationRunner {
 
 
     /**
-     * Appends generated models section.
+     * Appends generated models section using the actual generated entity Java files.
      *
      * @param report validation report
-     * @param models generated entity models
+     * @param outputDir output project directory
+     * @param basePackage base package
      */
     private void appendGeneratedModelsSection(
             GenerationValidationReport report,
-            List<Entity> models
+            String outputDir,
+            String basePackage
     ) {
         List<String> details = new ArrayList<>();
+        List<String> violations = new ArrayList<>();
 
-        if (models == null || models.isEmpty()) {
+        Path entityDir = PackageResolver.resolvePath(outputDir, basePackage, "entity");
+        List<String> generatedModelNames = listGeneratedJavaClassNames(entityDir);
+
+        if (generatedModelNames.isEmpty()) {
             details.add("No models were generated.");
-            report.addSection("Generated Models", details, List.of());
+            violations.add("No generated model files were found under: " + entityDir.toAbsolutePath());
+            report.addSection("Generated Models", details, violations);
             return;
         }
 
-        details.add("Total models: " + models.size());
+        details.add("Total models: " + generatedModelNames.size());
+        details.addAll(generatedModelNames);
 
-        for (Entity entity : models) {
-            details.add(entity.getName());
+        report.addSection("Generated Models", details, violations);
+    }
+
+
+    /**
+     * Lists generated Java class names from a directory.
+     *
+     * @param directory source directory
+     * @return sorted generated Java class names without .java suffix
+     */
+    private List<String> listGeneratedJavaClassNames(Path directory) {
+        if (!Files.exists(directory) || !Files.isDirectory(directory)) {
+            return List.of();
         }
 
-        report.addSection("Generated Models", details, List.of());
+        try (var paths = Files.walk(directory)) {
+            return paths
+                    .filter(Files::isRegularFile)
+                    .filter(path -> path.toString().endsWith(".java"))
+                    .map(path -> path.getFileName().toString())
+                    .map(fileName -> fileName.substring(0, fileName.length() - ".java".length()))
+                    .sorted(String.CASE_INSENSITIVE_ORDER)
+                    .toList();
+        } catch (Exception exception) {
+            return List.of();
+        }
     }
 
     /**

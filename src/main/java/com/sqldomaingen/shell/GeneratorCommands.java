@@ -127,7 +127,7 @@ public class GeneratorCommands {
             Path validationDir = createValidationOutputDirectory(outputDir);
 
             GenerationValidationReport validationReport = new GenerationValidationRunner().run(
-                    inputFile, outputDir, packageName, author, parsedTables, models,liquibaseGenerator.getGenerationWarnings()
+                    inputFile, outputDir, packageName, author, parsedTables,liquibaseGenerator.getGenerationWarnings()
             );
 
             Path xmlPath = validationDir.resolve("validation-report.xml");
