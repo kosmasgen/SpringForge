@@ -15,8 +15,8 @@ public class Constants {
     public static final String JAVA_LOCAL_DATE_TIME = "java.time.LocalDateTime";
 
     public static final String DTO_SUFFIX = "Dto";
-    public static final String SPRING_BOOT_VERSION = "3.4.2";
-    public static final String SPRINGDOC_VERSION = "2.8.5";
+    public static final String SPRING_BOOT_VERSION = "3.4.13";
+    public static final String SPRINGDOC_VERSION = "2.8.17";
     public static final String MODELMAPPER_VERSION = "3.2.0";
 
     public static final String DEFAULT_VERSION = "v0.1.0";
