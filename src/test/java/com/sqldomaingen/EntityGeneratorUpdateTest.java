@@ -17,7 +17,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Log4j2
-class EntityGeneratorTestUp {
+class EntityGeneratorUpdateTest {
 
     private EntityGenerator entityGenerator;
 
@@ -34,13 +34,13 @@ class EntityGeneratorTestUp {
     void testGenerateEntityWithOneToManyFromBothSides() throws IOException {
         Table customers = new Table();
         customers.setName("Customers");
-        customers.setColumns(new ArrayList<>(List.of(createLongPrimaryKeyColumn("id"))));
+        customers.setColumns(new ArrayList<>(List.of(createLongPrimaryKeyColumn())));
 
         Table orders = new Table();
         orders.setName("Orders");
         orders.setColumns(new ArrayList<>(List.of(
-                createLongPrimaryKeyColumn("id"),
-                createRequiredLongForeignKeyColumn("customer_id", "Customers", "id")
+                createLongPrimaryKeyColumn(),
+                createRequiredLongForeignKeyColumn("customer_id", "Customers")
         )));
 
         entityGenerator.generate(
@@ -248,8 +248,8 @@ class EntityGeneratorTestUp {
         Table department = new Table();
         department.setName("Department");
         department.setColumns(new ArrayList<>(List.of(
-                createLongPrimaryKeyColumn("id"),
-                createNullableLongForeignKeyColumn("parent_id", "Department", "id")
+                createLongPrimaryKeyColumn(),
+                createNullableLongForeignKeyColumn()
         )));
 
         entityGenerator.generate(
@@ -317,16 +317,14 @@ class EntityGeneratorTestUp {
 
         Column businessLocationId = createRequiredUuidForeignKeyColumn(
                 "business_location_id",
-                "pep_schema.business_location",
-                "id"
+                "pep_schema.business_location"
         );
         businessLocationId.setFieldName("businessLocationId");
         businessLocationId.setPrimaryKey(true);
 
         Column languageId = createRequiredUuidForeignKeyColumn(
                 "language_id",
-                "pep_schema.languages",
-                "id"
+                "pep_schema.languages"
         );
         languageId.setFieldName("languageId");
         languageId.setPrimaryKey(true);
@@ -406,13 +404,13 @@ class EntityGeneratorTestUp {
     void testGenerateEntityWithOneToOne_UsesTempDirAndGeneratesBothSides() throws IOException {
         Table users = new Table();
         users.setName("Users");
-        users.setColumns(new ArrayList<>(List.of(createLongPrimaryKeyColumn("id"))));
+        users.setColumns(new ArrayList<>(List.of(createLongPrimaryKeyColumn())));
 
         Table userDetails = new Table();
         userDetails.setName("UserDetails");
 
-        Column detailsId = createLongPrimaryKeyColumn("id");
-        Column userIdFk = createRequiredLongForeignKeyColumn("user_id", "Users", "id");
+        Column detailsId = createLongPrimaryKeyColumn();
+        Column userIdFk = createRequiredLongForeignKeyColumn("user_id", "Users");
         userIdFk.setUnique(true);
 
         userDetails.setColumns(new ArrayList<>(List.of(detailsId, userIdFk)));
@@ -454,9 +452,9 @@ class EntityGeneratorTestUp {
         Table companyProfession = new Table();
         companyProfession.setName("pep_schema.company_profession");
 
-        Column id = createUuidPrimaryKeyColumn("id");
-        Column companyFk = createRequiredUuidForeignKeyColumn("company_id", "pep_schema.company", "id");
-        Column professionFk = createRequiredUuidForeignKeyColumn("profession_id", "pep_schema.profession", "id");
+        Column id = createUuidPrimaryKeyColumn();
+        Column companyFk = createRequiredUuidForeignKeyColumn("company_id", "pep_schema.company");
+        Column professionFk = createRequiredUuidForeignKeyColumn("profession_id", "pep_schema.profession");
 
         Column notes = new Column();
         notes.setName("notes");
@@ -519,16 +517,14 @@ class EntityGeneratorTestUp {
 
         Column companyProfileFk = createRequiredUuidForeignKeyColumn(
                 "company_profile_id",
-                "pep_schema.company_profile",
-                "id"
+                "pep_schema.company_profile"
         );
         companyProfileFk.setFieldName("companyProfileId");
         companyProfileFk.setPrimaryKey(true);
 
         Column languageFk = createRequiredUuidForeignKeyColumn(
                 "language_id",
-                "pep_schema.languages",
-                "id"
+                "pep_schema.languages"
         );
         languageFk.setFieldName("languageId");
         languageFk.setPrimaryKey(true);
@@ -598,16 +594,14 @@ class EntityGeneratorTestUp {
 
         Column companyStatusFk = createRequiredUuidForeignKeyColumn(
                 "company_status_id",
-                "pep_schema.company_status",
-                "id"
+                "pep_schema.company_status"
         );
         companyStatusFk.setFieldName("companyStatusId");
         companyStatusFk.setPrimaryKey(true);
 
         Column companyViewRulesFk = createRequiredUuidForeignKeyColumn(
                 "company_view_rules_id",
-                "pep_schema.company_view_rules",
-                "id"
+                "pep_schema.company_view_rules"
         );
         companyViewRulesFk.setFieldName("companyViewRulesId");
         companyViewRulesFk.setPrimaryKey(true);
@@ -688,10 +682,10 @@ class EntityGeneratorTestUp {
         Table companyProfessionSystemLink = new Table();
         companyProfessionSystemLink.setName("pep_schema.company_profession_system_link");
 
-        Column companyFk = createRequiredUuidForeignKeyColumn("company_id", "pep_schema.company", "id");
+        Column companyFk = createRequiredUuidForeignKeyColumn("company_id", "pep_schema.company");
         companyFk.setPrimaryKey(true);
 
-        Column professionSystemFk = createRequiredUuidForeignKeyColumn("profession_system_id", "pep_schema.profession_system", "id");
+        Column professionSystemFk = createRequiredUuidForeignKeyColumn("profession_system_id", "pep_schema.profession_system");
         professionSystemFk.setPrimaryKey(true);
 
         companyProfessionSystemLink.setColumns(new ArrayList<>(List.of(companyFk, professionSystemFk)));
@@ -757,10 +751,10 @@ class EntityGeneratorTestUp {
         Table companyLanguage = new Table();
         companyLanguage.setName("pep_schema.company_language");
 
-        Column companyFk = createRequiredUuidForeignKeyColumn("company_id", "pep_schema.company", "id");
+        Column companyFk = createRequiredUuidForeignKeyColumn("company_id", "pep_schema.company");
         companyFk.setPrimaryKey(true);
 
-        Column languageFk = createRequiredUuidForeignKeyColumn("language_id", "pep_schema.languages", "id");
+        Column languageFk = createRequiredUuidForeignKeyColumn("language_id", "pep_schema.languages");
         languageFk.setPrimaryKey(true);
 
         companyLanguage.setColumns(new ArrayList<>(List.of(companyFk, languageFk)));
@@ -795,14 +789,14 @@ class EntityGeneratorTestUp {
     private Table createUuidPkTable(String tableName) {
         Table table = new Table();
         table.setName(tableName);
-        table.setColumns(new ArrayList<>(List.of(createUuidPrimaryKeyColumn("id"))));
+        table.setColumns(new ArrayList<>(List.of(createUuidPrimaryKeyColumn())));
         return table;
     }
 
-    private Column createLongPrimaryKeyColumn(String columnName) {
+    private Column createLongPrimaryKeyColumn() {
         Column column = new Column();
-        column.setName(columnName);
-        column.setFieldName(columnName);
+        column.setName("id");
+        column.setFieldName("id");
         column.setSqlType("INT");
         column.setJavaType("Long");
         column.setPrimaryKey(true);
@@ -810,18 +804,18 @@ class EntityGeneratorTestUp {
         return column;
     }
 
-    private Column createUuidPrimaryKeyColumn(String columnName) {
+    private Column createUuidPrimaryKeyColumn() {
         Column column = new Column();
-        column.setName(columnName);
-        column.setFieldName(columnName);
+        column.setName("id");
+        column.setFieldName("id");
         column.setSqlType("uuid");
-        column.setJavaType("java.util.UUID");
+        column.setJavaType("UUID");
         column.setPrimaryKey(true);
         column.setNullable(false);
         return column;
     }
 
-    private Column createRequiredLongForeignKeyColumn(String columnName, String referencedTable, String referencedColumn) {
+    private Column createRequiredLongForeignKeyColumn(String columnName, String referencedTable) {
         Column column = new Column();
         column.setName(columnName);
         column.setFieldName(toCamelCase(columnName));
@@ -831,35 +825,35 @@ class EntityGeneratorTestUp {
         column.setForeignKey(true);
         column.setNullable(false);
         column.setReferencedTable(referencedTable);
-        column.setReferencedColumn(referencedColumn);
+        column.setReferencedColumn("id");
         return column;
     }
 
-    private Column createNullableLongForeignKeyColumn(String columnName, String referencedTable, String referencedColumn) {
+    private Column createNullableLongForeignKeyColumn() {
         Column column = new Column();
-        column.setName(columnName);
-        column.setFieldName(toCamelCase(columnName));
+        column.setName("parent_id");
+        column.setFieldName(toCamelCase("parent_id"));
         column.setSqlType("INT");
         column.setJavaType("Long");
         column.setPrimaryKey(false);
         column.setForeignKey(true);
         column.setNullable(true);
-        column.setReferencedTable(referencedTable);
-        column.setReferencedColumn(referencedColumn);
+        column.setReferencedTable("Department");
+        column.setReferencedColumn("id");
         return column;
     }
 
-    private Column createRequiredUuidForeignKeyColumn(String columnName, String referencedTable, String referencedColumn) {
+    private Column createRequiredUuidForeignKeyColumn(String columnName, String referencedTable) {
         Column column = new Column();
         column.setName(columnName);
         column.setFieldName(toCamelCase(columnName));
         column.setSqlType("uuid");
-        column.setJavaType("java.util.UUID");
+        column.setJavaType("UUID");
         column.setPrimaryKey(false);
         column.setForeignKey(true);
         column.setNullable(false);
         column.setReferencedTable(referencedTable);
-        column.setReferencedColumn(referencedColumn);
+        column.setReferencedColumn("id");
         return column;
     }
 
