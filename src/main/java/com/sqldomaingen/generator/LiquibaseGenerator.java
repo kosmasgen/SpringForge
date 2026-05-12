@@ -63,6 +63,12 @@ public class LiquibaseGenerator {
                 overwrite
         );
 
+        GeneratorSupport.writeFile(
+                versionDir.resolve("extensions.xml"),
+                buildExtensionsChangelogContent(author, tables),
+                overwrite
+        );
+
         generateTableChangelogFiles(versionDir, tables, overwrite, author);
 
         GeneratorSupport.writeFile(
@@ -82,6 +88,143 @@ public class LiquibaseGenerator {
                 versionDir.toAbsolutePath(),
                 orderedChangelogFiles.size()
         );
+    }
+
+
+    /**
+     * Builds the Liquibase changelog that installs required PostgreSQL extensions.
+     *
+     * @param author liquibase author
+     * @param tables parsed tables
+     * @return generated extensions changelog XML
+     */
+    private String buildExtensionsChangelogContent(String author, List<Table> tables) {
+        String resolvedAuthor = resolveLiquibaseAuthor(author);
+        String extensionSchema = resolveExtensionSchema(tables);
+
+        boolean requiresPgTrgm = requiresPgTrgmExtension(tables);
+        boolean requiresUnaccent = requiresUnaccentExtension(tables);
+
+        StringBuilder builder = new StringBuilder();
+
+        builder.append("""
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.11.xsd">
+
+""");
+
+        if (requiresPgTrgm) {
+            builder.append("""
+    <changeSet id="create_pg_trgm_extension" author="%s">
+        <sql>
+            CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA %s;
+        </sql>
+    </changeSet>
+
+""".formatted(resolvedAuthor, extensionSchema));
+        }
+
+        if (requiresUnaccent) {
+            builder.append("""
+    <changeSet id="create_unaccent_extension" author="%s">
+        <sql>
+            CREATE EXTENSION IF NOT EXISTS unaccent WITH SCHEMA %s;
+        </sql>
+    </changeSet>
+
+    <changeSet id="create_f_unaccent_ci_function" author="%s">
+        <sql splitStatements="false"><![CDATA[
+            CREATE OR REPLACE FUNCTION %s.f_unaccent_ci(input text)
+            RETURNS text
+            LANGUAGE sql
+            IMMUTABLE
+            PARALLEL SAFE
+            AS $$
+                SELECT lower(%s.unaccent(input));
+            $$;
+        ]]></sql>
+    </changeSet>
+
+""".formatted(
+                    resolvedAuthor,
+                    extensionSchema,
+                    resolvedAuthor,
+                    extensionSchema,
+                    extensionSchema
+            ));
+        }
+
+        builder.append("""
+</databaseChangeLog>
+""");
+
+        return builder.toString();
+    }
+
+
+    /**
+     * Determines whether the generated Liquibase changelog requires the pg_trgm extension.
+     *
+     * @param tables parsed tables
+     * @return true when any parsed index uses trigram operator classes
+     */
+    private boolean requiresPgTrgmExtension(List<Table> tables) {
+        return containsIndexColumnExpression(tables, "gin_trgm_ops")
+                || containsIndexColumnExpression(tables, "gist_trgm_ops");
+    }
+
+    /**
+     * Determines whether the generated Liquibase changelog requires the unaccent extension.
+     *
+     * @param tables parsed tables
+     * @return true when any parsed index uses unaccent-based expressions
+     */
+    private boolean requiresUnaccentExtension(List<Table> tables) {
+        return containsIndexColumnExpression(tables, "unaccent(")
+                || containsIndexColumnExpression(tables, "f_unaccent_ci(");
+    }
+
+
+    /**
+     * Checks whether any parsed index column expression contains the provided token.
+     *
+     * @param tables parsed tables
+     * @param token expression token to search for
+     * @return true when at least one index column expression contains the token
+     */
+    private boolean containsIndexColumnExpression(List<Table> tables, String token) {
+        if (tables == null || tables.isEmpty() || token == null || token.isBlank()) {
+            return false;
+        }
+
+        String normalizedToken = token.toLowerCase(Locale.ROOT);
+
+        for (Table table : tables) {
+            if (table == null || table.getIndexes() == null || table.getIndexes().isEmpty()) {
+                continue;
+            }
+
+            for (IndexDefinition index : table.getIndexes()) {
+                if (index == null || index.getColumns() == null || index.getColumns().isEmpty()) {
+                    continue;
+                }
+
+                for (String columnExpression : index.getColumns()) {
+                    if (columnExpression == null || columnExpression.isBlank()) {
+                        continue;
+                    }
+
+                    if (columnExpression.toLowerCase(Locale.ROOT).contains(normalizedToken)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -830,16 +973,17 @@ public class LiquibaseGenerator {
         StringBuilder builder = new StringBuilder();
 
         builder.append("""
-    <?xml version="1.0" encoding="utf-8"?>
-    <databaseChangeLog
-            logicalFilePath="%s/main.xml"
-            xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-            xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.11.xsd">
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+        logicalFilePath="%s/main.xml"
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.11.xsd">
 
-    """.formatted(Constants.DEFAULT_VERSION));
+""".formatted(Constants.DEFAULT_VERSION));
 
         builder.append("    <include file=\"audit.xml\" relativeToChangelogFile=\"true\" />\n");
+        builder.append("    <include file=\"extensions.xml\" relativeToChangelogFile=\"true\" />\n");
 
         for (String changelogFile : changelogFiles) {
             builder.append("    <include file=\"")
@@ -979,6 +1123,22 @@ public class LiquibaseGenerator {
         }
 
         return "public";
+    }
+
+    /**
+     * Resolves the schema where PostgreSQL extensions and helper functions are created.
+     *
+     * @param tables parsed tables
+     * @return schema name used for extensions and helper functions
+     */
+    private String resolveExtensionSchema(List<Table> tables) {
+        String schemaName = resolveRevisionSequenceSchema(tables);
+
+        if (schemaName == null || schemaName.isBlank()) {
+            return "public";
+        }
+
+        return schemaName;
     }
 
     /**
@@ -1345,22 +1505,10 @@ public class LiquibaseGenerator {
                 continue;
             }
 
-            if (requiresUnsupportedIndexDependency(index.getColumns())) {
-                String warningMessage = String.format(
-                        "Skipped index '%s' on table '%s' (unsupported PostgreSQL function/extension dependency).",
-                        index.getName(),
-                        tableName
-                );
-
-                generationWarnings.add(warningMessage);
-                log.warn("{}", warningMessage);
-                continue;
-            }
-
             boolean requiresRawSql = requiresRawSqlIndexDefinition(index);
 
             if (requiresRawSql) {
-                appendRawSqlIndex(builder, index, qualifiedTableName);
+                appendRawSqlIndex(builder, index, qualifiedTableName, resolveExtensionSchema(List.of(table)));
                 continue;
             }
 
@@ -1378,10 +1526,15 @@ public class LiquibaseGenerator {
                 .anyMatch(this::requiresRawSqlIndex);
     }
 
-    private void appendRawSqlIndex(StringBuilder builder, IndexDefinition index, String qualifiedTableName) {
+    private void appendRawSqlIndex(
+            StringBuilder builder,
+            IndexDefinition index,
+            String qualifiedTableName,
+            String extensionSchema
+    ) {
         String columnList = index.getColumns().stream()
                 .filter(Objects::nonNull)
-                .map(this::toIndexSqlColumnExpression)
+                .map(columnExpression -> toIndexSqlColumnExpression(columnExpression, extensionSchema))
                 .filter(columnExpression -> !columnExpression.isBlank())
                 .collect(java.util.stream.Collectors.joining(", "));
 
@@ -1570,7 +1723,7 @@ public class LiquibaseGenerator {
      * @param rawIdentifier raw SQL identifier from the parsed index definition
      * @return SQL-safe column expression for the index body
      */
-    private String toIndexSqlColumnExpression(String rawIdentifier) {
+    private String toIndexSqlColumnExpression(String rawIdentifier, String extensionSchema) {
         String normalizedIdentifier = normalizeIdentifier(rawIdentifier);
 
         if (normalizedIdentifier.isBlank()) {
@@ -1581,8 +1734,17 @@ public class LiquibaseGenerator {
             return "\"" + normalizedIdentifier + "\"";
         }
 
-        return normalizedIdentifier
+        String expression = normalizedIdentifier
                 .replaceAll("(?i)\\)\\s*(gin_trgm_ops|gist_trgm_ops)$", ") $1");
+
+        if (extensionSchema != null && !extensionSchema.isBlank()) {
+            expression = expression.replaceAll(
+                    "(?i)(?<![\\w.])f_unaccent_ci\\s*\\(",
+                    extensionSchema + ".f_unaccent_ci("
+            );
+        }
+
+        return expression;
     }
 
 

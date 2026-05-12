@@ -222,6 +222,54 @@ class LiquibaseGeneratorTest {
         );
     }
 
+    @Test
+    void shouldGenerateRawSqlForTrigramExpressionIndex() throws Exception {
+        Column id = new Column();
+        id.setName("id");
+        id.setSqlType("int8");
+        id.setPrimaryKey(true);
+        id.setNullable(false);
+
+        Column address = new Column();
+        address.setName("address");
+        address.setSqlType("varchar(255)");
+
+        IndexDefinition indexDefinition = new IndexDefinition();
+        indexDefinition.setName("idx_locations_address_lower_trgm");
+        indexDefinition.setTableName("public.locations");
+        indexDefinition.setUsingMethod("gin");
+        indexDefinition.setColumns(List.of("lower((address)::text) gin_trgm_ops"));
+
+        Table table = table("public.locations", id, address);
+        table.setIndexes(List.of(indexDefinition));
+
+        LiquibaseGenerator generator = new LiquibaseGenerator();
+
+        generator.generateLiquibaseFiles(
+                tempDir.toString(),
+                List.of(table),
+                true
+        );
+
+        Path xml = tempDir.resolve("src/main/resources/db/migration/changelogs/v0.1.0/locations.xml");
+        String content = Files.readString(xml);
+
+        assertTrue(
+                content.contains("CREATE INDEX idx_locations_address_lower_trgm ON public.locations USING gin (lower((address)::text) gin_trgm_ops);"),
+                "Trigram expression index must be generated as raw SQL"
+        );
+
+        assertFalse(
+                content.contains("Skipped index"),
+                "Trigram expression index must not be skipped"
+        );
+
+        assertTrue(
+                generator.getGenerationWarnings().isEmpty(),
+                "Trigram expression index must not produce generation warning"
+        );
+    }
+
     private Table table(String tableName, Column... columns) {
         Table table = new Table();
         table.setName(tableName);
