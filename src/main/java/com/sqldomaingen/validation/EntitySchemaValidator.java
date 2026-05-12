@@ -184,6 +184,7 @@ public class EntitySchemaValidator {
         validateColumnConstraints(entityDefinition, tableDefinition, violations);
         validateMapsIdConsistency(entityDefinition, entityBySimpleName, violations);
         validateRelations(entityDefinition, tableDefinition, schemaTables, entityBySimpleName, violations);
+        validateMissingInverseOneToOneRelations(tableDefinition, schemaTables, entityBySimpleName, violations);
         validateForeignKeyTypeCompatibility(entityDefinition, tableDefinition, schemaTables, violations);
         validateForeignKeyCoverage(entityDefinition, tableDefinition, schemaTables, violations);
         validateMissingTableColumns(entityDefinition, tableDefinition, entityBySimpleName, violations);
@@ -830,6 +831,7 @@ public class EntitySchemaValidator {
     private TableDefinition parseTableBlock(String tableName, String tableBody) {
         Map<String, ColumnDefinition> columns = new LinkedHashMap<>();
         List<ForeignKeyDefinition> foreignKeys = new ArrayList<>();
+        Set<String> uniqueColumns = new LinkedHashSet<>();
         List<String> segments = splitTopLevelSqlSegments(tableBody);
 
         for (String segment : segments) {
@@ -846,6 +848,11 @@ public class EntitySchemaValidator {
                 continue;
             }
 
+            if (isUniqueConstraint(trimmed)) {
+                uniqueColumns.addAll(parseUniqueConstraintColumns(trimmed));
+                continue;
+            }
+
             if (isTableConstraint(trimmed)) {
                 continue;
             }
@@ -853,6 +860,10 @@ public class EntitySchemaValidator {
             ColumnDefinition columnDefinition = parseColumnDefinition(trimmed);
             if (columnDefinition != null) {
                 columns.put(normalizeName(columnDefinition.name()), columnDefinition);
+
+                if (columnDefinition.unique()) {
+                    uniqueColumns.add(normalizeName(columnDefinition.name()));
+                }
 
                 ForeignKeyDefinition inlineForeignKeyDefinition =
                         parseInlineForeignKeyConstraint(tableName, columnDefinition.name(), trimmed);
@@ -863,7 +874,190 @@ public class EntitySchemaValidator {
             }
         }
 
-        return new TableDefinition(tableName, columns, foreignKeys);
+        return new TableDefinition(tableName, columns, foreignKeys, uniqueColumns);
+    }
+
+    /**
+     * Checks whether a SQL segment is a UNIQUE table constraint.
+     *
+     * @param sqlSegment SQL segment
+     * @return true when the segment defines a UNIQUE constraint
+     */
+    private boolean isUniqueConstraint(String sqlSegment) {
+        String normalized = sqlSegment.trim().toUpperCase(Locale.ROOT);
+
+        return normalized.startsWith("UNIQUE")
+                || normalized.startsWith("CONSTRAINT ") && normalized.contains(" UNIQUE ");
+    }
+
+    /**
+     * Parses single-column UNIQUE constraint columns.
+     *
+     * @param sqlSegment SQL constraint segment
+     * @return normalized unique column names
+     */
+    private Set<String> parseUniqueConstraintColumns(String sqlSegment) {
+        Matcher matcher = Pattern.compile("(?is)\\bUNIQUE\\s*\\(([^)]+)\\)").matcher(sqlSegment);
+
+        if (!matcher.find()) {
+            return Set.of();
+        }
+
+        List<String> columns = splitIdentifierList(matcher.group(1));
+
+        if (columns.size() != 1) {
+            return Set.of();
+        }
+
+        return Set.of(normalizeName(columns.getFirst()));
+    }
+
+    /**
+     * Validates that unique foreign keys generated as owning @OneToOne also have
+     * the expected inverse @OneToOne(mappedBy=...) field on the referenced entity.
+     *
+     * @param tableDefinition current SQL table
+     * @param schemaTables parsed SQL schema tables
+     * @param entityBySimpleName generated entities by simple name
+     * @param violations collected violations
+     */
+    private void validateMissingInverseOneToOneRelations(
+            TableDefinition tableDefinition,
+            Map<String, TableDefinition> schemaTables,
+            Map<String, JavaEntityDefinition> entityBySimpleName,
+            List<String> violations
+    ) {
+        JavaEntityDefinition owningEntity = findEntityForTable(tableDefinition, entityBySimpleName);
+        if (owningEntity == null) {
+            return;
+        }
+
+        for (ForeignKeyDefinition foreignKeyDefinition : tableDefinition.foreignKeys()) {
+            if (!isUniqueForeignKeyColumn(tableDefinition, foreignKeyDefinition.sourceColumn())) {
+                continue;
+            }
+
+            JavaFieldDefinition owningField = findOwningOneToOneFieldForForeignKey(
+                    owningEntity,
+                    foreignKeyDefinition.sourceColumn()
+            );
+
+            if (owningField == null) {
+                continue;
+            }
+
+            TableDefinition targetTableDefinition = resolveTableDefinitionByPhysicalOrUnqualifiedName(
+                    schemaTables,
+                    foreignKeyDefinition.targetTable()
+            );
+
+            if (targetTableDefinition == null) {
+                continue;
+            }
+
+            JavaEntityDefinition targetEntity = findEntityForTable(targetTableDefinition, entityBySimpleName);
+            if (targetEntity == null) {
+                continue;
+            }
+
+            String expectedInverseFieldName = decapitalize(owningEntity.simpleName());
+
+            if (!hasInverseOneToOneField(targetEntity, owningEntity.simpleName(), expectedInverseFieldName, owningField.name())) {
+                violations.add("[" + targetEntity.displayName() + "] Missing inverse @OneToOne field '"
+                        + expectedInverseFieldName + "' mappedBy='" + owningField.name()
+                        + "' for unique foreign key '" + tableDefinition.fullName() + "."
+                        + foreignKeyDefinition.sourceColumn() + "'");
+            }
+        }
+    }
+
+    /**
+     * Checks whether the foreign key source column is unique.
+     *
+     * @param tableDefinition source table
+     * @param sourceColumn source FK column
+     * @return true when the FK column is unique
+     */
+    private boolean isUniqueForeignKeyColumn(TableDefinition tableDefinition, String sourceColumn) {
+        String normalizedSourceColumn = normalizeName(sourceColumn);
+        ColumnDefinition columnDefinition = tableDefinition.columns().get(normalizedSourceColumn);
+
+        return tableDefinition.uniqueColumns().contains(normalizedSourceColumn)
+                || columnDefinition != null && columnDefinition.unique();
+    }
+
+    /**
+     * Finds the generated entity for a SQL table.
+     *
+     * @param tableDefinition SQL table definition
+     * @param entityBySimpleName generated entities by simple name
+     * @return matching Java entity or null
+     */
+    private JavaEntityDefinition findEntityForTable(
+            TableDefinition tableDefinition,
+            Map<String, JavaEntityDefinition> entityBySimpleName
+    ) {
+        String expectedEntityName = toPascalCase(extractUnqualifiedTableName(tableDefinition.fullName()));
+        return entityBySimpleName.get(expectedEntityName);
+    }
+
+    /**
+     * Finds the owning @OneToOne field that uses the given FK column.
+     *
+     * @param entityDefinition generated entity
+     * @param sourceColumn FK source column
+     * @return owning @OneToOne field or null
+     */
+    private JavaFieldDefinition findOwningOneToOneFieldForForeignKey(
+            JavaEntityDefinition entityDefinition,
+            String sourceColumn
+    ) {
+        String normalizedSourceColumn = normalizeName(sourceColumn);
+
+        return entityDefinition.fields().stream()
+                .filter(field -> field.hasAnnotation("OneToOne"))
+                .filter(field -> field.annotationAttribute("OneToOne", "mappedBy") == null)
+                .filter(field -> resolveJoinColumnNames(field).stream()
+                        .map(this::normalizeName)
+                        .anyMatch(normalizedSourceColumn::equals))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * Checks whether the target entity contains the expected inverse @OneToOne field.
+     *
+     * @param targetEntity target entity
+     * @param expectedFieldType expected inverse field type
+     * @param expectedFieldName expected inverse field name
+     * @param expectedMappedBy expected mappedBy value
+     * @return true when the inverse field exists
+     */
+    private boolean hasInverseOneToOneField(
+            JavaEntityDefinition targetEntity,
+            String expectedFieldType,
+            String expectedFieldName,
+            String expectedMappedBy
+    ) {
+        return targetEntity.fields().stream()
+                .filter(field -> field.hasAnnotation("OneToOne"))
+                .filter(field -> expectedFieldName.equals(field.name()))
+                .filter(field -> expectedFieldType.equals(simpleTypeName(field.type())))
+                .anyMatch(field -> expectedMappedBy.equals(field.annotationAttribute("OneToOne", "mappedBy")));
+    }
+
+    /**
+     * Decapitalizes a Java class name into a field name.
+     *
+     * @param value class name
+     * @return decapitalized field name
+     */
+    private String decapitalize(String value) {
+        if (value == null || value.isBlank()) {
+            return value;
+        }
+
+        return Character.toLowerCase(value.charAt(0)) + value.substring(1);
     }
 
     /**
@@ -2272,7 +2466,8 @@ public class EntitySchemaValidator {
     private record TableDefinition(
             String fullName,
             Map<String, ColumnDefinition> columns,
-            List<ForeignKeyDefinition> foreignKeys
+            List<ForeignKeyDefinition> foreignKeys,
+            Set<String> uniqueColumns
     ) {
     }
 
