@@ -75,7 +75,7 @@ public class JavaImportCollector {
                 continue;
             }
 
-            // ΜΗΝ κάνεις import DTO (ίδιο package)
+            // Do not import DTOs from the same package
             if (token.endsWith("Dto")) {
                 continue;
             }

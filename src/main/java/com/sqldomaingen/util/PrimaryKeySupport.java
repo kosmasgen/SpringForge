@@ -41,17 +41,6 @@ public final class PrimaryKeySupport {
         return getPrimaryKeyColumns(table).size() > 1;
     }
 
-    /**
-     * Returns true when the table has exactly one primary key column.
-     *
-     * @param table source table metadata
-     * @return true when the table uses a single-column primary key
-     */
-    public static boolean hasSinglePrimaryKey(Table table) {
-        validateTable(table);
-
-        return getPrimaryKeyColumns(table).size() == 1;
-    }
 
     /**
      * Returns all primary key columns of the table in declaration order.
@@ -85,7 +74,7 @@ public final class PrimaryKeySupport {
             throw new IllegalStateException("Composite primary key found for table: " + table.getName());
         }
 
-        return primaryKeyColumns.get(0);
+        return primaryKeyColumns.getFirst();
     }
 
     /**
@@ -131,109 +120,11 @@ public final class PrimaryKeySupport {
         return resolveScalarPrimaryKeyTypeRef(primaryKeyColumn);
     }
 
-    /**
-     * Resolves only the simple primary key type name for generator code.
-     *
-     * @param table source table metadata
-     * @param entityName entity simple name
-     * @param entityPackage entity package name
-     * @return simple primary key type name
-     */
-    public static String resolvePrimaryKeyTypeName(
-            Table table,
-            String entityName,
-            String entityPackage
-    ) {
-        return resolvePrimaryKeyTypeRef(table, entityName, entityPackage).simpleName();
-    }
 
-    /**
-     * Resolves the primary key import line, if required.
-     *
-     * @param table source table metadata
-     * @param entityName entity simple name
-     * @param entityPackage entity package name
-     * @return import line or null when no import is needed
-     */
-    public static String resolvePrimaryKeyImportLine(
-            Table table,
-            String entityName,
-            String entityPackage
-    ) {
-        return resolvePrimaryKeyTypeRef(table, entityName, entityPackage).importLine();
-    }
 
-    /**
-     * Returns true when any primary key column requires UUID import.
-     *
-     * @param table source table metadata
-     * @return true when UUID import is required
-     */
-    public static boolean needsUuidImport(Table table) {
-        return getPrimaryKeyColumns(table).stream()
-                .map(PrimaryKeySupport::resolvePrimaryKeyColumnSimpleType)
-                .anyMatch("UUID"::equals);
-    }
 
-    /**
-     * Returns true when any primary key column requires BigDecimal import.
-     *
-     * @param table source table metadata
-     * @return true when BigDecimal import is required
-     */
-    public static boolean needsBigDecimalImport(Table table) {
-        return getPrimaryKeyColumns(table).stream()
-                .map(PrimaryKeySupport::resolvePrimaryKeyColumnSimpleType)
-                .anyMatch("BigDecimal"::equals);
-    }
 
-    /**
-     * Returns true when any primary key column requires BigInteger import.
-     *
-     * @param table source table metadata
-     * @return true when BigInteger import is required
-     */
-    public static boolean needsBigIntegerImport(Table table) {
-        return getPrimaryKeyColumns(table).stream()
-                .map(PrimaryKeySupport::resolvePrimaryKeyColumnSimpleType)
-                .anyMatch("BigInteger"::equals);
-    }
 
-    /**
-     * Returns true when any primary key column requires LocalDate import.
-     *
-     * @param table source table metadata
-     * @return true when LocalDate import is required
-     */
-    public static boolean needsLocalDateImport(Table table) {
-        return getPrimaryKeyColumns(table).stream()
-                .map(PrimaryKeySupport::resolvePrimaryKeyColumnSimpleType)
-                .anyMatch("LocalDate"::equals);
-    }
-
-    /**
-     * Returns true when any primary key column requires LocalDateTime import.
-     *
-     * @param table source table metadata
-     * @return true when LocalDateTime import is required
-     */
-    public static boolean needsLocalDateTimeImport(Table table) {
-        return getPrimaryKeyColumns(table).stream()
-                .map(PrimaryKeySupport::resolvePrimaryKeyColumnSimpleType)
-                .anyMatch("LocalDateTime"::equals);
-    }
-
-    /**
-     * Returns true when any primary key column requires LocalTime import.
-     *
-     * @param table source table metadata
-     * @return true when LocalTime import is required
-     */
-    public static boolean needsLocalTimeImport(Table table) {
-        return getPrimaryKeyColumns(table).stream()
-                .map(PrimaryKeySupport::resolvePrimaryKeyColumnSimpleType)
-                .anyMatch("LocalTime"::equals);
-    }
 
     /**
      * Resolves the simple Java type for a primary key column.
@@ -292,31 +183,15 @@ public final class PrimaryKeySupport {
             return null;
         }
 
-        if ("BigDecimal".equals(rawJavaType)) {
-            return "import java.math.BigDecimal;";
-        }
-
-        if ("BigInteger".equals(rawJavaType)) {
-            return "import java.math.BigInteger;";
-        }
-
-        if ("UUID".equalsIgnoreCase(rawJavaType)) {
-            return "import java.util.UUID;";
-        }
-
-        if ("LocalDate".equals(rawJavaType)) {
-            return "import java.time.LocalDate;";
-        }
-
-        if ("LocalDateTime".equals(rawJavaType)) {
-            return "import java.time.LocalDateTime;";
-        }
-
-        if ("LocalTime".equals(rawJavaType)) {
-            return "import java.time.LocalTime;";
-        }
-
-        return JavaTypeSupport.resolveImportLine(rawJavaType);
+        return switch (rawJavaType) {
+            case "BigDecimal" -> "import java.math.BigDecimal;";
+            case "BigInteger" -> "import java.math.BigInteger;";
+            case "UUID" -> "import java.util.UUID;";
+            case "LocalDate" -> "import java.time.LocalDate;";
+            case "LocalDateTime" -> "import java.time.LocalDateTime;";
+            case "LocalTime" -> "import java.time.LocalTime;";
+            default -> JavaTypeSupport.resolveImportLine(rawJavaType);
+        };
     }
 
     /**

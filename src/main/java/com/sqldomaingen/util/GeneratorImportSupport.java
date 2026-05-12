@@ -144,56 +144,6 @@ public final class GeneratorImportSupport {
         }
     }
 
-    /**
-     * Returns supported types list.
-     */
-    public static List<String> getSupportedTypes() {
-        return SUPPORTED_TYPES;
-    }
-
-    /**
-     * Resolves imports directly from simple Java type names.
-     *
-     * @param typeNames simple Java type names
-     * @return set of import lines
-     */
-    public static Set<String> resolveImportsFromTypes(Set<String> typeNames) {
-        Set<String> imports = new LinkedHashSet<>();
-
-        if (typeNames == null || typeNames.isEmpty()) {
-            return imports;
-        }
-
-        for (String typeName : typeNames) {
-            tryAddImportForType(imports, typeName);
-        }
-
-        return imports;
-    }
-
-    /**
-     * Adds an import for the provided simple Java type name when supported.
-     *
-     * @param imports target import set
-     * @param typeName simple Java type name
-     */
-    private static void tryAddImportForType(Set<String> imports, String typeName) {
-        if (typeName == null || typeName.isBlank()) {
-            return;
-        }
-
-        String normalizedType = typeName.trim();
-
-        if (!SUPPORTED_TYPES.contains(normalizedType)) {
-            return;
-        }
-
-        String importLine = JavaTypeSupport.resolveImportLine(normalizedType);
-
-        if (importLine != null && !importLine.isBlank()) {
-            imports.add(importLine);
-        }
-    }
 
     /**
      * Adds framework imports required by generated REST controllers.

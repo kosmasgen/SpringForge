@@ -17,34 +17,9 @@ import java.util.Set;
 public final class JavaTypeSupport {
 
     private static final Set<String> SCALAR_TYPES = Set.of(
-            "Object",
-            "String",
-            "Long",
-            "Integer",
-            "Boolean",
-            "Double",
-            "Float",
-            "Short",
-            "Byte",
-            "Character",
-            "long",
-            "int",
-            "boolean",
-            "double",
-            "float",
-            "short",
-            "byte",
-            "char",
-            "UUID",
-            "BigDecimal",
-            "BigInteger",
-            "LocalDate",
-            "LocalTime",
-            "LocalDateTime",
-            "OffsetTime",
-            "OffsetDateTime",
-            "Instant",
-            "ZonedDateTime"
+            "Object", "String", "Long", "Integer", "Boolean", "Double", "Float", "Short", "Byte", "Character", "long",
+            "int", "boolean", "double", "float", "short", "byte", "char", "UUID", "BigDecimal", "BigInteger",
+            "LocalDate", "LocalTime", "LocalDateTime", "OffsetTime", "OffsetDateTime", "Instant", "ZonedDateTime"
     );
 
 
@@ -257,89 +232,7 @@ public final class JavaTypeSupport {
         };
     }
 
-    /**
-     * Returns true when the provided raw type is a UUID type.
-     *
-     * @param rawType raw Java type
-     * @return true when the type is UUID
-     */
-    public static boolean isUuidType(String rawType) {
-        String simpleType = resolveSimpleType(rawType);
-        return "UUID".equals(simpleType);
-    }
 
-    /**
-     * Returns true when the provided raw type is a BigDecimal type.
-     *
-     * @param rawType raw Java type
-     * @return true when the type is BigDecimal
-     */
-    public static boolean isBigDecimalType(String rawType) {
-        String simpleType = resolveSimpleType(rawType);
-        return "BigDecimal".equals(simpleType);
-    }
-
-    /**
-     * Returns true when the provided raw type is a BigInteger type.
-     *
-     * @param rawType raw Java type
-     * @return true when the type is BigInteger
-     */
-    public static boolean isBigIntegerType(String rawType) {
-        String simpleType = resolveSimpleType(rawType);
-        return "BigInteger".equals(simpleType);
-    }
-
-    /**
-     * Returns true when the provided raw type is a LocalDate type.
-     *
-     * @param rawType raw Java type
-     * @return true when the type is LocalDate
-     */
-    public static boolean isLocalDateType(String rawType) {
-        String simpleType = resolveSimpleType(rawType);
-        return "LocalDate".equals(simpleType);
-    }
-
-    /**
-     * Returns true when the provided raw type is a LocalDateTime type.
-     *
-     * @param rawType raw Java type
-     * @return true when the type is LocalDateTime
-     */
-    public static boolean isLocalDateTimeType(String rawType) {
-        String simpleType = resolveSimpleType(rawType);
-        return "LocalDateTime".equals(simpleType);
-    }
-
-    /**
-     * Returns true when the provided raw type is a LocalTime type.
-     *
-     * @param rawType raw Java type
-     * @return true when the type is LocalTime
-     */
-    public static boolean isLocalTimeType(String rawType) {
-        String simpleType = resolveSimpleType(rawType);
-        return "LocalTime".equals(simpleType);
-    }
-
-    /**
-     * Returns true when the provided raw type is a temporal type supported by the generator.
-     *
-     * @param rawType raw Java type
-     * @return true when the type is temporal
-     */
-    public static boolean isTemporalType(String rawType) {
-        String simpleType = resolveSimpleType(rawType);
-
-        return "LocalDate".equals(simpleType)
-                || "LocalTime".equals(simpleType)
-                || "LocalDateTime".equals(simpleType)
-                || "OffsetTime".equals(simpleType)
-                || "OffsetDateTime".equals(simpleType)
-                || "Instant".equals(simpleType)
-                || "ZonedDateTime".equals(simpleType);
-    }
 
     /**
      * Returns true when the provided raw type is a collection type.
@@ -364,35 +257,6 @@ public final class JavaTypeSupport {
                 || "java.util.Map".equals(normalizedType);
     }
 
-    /**
-     * Returns true when the provided raw type is a List declaration.
-     *
-     * @param rawType raw Java type
-     * @return true when the type is List
-     */
-    public static boolean isListType(String rawType) {
-        String normalizedType = GeneratorSupport.trimToEmpty(rawType);
-
-        return normalizedType.startsWith("List<")
-                || normalizedType.startsWith("java.util.List<")
-                || "List".equals(normalizedType)
-                || "java.util.List".equals(normalizedType);
-    }
-
-    /**
-     * Returns true when the provided raw type is a Set declaration.
-     *
-     * @param rawType raw Java type
-     * @return true when the type is Set
-     */
-    public static boolean isSetType(String rawType) {
-        String normalizedType = GeneratorSupport.trimToEmpty(rawType);
-
-        return normalizedType.startsWith("Set<")
-                || normalizedType.startsWith("java.util.Set<")
-                || "Set".equals(normalizedType)
-                || "java.util.Set".equals(normalizedType);
-    }
 
     /**
      * Returns true when the provided type should be treated as a scalar Java type.
@@ -405,50 +269,5 @@ public final class JavaTypeSupport {
         return SCALAR_TYPES.contains(simpleType);
     }
 
-    /**
-     * Extracts the inner generic type from a generic declaration.
-     *
-     * <p>Examples:
-     * <ul>
-     *     <li>{@code List<String> -> String}</li>
-     *     <li>{@code java.util.Set<java.util.UUID> -> java.util.UUID}</li>
-     * </ul>
-     *
-     * @param rawType raw Java type
-     * @return inner generic type, or {@code Object} when not present
-     */
-    public static String extractGenericInnerType(String rawType) {
-        String normalizedType = GeneratorSupport.trimToEmpty(rawType);
-        int leftBracketIndex = normalizedType.indexOf('<');
-        int rightBracketIndex = normalizedType.lastIndexOf('>');
 
-        if (leftBracketIndex > 0 && rightBracketIndex > leftBracketIndex) {
-            return normalizedType.substring(leftBracketIndex + 1, rightBracketIndex).trim();
-        }
-
-        return "Object";
-    }
-
-    /**
-     * Returns true when the raw type contains the given simple type.
-     *
-     * @param rawType raw Java type
-     * @param simpleType simple Java type to look for
-     * @return true when the type matches directly or appears inside the raw type
-     */
-    public static boolean containsType(String rawType, String simpleType) {
-        String normalizedRawType = GeneratorSupport.trimToEmpty(rawType);
-        String normalizedSimpleType = GeneratorSupport.trimToEmpty(simpleType);
-
-        if (normalizedRawType.isEmpty() || normalizedSimpleType.isEmpty()) {
-            return false;
-        }
-
-        String resolvedSimpleType = resolveSimpleType(normalizedRawType);
-        if (resolvedSimpleType.equals(normalizedSimpleType)) {
-            return true;
-        }
-
-        return normalizedRawType.contains(normalizedSimpleType);
-    }
 }

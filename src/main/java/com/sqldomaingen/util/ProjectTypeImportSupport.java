@@ -79,19 +79,6 @@ public final class ProjectTypeImportSupport {
     }
 
     /**
-     * Resolves an import line for a project type using only the entity package.
-     *
-     * <p>This overload is useful in places where DTO package imports are not needed.
-     *
-     * @param typeName referenced type name
-     * @param entityPackage entity package name
-     * @return import line, or empty string when no import is required
-     */
-    public static String resolveEntitySideImportLine(String typeName, String entityPackage) {
-        return resolveImportLine(typeName, entityPackage, "");
-    }
-
-    /**
      * Returns true when the type represents a DTO.
      *
      * @param typeName referenced type name
@@ -105,7 +92,7 @@ public final class ProjectTypeImportSupport {
      * Returns true when the type represents a composite key or key-like type.
      *
      * @param typeName referenced type name
-     * @return true when the type ends with Key, Id, or PK
+     * @return true when the type ends with Key, id, or PK
      */
     public static boolean isCompositeKeyType(String typeName) {
         String normalizedTypeName = GeneratorSupport.trimToEmpty(typeName);
@@ -160,11 +147,8 @@ public final class ProjectTypeImportSupport {
             return true;
         }
 
-        if (isFrameworkOrLayerType(normalizedTypeName)) {
-            return true;
-        }
+        return isFrameworkOrLayerType(normalizedTypeName);
 
-        return false;
     }
 
     /**

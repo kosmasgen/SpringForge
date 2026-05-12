@@ -1,6 +1,5 @@
 package com.sqldomaingen.util;
 
-import java.util.Set;
 
 /**
  * Utility class for naming convention conversions.
