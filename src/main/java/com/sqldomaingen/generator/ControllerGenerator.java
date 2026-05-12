@@ -135,6 +135,7 @@ public class ControllerGenerator {
 
     /**
      * Appends the get all controller method.
+     *
      * @param sb target builder
      * @param entityName entity simple name
      * @param dtoName dto simple name
@@ -152,6 +153,7 @@ public class ControllerGenerator {
         String pluralLowerDisplayLabel = NamingConverter.toLogLabel(
                 NamingConverter.toCamelCasePlural(entityName)
         );
+        String controllerMethodName = "getAll" + pluralMethodSuffix;
 
         sb.append("    /**\n");
         sb.append("     * Retrieves all ").append(pluralLowerDisplayLabel).append(".\n");
@@ -161,7 +163,9 @@ public class ControllerGenerator {
         sb.append("    @Operation(summary = \"Get all ").append(pluralLowerDisplayLabel).append("\")\n");
 
         sb.append("    @GetMapping\n");
-        sb.append("    public ResponseEntity<List<").append(dtoName).append(">> getAll() {\n");
+        sb.append("    public ResponseEntity<List<").append(dtoName).append(">> ")
+                .append(controllerMethodName)
+                .append("() {\n");
         sb.append("        return ResponseEntity.ok(").append(serviceName).append(".getAll")
                 .append(pluralMethodSuffix).append("());\n");
         sb.append("    }\n\n");
@@ -192,6 +196,8 @@ public class ControllerGenerator {
             List<Column> primaryKeyColumns,
             boolean compositePrimaryKey
     ) {
+        String controllerMethodName = "get" + entityName + "ById";
+
         stringBuilder.append("    /**\n");
         stringBuilder.append("     * Retrieves the ").append(lowerDisplayLabel).append(" record by id.\n");
 
@@ -218,7 +224,9 @@ public class ControllerGenerator {
             stringBuilder.append("    @GetMapping(\"");
             appendCompositePath(stringBuilder, primaryKeyColumns);
             stringBuilder.append("\")\n");
-            stringBuilder.append("    public ResponseEntity<").append(dtoName).append("> getById(\n");
+            stringBuilder.append("    public ResponseEntity<").append(dtoName).append("> ")
+                    .append(controllerMethodName)
+                    .append("(\n");
 
             for (int index = 0; index < primaryKeyColumns.size(); index++) {
                 Column primaryKeyColumn = primaryKeyColumns.get(index);
@@ -251,7 +259,9 @@ public class ControllerGenerator {
         }
 
         stringBuilder.append("    @GetMapping(\"/{id}\")\n");
-        stringBuilder.append("    public ResponseEntity<").append(dtoName).append("> getById(\n");
+        stringBuilder.append("    public ResponseEntity<").append(dtoName).append("> ")
+                .append(controllerMethodName)
+                .append("(\n");
         stringBuilder.append("            @PathVariable ").append(primaryKeyType).append(" id) {\n");
         stringBuilder.append("        return ResponseEntity.ok(")
                 .append(serviceName)
@@ -280,6 +290,8 @@ public class ControllerGenerator {
             String lowerDisplayLabel,
             String serviceName
     ) {
+        String controllerMethodName = "create" + entityName;
+
         stringBuilder.append("    /**\n");
         stringBuilder.append("     * Creates a new ").append(lowerDisplayLabel).append(" record.\n");
         stringBuilder.append("     * @param dto ").append(lowerDisplayLabel).append(" payload\n");
@@ -287,7 +299,9 @@ public class ControllerGenerator {
         stringBuilder.append("     */\n");
         stringBuilder.append("    @Operation(summary = \"Create ").append(displayLabel).append("\")\n");
         stringBuilder.append("    @PostMapping\n");
-        stringBuilder.append("    public ResponseEntity<").append(dtoName).append("> create(\n");
+        stringBuilder.append("    public ResponseEntity<").append(dtoName).append("> ")
+                .append(controllerMethodName)
+                .append("(\n");
         stringBuilder.append("            @Valid @RequestBody ").append(dtoName).append(" dto) {\n");
         stringBuilder.append("        ").append(dtoName).append(" created = ")
                 .append(serviceName)
@@ -324,6 +338,7 @@ public class ControllerGenerator {
             boolean compositePrimaryKey
     ) {
         String label = lowerDisplayLabel.replaceAll("\\s+", " ").trim();
+        String controllerMethodName = "patch" + entityName;
 
         stringBuilder.append("    /**\n");
         stringBuilder.append("     * Partially updates an existing ").append(label).append(" record.\n");
@@ -353,10 +368,11 @@ public class ControllerGenerator {
             stringBuilder.append("    @PatchMapping(\"");
             appendCompositePath(stringBuilder, primaryKeyColumns);
             stringBuilder.append("\")\n");
-            stringBuilder.append("    public ResponseEntity<").append(dtoName).append("> patch(\n");
+            stringBuilder.append("    public ResponseEntity<").append(dtoName).append("> ")
+                    .append(controllerMethodName)
+                    .append("(\n");
 
-            for (int index = 0; index < primaryKeyColumns.size(); index++) {
-                Column primaryKeyColumn = primaryKeyColumns.get(index);
+            for (Column primaryKeyColumn : primaryKeyColumns) {
                 String parameterName = resolvePkParamName(primaryKeyColumn);
                 String parameterType = detectJavaTypeForPkColumn(primaryKeyColumn);
 
@@ -382,7 +398,9 @@ public class ControllerGenerator {
         }
 
         stringBuilder.append("    @PatchMapping(\"/{id}\")\n");
-        stringBuilder.append("    public ResponseEntity<").append(dtoName).append("> patch(\n");
+        stringBuilder.append("    public ResponseEntity<").append(dtoName).append("> ")
+                .append(controllerMethodName)
+                .append("(\n");
         stringBuilder.append("            @PathVariable ").append(primaryKeyType).append(" id,\n");
         stringBuilder.append("            @RequestBody ").append(dtoName).append(" dto) {\n");
         stringBuilder.append("        return ResponseEntity.ok(")
@@ -416,6 +434,8 @@ public class ControllerGenerator {
             List<Column> primaryKeyColumns,
             boolean compositePrimaryKey
     ) {
+        String controllerMethodName = "delete" + entityName + "ById";
+
         stringBuilder.append("    /**\n");
         stringBuilder.append("     * Delete an ").append(lowerDisplayLabel).append(" record by id.\n");
 
@@ -441,7 +461,9 @@ public class ControllerGenerator {
             stringBuilder.append("    @DeleteMapping(\"");
             appendCompositePath(stringBuilder, primaryKeyColumns);
             stringBuilder.append("\")\n");
-            stringBuilder.append("    public ResponseEntity<Void> deleteById(\n");
+            stringBuilder.append("    public ResponseEntity<Void> ")
+                    .append(controllerMethodName)
+                    .append("(\n");
 
             for (int index = 0; index < primaryKeyColumns.size(); index++) {
                 Column primaryKeyColumn = primaryKeyColumns.get(index);
@@ -469,7 +491,9 @@ public class ControllerGenerator {
         }
 
         stringBuilder.append("    @DeleteMapping(\"/{id}\")\n");
-        stringBuilder.append("    public ResponseEntity<Void> deleteById(\n");
+        stringBuilder.append("    public ResponseEntity<Void> ")
+                .append(controllerMethodName)
+                .append("(\n");
         stringBuilder.append("            @PathVariable ").append(primaryKeyType).append(" id) {\n");
         stringBuilder.append("        ").append(serviceName).append(".delete").append(entityName).append("(id);\n");
         stringBuilder.append("        return ResponseEntity.noContent().build();\n");
