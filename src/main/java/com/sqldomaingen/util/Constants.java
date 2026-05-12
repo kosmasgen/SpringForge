@@ -6,6 +6,9 @@ import java.util.regex.Pattern;
 
 public class Constants {
 
+    public static final Path SCHEMA_PATH = Path.of("input", "test_script.sql");
+    public static final Path GENERATED_JAVA_ROOT = Path.of("output", "PepTest", "src", "main", "java");
+
     public static final String EMPTY_SQL_ERROR_MESSAGE = "SQL content is empty or not set.";
 
     public static final int MAX_LINE_LENGTH = 100;
@@ -28,8 +31,7 @@ public class Constants {
             Pattern.compile("^\\s*([A-Z0-9 ]+?)\\s*(?:\\((\\d+)(?:\\s*,\\s*(\\d+))?\\))?\\s*(\\[])?\\s*$");
 
 
-    public static final Path SCHEMA_PATH = Path.of("input", "test_script.sql");
-    public static final Path GENERATED_JAVA_ROOT = Path.of("output", "PepTest", "src", "main", "java");
+
 
     public static final Set<String> JAVA_EXCLUDED_TABLES = Set.of("audit", "syncruns_error_log");
 

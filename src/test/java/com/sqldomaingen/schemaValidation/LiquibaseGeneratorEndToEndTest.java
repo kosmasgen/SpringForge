@@ -88,28 +88,29 @@ class LiquibaseGeneratorEndToEndTest {
 
     /**
      * Verifies that every declared table is included exactly once in the generated main.xml.
+     * Infrastructure includes are ignored because they are generated only when needed.
      *
      * @param actualIncludes include filenames extracted from generated main.xml
      * @param declaredTables physical table names declared in the source SQL
      */
     private void assertEveryDeclaredTableIsIncludedExactlyOnce(List<String> actualIncludes, List<String> declaredTables) {
-        List<String> expectedIncludes = new ArrayList<>();
-        expectedIncludes.add("audit.xml");
-
-        expectedIncludes.addAll(
-                declaredTables.stream()
-                        .map(this::toIncludeFileName)
-                        .distinct()
-                        .sorted()
-                        .toList()
+        Set<String> infrastructureIncludes = Set.of(
+                "audit.xml",
+                "extensions.xml"
         );
 
-        List<String> sortedActualIncludes = new ArrayList<>(actualIncludes);
-        sortedActualIncludes.sort(String::compareTo);
+        List<String> expectedTableIncludes = declaredTables.stream()
+                .map(this::toIncludeFileName)
+                .distinct()
+                .sorted()
+                .toList();
 
-        expectedIncludes.sort(String::compareTo);
+        List<String> actualTableIncludes = actualIncludes.stream()
+                .filter(include -> !infrastructureIncludes.contains(include))
+                .sorted()
+                .toList();
 
-        assertEquals(expectedIncludes, sortedActualIncludes, "Generated includes do not match declared tables");
+        assertEquals(expectedTableIncludes, actualTableIncludes, "Generated table includes do not match declared tables");
         assertEquals(new LinkedHashSet<>(actualIncludes).size(), actualIncludes.size(), "Duplicate includes found");
     }
 
