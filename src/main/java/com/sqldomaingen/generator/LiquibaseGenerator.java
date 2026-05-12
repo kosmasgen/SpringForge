@@ -540,12 +540,15 @@ public class LiquibaseGenerator {
         }
 
         if (!isReferencedTableAvailable(referencedTableRaw, availableTableReferences)) {
-            log.warn(
-                    "Skipping foreign key for table '{}' column '{}' because referenced table '{}' was not found in parsed schema.",
+            String warningMessage = String.format(
+                    "Skipping foreign key for table '%s' column '%s' because referenced table '%s' was not found in parsed schema.",
                     rawTableName,
                     baseColumnName,
                     referencedTableRaw
             );
+
+            generationWarnings.add(warningMessage);
+            log.warn(warningMessage);
             return;
         }
 
@@ -1134,7 +1137,7 @@ public class LiquibaseGenerator {
     private String resolveExtensionSchema(List<Table> tables) {
         String schemaName = resolveRevisionSequenceSchema(tables);
 
-        if (schemaName == null || schemaName.isBlank()) {
+        if (schemaName.isBlank()) {
             return "public";
         }
 
@@ -1611,26 +1614,6 @@ public class LiquibaseGenerator {
         }
 
         return " WHERE " + index.getWhereClause().trim();
-    }
-
-    /**
-     * Checks whether index columns depend on unsupported PostgreSQL extensions or
-     * custom database functions.
-     *
-     * @param columnNames raw index column names or expressions
-     * @return true when the index should be skipped
-     */
-    private boolean requiresUnsupportedIndexDependency(List<String> columnNames) {
-        if (columnNames == null || columnNames.isEmpty()) {
-            return false;
-        }
-
-        return columnNames.stream()
-                .filter(Objects::nonNull)
-                .map(columnName -> columnName.toLowerCase(java.util.Locale.ROOT))
-                .anyMatch(columnName -> columnName.contains("gin_trgm_ops")
-                        || columnName.contains("gist_trgm_ops")
-                        || columnName.contains("f_unaccent_ci"));
     }
 
     /**
