@@ -1,5 +1,7 @@
 package com.sqldomaingen.util;
 
+import java.util.Set;
+
 /**
  * Utility class for naming convention conversions.
  */
@@ -172,6 +174,7 @@ public final class NamingConverter {
      *
      * <p>Supported rules:
      * <ul>
+     *     <li>uncountable words remain unchanged</li>
      *     <li>already plural words ending in s remain unchanged</li>
      *     <li>consonant + y -> ies</li>
      *     <li>x, z, ch, sh -> es</li>
@@ -187,6 +190,10 @@ public final class NamingConverter {
         }
 
         String lowerCaseWord = word.toLowerCase();
+
+        if (isUncountableWord(lowerCaseWord)) {
+            return word;
+        }
 
         if (lowerCaseWord.endsWith("s")) {
             return word;
@@ -204,6 +211,23 @@ public final class NamingConverter {
         }
 
         return word + "s";
+    }
+
+    /**
+     * Checks whether a word should remain unchanged when pluralized.
+     *
+     * @param word lowercase word
+     * @return true when the word is treated as uncountable
+     */
+    private static boolean isUncountableWord(String word) {
+        return java.util.Set.of(
+                "accommodation", "advice", "architecture", "art", "baggage", "cash", "commerce", "content", "culture",
+                "data", "dating", "education", "equipment", "evidence", "feedback", "furniture", "health", "history",
+                "hospitality", "information", "infrastructure",
+                "legislation", "literature", "logistics", "machinery", "mail", "management", "media", "metadata",
+                "music", "news", "nutrition", "permission", "poetry", "pollution", "research", "software", "technology",
+                "tourism", "traffic", "training", "transportation", "weather"
+        ).contains(word);
     }
 
     /**
@@ -368,6 +392,31 @@ public final class NamingConverter {
         }
 
         return builder.toString();
+    }
+
+    /**
+     * Builds the correct English indefinite article for a label.
+     *
+     * <p>Examples:
+     * <ul>
+     *     <li>a company</li>
+     *     <li>an architectural feature</li>
+     * </ul>
+     *
+     * @param label readable label
+     * @return a or an
+     */
+    public static String resolveIndefiniteArticle(String label) {
+        if (label == null || label.isBlank()) {
+            return "a";
+        }
+
+        char firstCharacter = Character.toLowerCase(label.trim().charAt(0));
+
+        return switch (firstCharacter) {
+            case 'a', 'e', 'i', 'o', 'u' -> "an";
+            default -> "a";
+        };
     }
 
 

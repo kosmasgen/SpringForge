@@ -197,9 +197,14 @@ public class ControllerGenerator {
             boolean compositePrimaryKey
     ) {
         String controllerMethodName = "get" + entityName + "ById";
+        String article = NamingConverter.resolveIndefiniteArticle(lowerDisplayLabel);
 
         stringBuilder.append("    /**\n");
-        stringBuilder.append("     * Retrieves the ").append(lowerDisplayLabel).append(" record by id.\n");
+        stringBuilder.append("     * Retrieves ")
+                .append(article)
+                .append(" ")
+                .append(lowerDisplayLabel)
+                .append(" record by id.\n");
 
         if (compositePrimaryKey) {
             for (Column primaryKeyColumn : primaryKeyColumns) {
@@ -291,9 +296,14 @@ public class ControllerGenerator {
             String serviceName
     ) {
         String controllerMethodName = "create" + entityName;
+        String article = NamingConverter.resolveIndefiniteArticle("new");
 
         stringBuilder.append("    /**\n");
-        stringBuilder.append("     * Creates a new ").append(lowerDisplayLabel).append(" record.\n");
+        stringBuilder.append("     * Creates ")
+                .append(article)
+                .append(" new ")
+                .append(lowerDisplayLabel)
+                .append(" record.\n");
         stringBuilder.append("     * @param dto ").append(lowerDisplayLabel).append(" payload\n");
         stringBuilder.append("     * @return created ").append(dtoName).append("\n");
         stringBuilder.append("     */\n");
@@ -338,10 +348,15 @@ public class ControllerGenerator {
             boolean compositePrimaryKey
     ) {
         String label = lowerDisplayLabel.replaceAll("\\s+", " ").trim();
+        String article = NamingConverter.resolveIndefiniteArticle("existing");
         String controllerMethodName = "patch" + entityName;
 
         stringBuilder.append("    /**\n");
-        stringBuilder.append("     * Partially updates an existing ").append(label).append(" record.\n");
+        stringBuilder.append("     * Partially updates ")
+                .append(article)
+                .append(" existing ")
+                .append(label)
+                .append(" record.\n");
         stringBuilder.append("     * Only fields that are not null in the request are updated.\n");
 
         if (compositePrimaryKey) {
@@ -437,7 +452,13 @@ public class ControllerGenerator {
         String controllerMethodName = "delete" + entityName + "ById";
 
         stringBuilder.append("    /**\n");
-        stringBuilder.append("     * Delete an ").append(lowerDisplayLabel).append(" record by id.\n");
+        String article = NamingConverter.resolveIndefiniteArticle(lowerDisplayLabel);
+
+        stringBuilder.append("     * Deletes ")
+                .append(article)
+                .append(" ")
+                .append(lowerDisplayLabel)
+                .append(" record by id.\n");
 
         if (compositePrimaryKey) {
             for (Column primaryKeyColumn : primaryKeyColumns) {

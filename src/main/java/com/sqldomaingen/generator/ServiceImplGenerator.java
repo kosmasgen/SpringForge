@@ -418,6 +418,7 @@ public class ServiceImplGenerator {
             boolean compositePrimaryKey
     ) {
         String label = lowerDisplayLabel.replaceAll("\\s+", " ").trim();
+        String article = NamingConverter.resolveIndefiniteArticle(label);
 
         String methodParameters = compositePrimaryKey
                 ? buildCompositePrimaryKeyMethodParameters(primaryKeyColumns)
@@ -428,7 +429,11 @@ public class ServiceImplGenerator {
                 : "id";
 
         stringBuilder.append("    /**\n");
-        stringBuilder.append("     * Retrieves a ").append(label).append(" record by id.\n");
+        stringBuilder.append("     * Retrieves ")
+                .append(article)
+                .append(" ")
+                .append(label)
+                .append(" record by id.\n");
 
         if (compositePrimaryKey) {
             appendCompositePrimaryKeyJavaDocParameters(stringBuilder, primaryKeyColumns);
@@ -485,6 +490,8 @@ public class ServiceImplGenerator {
             List<Column> primaryKeyColumns,
             boolean compositePrimaryKey
     ) {
+        String label = lowerDisplayLabel.replaceAll("\\s+", " ").trim();
+
         String methodParameters = compositePrimaryKey
                 ? buildCompositePrimaryKeyMethodParameters(primaryKeyColumns)
                 : primaryKeyType + " id";
@@ -494,9 +501,7 @@ public class ServiceImplGenerator {
                 : "id";
 
         stringBuilder.append("    /**\n");
-        stringBuilder.append("     * Creates a NOT FOUND exception for the ")
-                .append(lowerDisplayLabel)
-                .append(" entity.\n");
+        stringBuilder.append("     * Creates a NOT FOUND exception for this entity.\n");
 
         if (compositePrimaryKey) {
             for (Column primaryKeyColumn : primaryKeyColumns) {
@@ -508,14 +513,14 @@ public class ServiceImplGenerator {
                 String parameterName = NamingConverter.toCamelCase(columnName);
                 stringBuilder.append("     * @param ")
                         .append(parameterName)
-                        .append(" the ")
-                        .append(columnName)
-                        .append(" value\n");
+                        .append(" ")
+                        .append(NamingConverter.toLogLabel(parameterName))
+                        .append(" identifier\n");
             }
         } else {
-            stringBuilder.append("     * @param id the ")
-                    .append(lowerDisplayLabel)
-                    .append(" id\n");
+            stringBuilder.append("     * @param id ")
+                    .append(label)
+                    .append(" identifier\n");
         }
 
         stringBuilder.append("     * @return runtime exception\n");
@@ -593,6 +598,7 @@ public class ServiceImplGenerator {
             boolean compositePrimaryKey
     ) {
         String label = lowerDisplayLabel.replaceAll("\\s+", " ").trim();
+        String article = NamingConverter.resolveIndefiniteArticle("existing");
 
         String methodParameters = compositePrimaryKey
                 ? buildCompositePrimaryKeyMethodParametersWithDto(primaryKeyColumns, dtoName)
@@ -603,7 +609,11 @@ public class ServiceImplGenerator {
                 : "id";
 
         stringBuilder.append("    /**\n");
-        stringBuilder.append("     * Updates an existing ").append(label).append(" record.\n");
+        stringBuilder.append("     * Updates ")
+                .append(article)
+                .append(" existing ")
+                .append(label)
+                .append(" record.\n");
         stringBuilder.append("     *\n");
 
         if (compositePrimaryKey) {
@@ -670,10 +680,15 @@ public class ServiceImplGenerator {
             boolean compositePrimaryKey
     ) {
         String label = lowerDisplayLabel.replaceAll("\\s+", " ").trim();
+        String article = NamingConverter.resolveIndefiniteArticle("new");
         String validateCreateUniqueConstraintsMethodName = "validate" + entityName + "CreateUniqueConstraints";
 
         stringBuilder.append("    /**\n");
-        stringBuilder.append("     * Creates a new ").append(label).append(" record.\n");
+        stringBuilder.append("     * Creates ")
+                .append(article)
+                .append(" new ")
+                .append(label)
+                .append(" record.\n");
         stringBuilder.append("     * @param dto input payload\n");
         stringBuilder.append("     * @return created {@link ").append(dtoName).append("}\n");
         stringBuilder.append("     */\n");
@@ -827,6 +842,9 @@ public class ServiceImplGenerator {
             List<Column> primaryKeyColumns,
             boolean compositePrimaryKey
     ) {
+        String label = lowerDisplayLabel.replaceAll("\\s+", " ").trim();
+        String article = NamingConverter.resolveIndefiniteArticle(label);
+
         String methodParameters = compositePrimaryKey
                 ? buildCompositePrimaryKeyMethodParameters(primaryKeyColumns)
                 : primaryKeyType + " id";
@@ -836,7 +854,11 @@ public class ServiceImplGenerator {
                 : "id";
 
         stringBuilder.append("    /**\n");
-        stringBuilder.append("     * Delete a ").append(lowerDisplayLabel).append(" record by id.\n");
+        stringBuilder.append("     * Deletes ")
+                .append(article)
+                .append(" ")
+                .append(label)
+                .append(" record by id.\n");
 
         if (compositePrimaryKey) {
             for (Column primaryKeyColumn : primaryKeyColumns) {
@@ -850,7 +872,7 @@ public class ServiceImplGenerator {
                         .append(" the ").append(columnName).append(" value\n");
             }
         } else {
-            stringBuilder.append("     * @param id the ").append(lowerDisplayLabel).append(" id\n");
+            stringBuilder.append("     * @param id the ").append(label).append(" id\n");
         }
 
         stringBuilder.append("     */\n");
@@ -864,14 +886,14 @@ public class ServiceImplGenerator {
                     .append("(")
                     .append(idArguments)
                     .append(");\n");
-            stringBuilder.append("        log.info(\"Deleting ").append(lowerDisplayLabel)
+            stringBuilder.append("        log.info(\"Deleting ").append(label)
                     .append(" with composite id: {}\", compositeId);\n\n");
             stringBuilder.append("        ").append(findByIdOrThrowMethodName).append("(")
                     .append(idArguments).append(");\n");
             stringBuilder.append("        ").append(repositoryVariableName).append(".deleteById(")
                     .append(buildKeyMethodName).append("(").append(idArguments).append("));\n");
         } else {
-            stringBuilder.append("        log.info(\"Deleting ").append(lowerDisplayLabel)
+            stringBuilder.append("        log.info(\"Deleting ").append(label)
                     .append(" with id: {}\", id);\n\n");
             stringBuilder.append("        ").append(findByIdOrThrowMethodName).append("(id);\n");
             stringBuilder.append("        ").append(repositoryVariableName).append(".deleteById(id);\n");
@@ -907,6 +929,8 @@ public class ServiceImplGenerator {
             List<Column> primaryKeyColumns,
             boolean compositePrimaryKey
     ) {
+        String label = lowerDisplayLabel.replaceAll("\\s+", " ").trim();
+
         String methodParameters = compositePrimaryKey
                 ? buildCompositePrimaryKeyMethodParameters(primaryKeyColumns)
                 : primaryKeyType + " id";
@@ -916,13 +940,13 @@ public class ServiceImplGenerator {
                 : "id";
 
         stringBuilder.append("    /**\n");
-        stringBuilder.append("     * Finds an existing ").append(lowerDisplayLabel)
+        stringBuilder.append("     * Finds an existing ").append(label)
                 .append(" record by id or throws an exception.\n");
 
         if (compositePrimaryKey) {
             appendCompositePrimaryKeyJavaDocParameters(stringBuilder, primaryKeyColumns);
         } else {
-            stringBuilder.append("     * @param id the ").append(lowerDisplayLabel).append(" id\n");
+            stringBuilder.append("     * @param id ").append(label).append(" identifier\n");
         }
 
         stringBuilder.append("     * @return existing ").append(entityName).append(" entity\n");

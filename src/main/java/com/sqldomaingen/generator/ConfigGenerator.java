@@ -125,7 +125,7 @@ public class ConfigGenerator {
 
                 /**
                  * Configures CORS mappings.
-                 * @return configured WebMvcConfigurer
+                 * @return configured Web Mvc Configurer
                  */
                 @Bean
                 public WebMvcConfigurer corsConfigurer() {
