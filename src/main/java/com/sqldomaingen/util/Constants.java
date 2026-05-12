@@ -9,7 +9,7 @@ public class Constants {
     public static final String EMPTY_SQL_ERROR_MESSAGE = "SQL content is empty or not set.";
 
     public static final int MAX_LINE_LENGTH = 100;
-    public static final int MAX_LINES_PER_PAGE = 45;
+    public static final int MAX_LINES_PER_PAGE = 54;
     public static final String JAVA_BIG_DECIMAL = "java.math.BigDecimal";
     public static final String JAVA_STRING = "String";
     public static final String JAVA_LOCAL_DATE_TIME = "java.time.LocalDateTime";

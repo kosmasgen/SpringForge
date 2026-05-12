@@ -2,11 +2,11 @@ package com.sqldomaingen.validation;
 
 import com.sqldomaingen.util.Constants;
 
-import java.time.format.DateTimeFormatter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,88 +26,124 @@ public class ValidationReportPdfWriter {
     public void writePdf(GenerationValidationReport report, Path outputPath) throws IOException {
         Files.createDirectories(outputPath.getParent());
 
-        List<String> lines = buildReportLines(report);
+        List<PdfLine> lines = buildReportLines(report);
         byte[] pdfBytes = buildPdf(lines);
 
         Files.write(outputPath, pdfBytes);
     }
 
     /**
-     * Builds report lines for PDF rendering.
+     * Builds styled report lines for PDF rendering.
      *
      * @param report validation report
-     * @return plain text lines
+     * @return styled PDF lines
      */
-    private List<String> buildReportLines(GenerationValidationReport report) {
-        List<String> lines = new ArrayList<>();
-
+    private List<PdfLine> buildReportLines(GenerationValidationReport report) {
+        List<PdfLine> lines = new ArrayList<>();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-        lines.add("GENERATION VALIDATION REPORT");
-        lines.add("");
+        lines.add(PdfLine.title("GENERATION VALIDATION REPORT"));
+        lines.add(PdfLine.blank());
 
-        lines.add("Generated at: " + report.getGeneratedAt().format(formatter));
-        lines.add("Author: " + report.getAuthor());
-        lines.add("Input file: " + report.getInputFile());
-        lines.add("Output dir: " + report.getOutputDir());
-        lines.add("Base package: " + report.getBasePackage());
+        lines.add(PdfLine.label("Generated at: " + report.getGeneratedAt().format(formatter)));
+        lines.add(PdfLine.label("Author: " + report.getAuthor()));
+        lines.add(PdfLine.label("Input file: " + report.getInputFile()));
+        lines.add(PdfLine.label("Output dir: " + report.getOutputDir()));
+        lines.add(PdfLine.label("Base package: " + report.getBasePackage()));
+        lines.add(PdfLine.blank());
 
-        lines.add("Total issues: " + report.getTotalViolationCount());
-        lines.add("Total warnings: " + report.getTotalWarningCount());
-
-        lines.add("");
+        lines.add(PdfLine.label("Total issues: " + report.getTotalViolationCount()));
+        lines.add(PdfLine.label("Total warnings: " + report.getTotalWarningCount()));
+        lines.add(PdfLine.blank());
 
         for (GenerationValidationReport.Section section : report.getSections()) {
-
-            lines.add("SECTION: " + section.title());
-
-            if (!section.details().isEmpty()) {
-
-                lines.add("Details:");
-
-                if ("Schema Tables".equals(section.title())) {
-
-                    int index = 1;
-
-                    for (String detail : section.details()) {
-                        lines.add(index + ". " + detail);
-                        index++;
-                    }
-
-                } else {
-                    lines.addAll(section.details());
-                }
-            }
-
-            if (section.violations().isEmpty()) {
-                lines.add("Violations: None");
-            } else {
-
-                lines.add("Violations:");
-
-                for (String violation : section.violations()) {
-                    lines.add("- " + violation);
-                }
-            }
-
-            if (section.warnings().isEmpty()) {
-                lines.add("Warnings: None");
-            } else {
-
-                lines.add("Warnings:");
-
-                for (String warning : section.warnings()) {
-                    lines.add("- " + warning);
-                }
-            }
-
-            lines.add("");
+            appendSectionLines(lines, section);
         }
 
         return lines;
     }
 
+    /**
+     * Appends one report section to the PDF line list.
+     *
+     * @param lines target PDF lines
+     * @param section report section
+     */
+    private void appendSectionLines(List<PdfLine> lines, GenerationValidationReport.Section section) {
+        lines.add(PdfLine.blank());
+        lines.add(PdfLine.section(section.title()));
 
+        appendDetails(lines, section);
+        appendViolations(lines, section);
+        appendWarnings(lines, section);
+    }
+
+    /**
+     * Appends section details.
+     *
+     * @param lines target PDF lines
+     * @param section report section
+     */
+    private void appendDetails(List<PdfLine> lines, GenerationValidationReport.Section section) {
+        if (section.details().isEmpty()) {
+            return;
+        }
+
+        lines.add(PdfLine.subheading("Details"));
+
+        if ("Schema Tables".equals(section.title())) {
+            int index = 1;
+
+            for (String detail : section.details()) {
+                lines.add(PdfLine.detail(index + ". " + detail));
+                index++;
+            }
+
+            return;
+        }
+
+        for (String detail : section.details()) {
+            lines.add(PdfLine.detail("- " + detail));
+        }
+    }
+
+    /**
+     * Appends section violations.
+     *
+     * @param lines target PDF lines
+     * @param section report section
+     */
+    private void appendViolations(List<PdfLine> lines, GenerationValidationReport.Section section) {
+        lines.add(PdfLine.subheading("Violations"));
+
+        if (section.violations().isEmpty()) {
+            lines.add(PdfLine.detail("None"));
+            return;
+        }
+
+        for (String violation : section.violations()) {
+            lines.add(PdfLine.violation("[VIOLATION] " + violation));
+        }
+    }
+
+    /**
+     * Appends section warnings.
+     *
+     * @param lines target PDF lines
+     * @param section report section
+     */
+    private void appendWarnings(List<PdfLine> lines, GenerationValidationReport.Section section) {
+        lines.add(PdfLine.subheading("Warnings"));
+
+        if (section.warnings().isEmpty()) {
+            lines.add(PdfLine.detail("None"));
+            return;
+        }
+
+        for (String warning : section.warnings()) {
+            lines.add(PdfLine.warning("[WARNING] " + warning));
+        }
+    }
 
     /**
      * Builds a minimal valid PDF byte array.
@@ -115,8 +151,8 @@ public class ValidationReportPdfWriter {
      * @param lines report lines
      * @return PDF bytes
      */
-    private byte[] buildPdf(List<String> lines) {
-        List<List<String>> pages = paginate(lines);
+    private byte[] buildPdf(List<PdfLine> lines) {
+        List<List<PdfLine>> pages = paginate(lines);
 
         StringBuilder pdf = new StringBuilder();
         List<Integer> xrefOffsets = new ArrayList<>();
@@ -131,10 +167,12 @@ public class ValidationReportPdfWriter {
         xrefOffsets.add(pdf.length());
         pdf.append("2 0 obj\n");
         pdf.append("<< /Type /Pages /Count ").append(pages.size()).append(" /Kids [");
+
         for (int pageIndex = 0; pageIndex < pages.size(); pageIndex++) {
             int pageObjectNumber = 3 + (pageIndex * 2);
             pdf.append(pageObjectNumber).append(" 0 R ");
         }
+
         pdf.append("] >>\n");
         pdf.append("endobj\n");
 
@@ -145,7 +183,11 @@ public class ValidationReportPdfWriter {
             xrefOffsets.add(pdf.length());
             pdf.append(pageObjectNumber).append(" 0 obj\n");
             pdf.append("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] ");
-            pdf.append("/Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >> ");
+            pdf.append("/Resources << /Font << ");
+            pdf.append("/F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> ");
+            pdf.append("/F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> ");
+            pdf.append("/F3 << /Type /Font /Subtype /Type1 /BaseFont /Courier >> ");
+            pdf.append(">> >> ");
             pdf.append("/Contents ").append(contentObjectNumber).append(" 0 R >>\n");
             pdf.append("endobj\n");
 
@@ -185,23 +227,28 @@ public class ValidationReportPdfWriter {
      * @param lines page lines
      * @return PDF content stream
      */
-    private String buildPageContentStream(List<String> lines) {
+    private String buildPageContentStream(List<PdfLine> lines) {
         StringBuilder stream = new StringBuilder();
 
         stream.append("BT\n");
-        stream.append("/F1 10 Tf\n");
         stream.append("50 790 Td\n");
-        stream.append("14 TL\n");
 
         boolean firstLine = true;
-        for (String line : lines) {
-            String escapedLine = escapePdfText(line);
 
+        for (PdfLine line : lines) {
             if (!firstLine) {
-                stream.append("T*\n");
+                stream.append("0 -").append(line.lineHeight()).append(" Td\n");
             }
 
-            stream.append("(").append(escapedLine).append(") Tj\n");
+            stream.append(line.fontName())
+                    .append(" ")
+                    .append(line.fontSize())
+                    .append(" Tf\n");
+
+            stream.append("(")
+                    .append(escapePdfText(line.text()))
+                    .append(") Tj\n");
+
             firstLine = false;
         }
 
@@ -215,14 +262,19 @@ public class ValidationReportPdfWriter {
      * @param lines report lines
      * @return paginated lines
      */
-    private List<List<String>> paginate(List<String> lines) {
-        List<List<String>> pages = new ArrayList<>();
-        List<String> currentPage = new ArrayList<>();
+    private List<List<PdfLine>> paginate(List<PdfLine> lines) {
+        List<List<PdfLine>> pages = new ArrayList<>();
+        List<PdfLine> currentPage = new ArrayList<>();
 
-        for (String line : lines) {
-            List<String> wrappedLines = wrapLine(line);
+        for (PdfLine line : lines) {
+            if (shouldStartNewPageBeforeLine(line, currentPage)) {
+                pages.add(currentPage);
+                currentPage = new ArrayList<>();
+            }
 
-            for (String wrappedLine : wrappedLines) {
+            List<PdfLine> wrappedLines = wrapLine(line);
+
+            for (PdfLine wrappedLine : wrappedLines) {
                 if (currentPage.size() >= Constants.MAX_LINES_PER_PAGE) {
                     pages.add(currentPage);
                     currentPage = new ArrayList<>();
@@ -237,31 +289,58 @@ public class ValidationReportPdfWriter {
         }
 
         if (pages.isEmpty()) {
-            pages.add(List.of("Empty validation report."));
+            pages.add(List.of(PdfLine.detail("Empty validation report.")));
         }
 
         return pages;
     }
 
     /**
-     * Wraps one line to a fixed maximum character width.
+     * Determines whether a new page should start before rendering the given line.
+     *
+     * @param line next line to render
+     * @param currentPage current page lines
+     * @return true when a section should move to a new page
+     */
+    private boolean shouldStartNewPageBeforeLine(PdfLine line, List<PdfLine> currentPage) {
+        if (line == null || currentPage == null || currentPage.isEmpty()) {
+            return false;
+        }
+
+        boolean sectionHeading = line.fontName().equals("/F2")
+                && line.fontSize() == 13;
+
+        if (!sectionHeading) {
+            return false;
+        }
+
+        int remainingLines = Constants.MAX_LINES_PER_PAGE - currentPage.size();
+
+        return remainingLines < 12;
+    }
+
+    /**
+     * Wraps one styled line to a fixed maximum character width.
      *
      * @param line source line
-     * @return wrapped lines
+     * @return wrapped styled lines
      */
-    private List<String> wrapLine(String line) {
-        List<String> wrappedLines = new ArrayList<>();
-        String safeLine = line == null ? "" : line;
+    private List<PdfLine> wrapLine(PdfLine line) {
+        List<PdfLine> wrappedLines = new ArrayList<>();
+        String safeText = line.text() == null ? "" : line.text();
 
-        if (safeLine.length() <= Constants.MAX_LINE_LENGTH) {
-            wrappedLines.add(safeLine);
+        if (safeText.length() <= Constants.MAX_LINE_LENGTH) {
+            wrappedLines.add(line);
             return wrappedLines;
         }
 
         int startIndex = 0;
-        while (startIndex < safeLine.length()) {
-            int endIndex = Math.min(startIndex + Constants.MAX_LINE_LENGTH, safeLine.length());
-            wrappedLines.add(safeLine.substring(startIndex, endIndex));
+
+        while (startIndex < safeText.length()) {
+            int endIndex = Math.min(startIndex + Constants.MAX_LINE_LENGTH, safeText.length());
+            String part = safeText.substring(startIndex, endIndex);
+
+            wrappedLines.add(line.withText(startIndex == 0 ? part : "    " + part));
             startIndex = endIndex;
         }
 
@@ -275,9 +354,118 @@ public class ValidationReportPdfWriter {
      * @return escaped text
      */
     private String escapePdfText(String value) {
+        if (value == null) {
+            return "";
+        }
+
         return value
                 .replace("\\", "\\\\")
                 .replace("(", "\\(")
                 .replace(")", "\\)");
+    }
+
+    /**
+     * One styled PDF line.
+     *
+     * @param text line text
+     * @param fontName PDF font resource name
+     * @param fontSize font size
+     * @param lineHeight line height
+     */
+    private record PdfLine(
+            String text,
+            String fontName,
+            int fontSize,
+            int lineHeight
+    ) {
+
+        /**
+         * Creates a title line.
+         *
+         * @param text line text
+         * @return title line
+         */
+        private static PdfLine title(String text) {
+            return new PdfLine(text, "/F2", 16, 20);
+        }
+
+        /**
+         * Creates a section heading line.
+         *
+         * @param text line text
+         * @return section line
+         */
+        private static PdfLine section(String text) {
+            return new PdfLine(text.toUpperCase(), "/F2", 13, 18);
+        }
+
+        /**
+         * Creates a subsection heading line.
+         *
+         * @param text line text
+         * @return subsection line
+         */
+        private static PdfLine subheading(String text) {
+            return new PdfLine(text + ":", "/F2", 10, 14);
+        }
+
+        /**
+         * Creates a metadata label line.
+         *
+         * @param text line text
+         * @return label line
+         */
+        private static PdfLine label(String text) {
+            return new PdfLine(text, "/F2", 10, 14);
+        }
+
+        /**
+         * Creates a detail line.
+         *
+         * @param text line text
+         * @return detail line
+         */
+        private static PdfLine detail(String text) {
+            return new PdfLine("  " + text, "/F1", 10, 14);
+        }
+
+        /**
+         * Creates a warning line.
+         *
+         * @param text line text
+         * @return warning line
+         */
+        private static PdfLine warning(String text) {
+            return new PdfLine("  " + text, "/F3", 9, 13);
+        }
+
+        /**
+         * Creates a violation line.
+         *
+         * @param text line text
+         * @return violation line
+         */
+        private static PdfLine violation(String text) {
+            return new PdfLine("  " + text, "/F3", 9, 13);
+        }
+
+        /**
+         * Creates a blank line.
+         *
+         * @return blank line
+         */
+        private static PdfLine blank() {
+            return new PdfLine("", "/F1", 10, 10);
+        }
+
+        /**
+         * Creates a copy with different text.
+         *
+         * @param newText replacement text
+         * @return copied line
+         */
+        private PdfLine withText(String newText) {
+            return new PdfLine(newText, fontName, fontSize, lineHeight);
+        }
     }
 }

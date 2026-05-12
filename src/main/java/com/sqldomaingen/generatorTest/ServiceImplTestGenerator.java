@@ -109,11 +109,14 @@ public class ServiceImplTestGenerator {
             appendTypeImports(
                     content,
                     table,
+                    getSafeEntityFields(entityMetadata),
                     dtoFields,
                     entityPackage,
                     entityName,
                     primaryKeyType,
-                    compositePrimaryKey
+                    compositePrimaryKey,
+                    outputDir,
+                    basePackage
             );
             appendFrameworkImports(content, basePackage);
             appendClassHeader(
@@ -282,20 +285,26 @@ public class ServiceImplTestGenerator {
      *
      * @param content generated test content
      * @param table current table
+     * @param entityFields actual generated entity fields
      * @param dtoFields actual generated DTO fields
      * @param entityPackage entity package name
      * @param entityName entity simple name
      * @param primaryKeyType primary key type
      * @param compositePrimaryKey whether the table uses composite primary key
+     * @param outputDir project root output directory
+     * @param basePackage base Java package
      */
     private void appendTypeImports(
             StringBuilder content,
             Table table,
+            List<Field> entityFields,
             List<Field> dtoFields,
             String entityPackage,
             String entityName,
             String primaryKeyType,
-            boolean compositePrimaryKey
+            boolean compositePrimaryKey,
+            String outputDir,
+            String basePackage
     ) {
         Set<String> importLines = new LinkedHashSet<>();
 
@@ -312,14 +321,59 @@ public class ServiceImplTestGenerator {
         }
 
         importLines.addAll(buildCompositePrimaryKeyExtraImports(table));
-        importLines.addAll(buildFixtureExtraImports(table));
+        importLines.addAll(buildFixtureExtraImports(entityFields));
         importLines.addAll(buildImportsForFields(dtoFields));
+        importLines.addAll(buildNestedDtoIdImports(dtoFields, outputDir, basePackage));
 
         for (String importLine : importLines) {
             content.append(importLine).append("\n");
         }
 
         content.append("\n");
+    }
+
+    /**
+     * Builds import lines required by nested DTO ID literals.
+     *
+     * @param dtoFields actual generated DTO fields
+     * @param outputDir project root output directory
+     * @param basePackage base Java package
+     * @return import lines required by nested DTO ID fields
+     */
+    private List<String> buildNestedDtoIdImports(
+            List<Field> dtoFields,
+            String outputDir,
+            String basePackage
+    ) {
+        Set<String> imports = new LinkedHashSet<>();
+
+        for (Field field : dtoFields) {
+            if (field == null) {
+                continue;
+            }
+
+            String normalizedJavaType = normalizeJavaType(field.getType());
+
+            if (!normalizedJavaType.endsWith("Dto")) {
+                continue;
+            }
+
+            Field nestedIdField = findNestedDtoIdField(outputDir, basePackage, normalizedJavaType);
+
+            if (nestedIdField == null) {
+                continue;
+            }
+
+            String importLine = JavaTypeSupport.resolveImportLine(
+                    normalizeJavaType(nestedIdField.getType())
+            );
+
+            if (importLine != null && !importLine.isBlank()) {
+                imports.add(importLine);
+            }
+        }
+
+        return new ArrayList<>(imports);
     }
 
     /**
@@ -1406,9 +1460,9 @@ public class ServiceImplTestGenerator {
         String normalizedJavaType = normalizeJavaType(field.getType());
 
         return switch (normalizedJavaType) {
-            case "UUID" -> "java.util.UUID.fromString(\"123e4567-e89b-12d3-a456-426614174000\")";
-            case "BigDecimal" -> "new java.math.BigDecimal(\"" + variant + "\")";
-            case "BigInteger" -> "new java.math.BigInteger(\"" + variant + "\")";
+            case "UUID" -> "UUID.fromString(\"123e4567-e89b-12d3-a456-426614174000\")";
+            case "BigDecimal" -> "new BigDecimal(\"" + variant + "\")";
+            case "BigInteger" -> "new BigInteger(\"" + variant + "\")";
             case "Integer", "int" -> String.valueOf(variant);
             case "Short", "short" -> "(short) " + variant;
             case "Byte", "byte" -> "(byte) " + variant;
@@ -1628,42 +1682,15 @@ public class ServiceImplTestGenerator {
     }
 
     /**
-     * Builds extra import lines required by generated sample fixtures.
+     * Builds extra import lines required by generated entity fixture fields.
      *
-     * @param table current table
+     * @param entityFields actual generated entity fields
      * @return import lines
      */
-    private List<String> buildFixtureExtraImports(Table table) {
-        List<Column> usedColumns = table.getColumns().stream()
-                .filter(Objects::nonNull)
-                .filter(this::isColumnUsedInAnyFixture)
-                .toList();
-
-        return buildImportsForColumns(usedColumns);
+    private List<String> buildFixtureExtraImports(List<Field> entityFields) {
+        return buildImportsForFields(entityFields);
     }
 
-    /**
-     * Determines whether the provided column is actually used
-     * in any generated fixture method.
-     *
-     * @param column source column
-     * @return true when the column contributes a non-null fixture value
-     */
-    private boolean isColumnUsedInAnyFixture(Column column) {
-        if (column == null) {
-            return false;
-        }
-
-        if (!"null".equals(sampleLiteralForColumn(column, 1))) {
-            return true;
-        }
-
-        if (!"null".equals(sampleLiteralForColumn(column, 2))) {
-            return true;
-        }
-
-        return !column.isPrimaryKey() && !"null".equals(sampleLiteralForColumn(column, 3));
-    }
 
     /**
      * Builds Java import lines for the provided columns.
