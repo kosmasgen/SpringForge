@@ -1037,7 +1037,7 @@ public class ServiceImplGenerator {
                 buildCompositePrimaryKeyMethodParameters(primaryKeyColumns)
         );
 
-        if (stringBuilder.length() > 0) {
+        if (!stringBuilder.isEmpty()) {
             stringBuilder.append(", ");
         }
 

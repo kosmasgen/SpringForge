@@ -127,14 +127,6 @@ public class Field {
     }
 
 
-    /**
-     * Returns true when this field represents an owning-side relationship.
-     *
-     * @return true if the field is an owning-side relation
-     */
-    public boolean isOwningRelationship() {
-        return relationKind != null && owningSide;
-    }
 
     /**
      * Enumerates the supported relationship kinds for generated fields.

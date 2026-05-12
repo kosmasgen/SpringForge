@@ -364,7 +364,7 @@ public class ExceptionGenerator {
     /**
      * Builds the JavaDoc section of the generated {@code GlobalExceptionHandler}.
      *
-     * @return generated class JavaDoc source content
+     * @return generated class Javadoc source content
      */
     private String buildGlobalExceptionHandlerClassJavaDoc() {
         return """

@@ -583,7 +583,7 @@ public class RelationshipResolver {
         log.info("Starting to resolve relationships for all {} tables...", tableMap.size());
 
         for (Table table : tableMap.values()) {
-            log.info("Resolving relationships for table: {}", table.getName());
+            log.info(" Resolving relationships for table: {}", table.getName());
 
             if (isPureManyToManyJoinTable(table)) {
                 registerPureManyToMany(table);
