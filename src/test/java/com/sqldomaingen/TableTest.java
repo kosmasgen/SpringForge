@@ -16,6 +16,30 @@ public class TableTest {
     public void testAddDecimalColumnToEventAssignmentTable() {
         log.info("Testing addColumn with DECIMAL column in 'event_assignment' table...");
 
+        Table table = createEventAssignmentTableWithDecimalColumn();
+
+        log.info("Final table: {}", table);
+
+        // Assertions
+        Assertions.assertEquals(5, table.getColumns().size());
+
+        Column decimalCol = table.getColumns().stream()
+                .filter(c -> "workload_percentage".equals(c.getName()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("DECIMAL column not found"));
+
+        Assertions.assertEquals("DECIMAL", decimalCol.getSqlType());
+        Assertions.assertEquals(5, decimalCol.getPrecision());
+        Assertions.assertEquals(2, decimalCol.getScale());
+        Assertions.assertFalse(decimalCol.isNullable());
+    }
+
+    /**
+     * Creates a test table with a DECIMAL workload column.
+     *
+     * @return populated test table
+     */
+    private Table createEventAssignmentTableWithDecimalColumn() {
         Table table = new Table();
         table.setName("event_assignment");
 
@@ -53,21 +77,7 @@ public class TableTest {
         table.addColumn(workload);
         table.addColumn(note);
 
-
-        log.info(" Final table: {}", table);
-
-        // Assertions
-        Assertions.assertEquals(5, table.getColumns().size());
-
-        Column decimalCol = table.getColumns().stream()
-                .filter(c -> "workload_percentage".equals(c.getName()))
-                .findFirst()
-                .orElseThrow(() -> new AssertionError("DECIMAL column not found"));
-
-        Assertions.assertEquals("DECIMAL", decimalCol.getSqlType());
-        Assertions.assertEquals(5, decimalCol.getPrecision());
-        Assertions.assertEquals(2, decimalCol.getScale());
-        Assertions.assertFalse(decimalCol.isNullable());
+        return table;
     }
 
 
@@ -115,6 +125,28 @@ public class TableTest {
     void testParseCreateDepartmentTable_ToStringValidation() {
         log.info("Testing Table.toString with parsed 'department' table structure...");
 
+        Table table = createDepartmentTableFixture();
+
+        String expected = "Table{name='department', columns=[" +
+                "Column(name=department_id, sqlType=SERIAL, length=0, isIdentity=false, identityGeneration=null, sequenceName=null, constraints=[], defaultValue=null, primaryKey=true, unique=false, manyToMany=false, nullable=false, isDefaultExpression=null, defaultExpression=null, checkConstraint=null, targetTable=null, joinTableName=null, inverseJoinColumn=null, isRelationship=false, onUpdate=null, onDelete=null, generatedAs=null, javaType=null, foreignKey=false, formattedName=null, referencedTable=null, referencedColumn=null, precision=0, scale=0, mappedBy=null, fieldName=null, primaryKeyConstraintName=null, foreignKeyConstraintName=null), " +
+                "Column(name=name, sqlType=VARCHAR, length=100, isIdentity=false, identityGeneration=null, sequenceName=null, constraints=[], defaultValue=null, primaryKey=false, unique=false, manyToMany=false, nullable=false, isDefaultExpression=null, defaultExpression=null, checkConstraint=null, targetTable=null, joinTableName=null, inverseJoinColumn=null, isRelationship=false, onUpdate=null, onDelete=null, generatedAs=null, javaType=null, foreignKey=false, formattedName=null, referencedTable=null, referencedColumn=null, precision=0, scale=0, mappedBy=null, fieldName=null, primaryKeyConstraintName=null, foreignKeyConstraintName=null), " +
+                "Column(name=description, sqlType=TEXT, length=0, isIdentity=false, identityGeneration=null, sequenceName=null, constraints=[], defaultValue=null, primaryKey=false, unique=false, manyToMany=false, nullable=true, isDefaultExpression=null, defaultExpression=null, checkConstraint=null, targetTable=null, joinTableName=null, inverseJoinColumn=null, isRelationship=false, onUpdate=null, onDelete=null, generatedAs=null, javaType=null, foreignKey=false, formattedName=null, referencedTable=null, referencedColumn=null, precision=0, scale=0, mappedBy=null, fieldName=null, primaryKeyConstraintName=null, foreignKeyConstraintName=null), " +
+                "Column(name=parent_dept_id, sqlType=INT, length=0, isIdentity=false, identityGeneration=null, sequenceName=null, constraints=[], defaultValue=null, primaryKey=false, unique=false, manyToMany=false, nullable=true, isDefaultExpression=null, defaultExpression=null, checkConstraint=null, targetTable=null, joinTableName=null, inverseJoinColumn=null, isRelationship=false, onUpdate=null, onDelete=null, generatedAs=null, javaType=null, foreignKey=false, formattedName=null, referencedTable=null, referencedColumn=null, precision=0, scale=0, mappedBy=null, fieldName=null, primaryKeyConstraintName=null, foreignKeyConstraintName=null), " +
+                "Column(name=created_at, sqlType=TIMESTAMP, length=0, isIdentity=false, identityGeneration=null, sequenceName=null, constraints=[], defaultValue=CURRENT_TIMESTAMP, primaryKey=false, unique=false, manyToMany=false, nullable=true, isDefaultExpression=null, defaultExpression=null, checkConstraint=null, targetTable=null, joinTableName=null, inverseJoinColumn=null, isRelationship=false, onUpdate=null, onDelete=null, generatedAs=null, javaType=null, foreignKey=false, formattedName=null, referencedTable=null, referencedColumn=null, precision=0, scale=0, mappedBy=null, fieldName=null, primaryKeyConstraintName=null, foreignKeyConstraintName=null), " +
+                "Column(name=updated_at, sqlType=TIMESTAMP, length=0, isIdentity=false, identityGeneration=null, sequenceName=null, constraints=[], defaultValue=CURRENT_TIMESTAMP, primaryKey=false, unique=false, manyToMany=false, nullable=true, isDefaultExpression=null, defaultExpression=null, checkConstraint=null, targetTable=null, joinTableName=null, inverseJoinColumn=null, isRelationship=false, onUpdate=null, onDelete=null, generatedAs=null, javaType=null, foreignKey=false, formattedName=null, referencedTable=null, referencedColumn=null, precision=0, scale=0, mappedBy=null, fieldName=null, primaryKeyConstraintName=null, foreignKeyConstraintName=null)" +
+                "], constraints=[PRIMARY KEY (department_id), FOREIGN KEY (parent_dept_id) REFERENCES department(department_id)], relationships=[], manyToManyRelations=[], pureJoinTable=false, indexes=[]}";
+
+        log.info("Table state: {}", table);
+
+        Assertions.assertEquals(expected, table.toString(), "Table toString should match the expected format.");
+    }
+
+    /**
+     * Creates a department table fixture for toString validation.
+     *
+     * @return populated department table
+     */
+    private Table createDepartmentTableFixture() {
         Table table = new Table();
         table.setName("department");
 
@@ -164,18 +196,7 @@ public class TableTest {
                 "FOREIGN KEY (parent_dept_id) REFERENCES department(department_id)"
         ));
 
-        String expected = "Table{name='department', columns=[" +
-                "Column(name=department_id, sqlType=SERIAL, length=0, isIdentity=false, identityGeneration=null, sequenceName=null, constraints=[], defaultValue=null, primaryKey=true, unique=false, manyToMany=false, nullable=false, isDefaultExpression=null, defaultExpression=null, checkConstraint=null, targetTable=null, joinTableName=null, inverseJoinColumn=null, isRelationship=false, onUpdate=null, onDelete=null, generatedAs=null, javaType=null, foreignKey=false, formattedName=null, referencedTable=null, referencedColumn=null, precision=0, scale=0, mappedBy=null, fieldName=null, primaryKeyConstraintName=null, foreignKeyConstraintName=null), " +
-                "Column(name=name, sqlType=VARCHAR, length=100, isIdentity=false, identityGeneration=null, sequenceName=null, constraints=[], defaultValue=null, primaryKey=false, unique=false, manyToMany=false, nullable=false, isDefaultExpression=null, defaultExpression=null, checkConstraint=null, targetTable=null, joinTableName=null, inverseJoinColumn=null, isRelationship=false, onUpdate=null, onDelete=null, generatedAs=null, javaType=null, foreignKey=false, formattedName=null, referencedTable=null, referencedColumn=null, precision=0, scale=0, mappedBy=null, fieldName=null, primaryKeyConstraintName=null, foreignKeyConstraintName=null), " +
-                "Column(name=description, sqlType=TEXT, length=0, isIdentity=false, identityGeneration=null, sequenceName=null, constraints=[], defaultValue=null, primaryKey=false, unique=false, manyToMany=false, nullable=true, isDefaultExpression=null, defaultExpression=null, checkConstraint=null, targetTable=null, joinTableName=null, inverseJoinColumn=null, isRelationship=false, onUpdate=null, onDelete=null, generatedAs=null, javaType=null, foreignKey=false, formattedName=null, referencedTable=null, referencedColumn=null, precision=0, scale=0, mappedBy=null, fieldName=null, primaryKeyConstraintName=null, foreignKeyConstraintName=null), " +
-                "Column(name=parent_dept_id, sqlType=INT, length=0, isIdentity=false, identityGeneration=null, sequenceName=null, constraints=[], defaultValue=null, primaryKey=false, unique=false, manyToMany=false, nullable=true, isDefaultExpression=null, defaultExpression=null, checkConstraint=null, targetTable=null, joinTableName=null, inverseJoinColumn=null, isRelationship=false, onUpdate=null, onDelete=null, generatedAs=null, javaType=null, foreignKey=false, formattedName=null, referencedTable=null, referencedColumn=null, precision=0, scale=0, mappedBy=null, fieldName=null, primaryKeyConstraintName=null, foreignKeyConstraintName=null), " +
-                "Column(name=created_at, sqlType=TIMESTAMP, length=0, isIdentity=false, identityGeneration=null, sequenceName=null, constraints=[], defaultValue=CURRENT_TIMESTAMP, primaryKey=false, unique=false, manyToMany=false, nullable=true, isDefaultExpression=null, defaultExpression=null, checkConstraint=null, targetTable=null, joinTableName=null, inverseJoinColumn=null, isRelationship=false, onUpdate=null, onDelete=null, generatedAs=null, javaType=null, foreignKey=false, formattedName=null, referencedTable=null, referencedColumn=null, precision=0, scale=0, mappedBy=null, fieldName=null, primaryKeyConstraintName=null, foreignKeyConstraintName=null), " +
-                "Column(name=updated_at, sqlType=TIMESTAMP, length=0, isIdentity=false, identityGeneration=null, sequenceName=null, constraints=[], defaultValue=CURRENT_TIMESTAMP, primaryKey=false, unique=false, manyToMany=false, nullable=true, isDefaultExpression=null, defaultExpression=null, checkConstraint=null, targetTable=null, joinTableName=null, inverseJoinColumn=null, isRelationship=false, onUpdate=null, onDelete=null, generatedAs=null, javaType=null, foreignKey=false, formattedName=null, referencedTable=null, referencedColumn=null, precision=0, scale=0, mappedBy=null, fieldName=null, primaryKeyConstraintName=null, foreignKeyConstraintName=null)" +
-                "], constraints=[PRIMARY KEY (department_id), FOREIGN KEY (parent_dept_id) REFERENCES department(department_id)], relationships=[], manyToManyRelations=[], pureJoinTable=false, indexes=[]}";
-
-        log.info("Table state: {}", table);
-
-        Assertions.assertEquals(expected, table.toString(), "Table toString should match the expected format.");
+        return table;
     }
 
 

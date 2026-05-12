@@ -661,12 +661,16 @@ public class EntityGenerator {
     }
 
 
+    /**
+     * Checks whether an inverse relationship should be skipped because its owning side
+     * will not be generated as a relation field.
+     *
+     * @param relationship inverse relationship metadata
+     * @return true when the inverse relationship should be skipped
+     */
     private boolean shouldGenerateInverseRelationship(Relationship relationship) {
         if (relationship == null || relationship.getMappedBy() == null || relationship.getMappedBy().isBlank()) {
             return false;
-        }
-        if (relationship.getRelationshipType() == Relationship.RelationshipType.ONETOONE) {
-            return true;
         }
 
         Optional<Table> targetTableOptional = findTargetTableInGeneratorMap(relationship.getTargetTable());
@@ -700,11 +704,11 @@ public class EntityGenerator {
 
             if (expectedParentTable.equals(resolvedParentTable)
                     && expectedMappedBy.equals(resolvedFieldName)) {
-                return true;
+                return false;
             }
         }
 
-        return false;
+        return true;
     }
 
 

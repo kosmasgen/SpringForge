@@ -17,8 +17,8 @@ class LiquibaseDependencyGraphBuilderTest {
         Table companyProfile = table("pep_schema.company_profile");
         Table companyProfileI18n = table(
                 "pep_schema.company_profile_i18n",
-                foreignKeyColumn("company_profile_id", "company_profile", "id"),
-                foreignKeyColumn("language_id", "languages", "id")
+                foreignKeyColumn("company_profile_id", "company_profile"),
+                foreignKeyColumn("language_id", "languages")
         );
 
         LiquibaseDependencyGraphBuilder builder = new LiquibaseDependencyGraphBuilder();
@@ -41,7 +41,7 @@ class LiquibaseDependencyGraphBuilderTest {
         Table auditUsers = table("audit.users");
         Table userSession = table(
                 "app.user_session",
-                foreignKeyColumn("user_id", "users", "id")
+                foreignKeyColumn("user_id", "users")
         );
 
         LiquibaseDependencyGraphBuilder builder = new LiquibaseDependencyGraphBuilder();
@@ -62,27 +62,27 @@ class LiquibaseDependencyGraphBuilderTest {
         Table company = table("pep_schema.company");
         Table department = table(
                 "pep_schema.department",
-                foreignKeyColumn("company_id", "pep_schema.company", "id")
+                foreignKeyColumn("company_id", "pep_schema.company")
         );
         Table employee = table(
                 "pep_schema.employee",
-                foreignKeyColumn("company_id", "pep_schema.company", "id"),
-                foreignKeyColumn("department_id", "pep_schema.department", "id"),
-                foreignKeyColumn("status_id", "pep_schema.company_status", "id")
+                foreignKeyColumn("company_id", "pep_schema.company"),
+                foreignKeyColumn("department_id", "pep_schema.department"),
+                foreignKeyColumn("status_id", "pep_schema.company_status")
         );
         Table employeeI18n = table(
                 "pep_schema.employee_i18n",
-                foreignKeyColumn("employee_id", "employee", "id"),
-                foreignKeyColumn("language_id", "languages", "id")
+                foreignKeyColumn("employee_id", "employee"),
+                foreignKeyColumn("language_id", "languages")
         );
         Table project = table(
                 "pep_schema.project",
-                foreignKeyColumn("company_id", "company", "id")
+                foreignKeyColumn("company_id", "company")
         );
         Table projectAssignment = table(
                 "pep_schema.project_assignment",
-                foreignKeyColumn("project_id", "project", "id"),
-                foreignKeyColumn("employee_id", "employee", "id")
+                foreignKeyColumn("project_id", "project"),
+                foreignKeyColumn("employee_id", "employee")
         );
 
         LiquibaseDependencyGraphBuilder builder = new LiquibaseDependencyGraphBuilder();
@@ -113,40 +113,40 @@ class LiquibaseDependencyGraphBuilderTest {
         Table company = table("pep_schema.company");
         Table companyProfile = table(
                 "pep_schema.company_profile",
-                foreignKeyColumn("company_id", "pep_schema.company", "id")
+                foreignKeyColumn("company_id", "pep_schema.company")
         );
         Table companyProfileI18n = table(
                 "pep_schema.company_profile_i18n",
-                foreignKeyColumn("company_profile_id", "company_profile", "id"),
-                foreignKeyColumn("language_id", "languages", "id")
+                foreignKeyColumn("company_profile_id", "company_profile"),
+                foreignKeyColumn("language_id", "languages")
         );
         Table department = table(
                 "pep_schema.department",
-                foreignKeyColumn("company_id", "company", "id")
+                foreignKeyColumn("company_id", "company")
         );
         Table employee = table(
                 "pep_schema.employee",
-                foreignKeyColumn("company_id", "pep_schema.company", "id"),
-                foreignKeyColumn("department_id", "department", "id"),
-                foreignKeyColumn("status_id", "pep_schema.company_status", "id")
+                foreignKeyColumn("company_id", "pep_schema.company"),
+                foreignKeyColumn("department_id", "department"),
+                foreignKeyColumn("status_id", "pep_schema.company_status")
         );
         Table employeeI18n = table(
                 "pep_schema.employee_i18n",
-                foreignKeyColumn("employee_id", "employee", "id"),
-                foreignKeyColumn("language_id", "pep_schema.languages", "id")
+                foreignKeyColumn("employee_id", "employee"),
+                foreignKeyColumn("language_id", "pep_schema.languages")
         );
         Table project = table(
                 "pep_schema.project",
-                foreignKeyColumn("company_id", "company", "id")
+                foreignKeyColumn("company_id", "company")
         );
         Table projectAssignment = table(
                 "pep_schema.project_assignment",
-                foreignKeyColumn("project_id", "project", "id"),
-                foreignKeyColumn("employee_id", "employee", "id")
+                foreignKeyColumn("project_id", "project"),
+                foreignKeyColumn("employee_id", "employee")
         );
         Table auditTrail = table(
                 "pep_schema.audit_trail",
-                foreignKeyColumn("employee_id", "employee", "id")
+                foreignKeyColumn("employee_id", "employee")
         );
 
         LiquibaseDependencyGraphBuilder builder = new LiquibaseDependencyGraphBuilder();
@@ -199,12 +199,12 @@ class LiquibaseDependencyGraphBuilderTest {
         return table;
     }
 
-    private Column foreignKeyColumn(String columnName, String referencedTable, String referencedColumn) {
+    private Column foreignKeyColumn(String columnName, String referencedTable) {
         Column column = new Column();
         column.setName(columnName);
         column.setForeignKey(true);
         column.setReferencedTable(referencedTable);
-        column.setReferencedColumn(referencedColumn);
+        column.setReferencedColumn("id");
         return column;
     }
 }

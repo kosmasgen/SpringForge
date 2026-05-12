@@ -69,23 +69,29 @@ class GrammarRelationshipTest {
         return parser.constraint();
     }
 
+    /**
+     * Extracts the relationship type from a constraint definition.
+     *
+     * @param ctx constraint parser context
+     * @return resolved relationship type
+     */
     private String extractRelationship(PostgreSQLParser.ConstraintContext ctx) {
         if (ctx.RELATIONSHIP() != null && ctx.relationshipType() != null) {
             String relationship = ctx.relationshipType().getText();
-            switch (relationship) {
-                case "ONETOONE":
-                    return "OneToOne";
-                case "MANYTOONE":
-                    return "ManyToOne";
-                case "ONETOMANY":
-                    return "OneToMany";
-                case "MANYTOMANY":
-                    return "ManyToMany";
-                default:
-                    throw new IllegalArgumentException("Unknown relationship type: " + relationship);
-            }
+
+            return switch (relationship) {
+                case "ONETOONE" -> "OneToOne";
+                case "MANYTOONE" -> "ManyToOne";
+                case "ONETOMANY" -> "OneToMany";
+                case "MANYTOMANY" -> "ManyToMany";
+                default -> throw new IllegalArgumentException(
+                        "Unknown relationship type: " + relationship
+                );
+            };
         }
-        return "ManyToOne"; // Προεπιλογή αν δεν υπάρχει η λέξη RELATIONSHIP
+
+        // Default relationship type
+        return "ManyToOne";
     }
 
     @Test

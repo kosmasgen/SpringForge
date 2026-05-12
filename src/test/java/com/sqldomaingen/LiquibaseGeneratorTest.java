@@ -26,8 +26,8 @@ class LiquibaseGeneratorTest {
         Table companyProfile = table("pep_schema.company_profile");
         Table companyProfileI18n = table(
                 "pep_schema.company_profile_i18n",
-                foreignKeyColumn("company_profile_id", "pep_schema.company_profile", "id"),
-                foreignKeyColumn("language_id", "pep_schema.languages", "id")
+                foreignKeyColumn("company_profile_id", "pep_schema.company_profile"),
+                foreignKeyColumn("language_id", "pep_schema.languages")
         );
 
         LiquibaseGenerator generator = new LiquibaseGenerator();
@@ -277,12 +277,12 @@ class LiquibaseGeneratorTest {
         return table;
     }
 
-    private Column foreignKeyColumn(String columnName, String referencedTable, String referencedColumn) {
+    private Column foreignKeyColumn(String columnName, String referencedTable) {
         Column column = new Column();
         column.setName(columnName);
         column.setForeignKey(true);
         column.setReferencedTable(referencedTable);
-        column.setReferencedColumn(referencedColumn);
+        column.setReferencedColumn("id");
         return column;
     }
 }

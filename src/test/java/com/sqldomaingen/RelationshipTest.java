@@ -14,17 +14,7 @@ class RelationshipTest {
     void testRelationshipSettersAndGetters() {
         log.info("Running test: testRelationshipSettersAndGetters");
 
-        Relationship relationship = new Relationship();
-        relationship.setSourceTable("orders");
-        relationship.setSourceColumn("customer_id");
-        relationship.setTargetTable("customers");
-        relationship.setTargetColumn("id");
-        relationship.setRelationshipType(RelationshipType.MANYTOONE);
-        relationship.setOnUpdate("CASCADE");
-        relationship.setOnDelete("SET NULL");
-        relationship.setJoinTableName("order_customers");
-        relationship.setInverseJoinColumn("customer_id");
-        relationship.setMappedBy("customer");
+        Relationship relationship = createRelationshipFixture();
 
         log.info("Relationship initialized: {}", relationship);
 
@@ -40,11 +30,65 @@ class RelationshipTest {
         assertEquals("customer", relationship.getMappedBy());
     }
 
+    /**
+     * Creates a relationship fixture for testing setters and getters.
+     *
+     * @return populated relationship
+     */
+    private Relationship createRelationshipFixture() {
+        Relationship relationship = new Relationship();
+
+        relationship.setSourceTable("orders");
+        relationship.setSourceColumn("customer_id");
+        relationship.setTargetTable("customers");
+        relationship.setTargetColumn("id");
+        relationship.setRelationshipType(RelationshipType.MANYTOONE);
+        relationship.setOnUpdate("CASCADE");
+        relationship.setOnDelete("SET NULL");
+        relationship.setJoinTableName("order_customers");
+        relationship.setInverseJoinColumn("customer_id");
+        relationship.setMappedBy("customer");
+
+        return relationship;
+    }
+
     @Test
     void testRelationshipToString() {
         log.info("Running test: testRelationshipToString");
 
+        Relationship relationship = createRelationshipToStringFixture();
+
+        String expected = buildExpectedRelationshipToString();
+
+        log.info("Expected: {}", expected);
+        log.info("Actual: {}", relationship);
+
+        assertEquals(
+                expected,
+                relationship.toString(),
+                "Relationship toString should match the expected format."
+        );
+    }
+
+    /**
+     * Builds the expected relationship toString value.
+     *
+     * @return expected relationship string
+     */
+    private String buildExpectedRelationshipToString() {
+        return "Relationship(sourceColumn=customer_id, targetColumn=id, sourceTable=orders, " +
+                "targetTable=customers, onUpdate=RESTRICT, onDelete=CASCADE, joinTableName=order_customers, " +
+                "inverseJoinColumn=customer_id, mappedBy=customer, relationshipType=ONETOMANY)";
+    }
+
+    /**
+     * Creates a relationship fixture for toString validation.
+     *
+     * @return populated relationship
+     */
+    private Relationship createRelationshipToStringFixture() {
         Relationship relationship = new Relationship();
+
         relationship.setSourceTable("orders");
         relationship.setSourceColumn("customer_id");
         relationship.setTargetTable("customers");
@@ -56,14 +100,7 @@ class RelationshipTest {
         relationship.setInverseJoinColumn("customer_id");
         relationship.setMappedBy("customer");
 
-        String expected = "Relationship(sourceColumn=customer_id, targetColumn=id, sourceTable=orders, " +
-                "targetTable=customers, onUpdate=RESTRICT, onDelete=CASCADE, joinTableName=order_customers, " +
-                "inverseJoinColumn=customer_id, mappedBy=customer, relationshipType=ONETOMANY)";
-
-        log.info("Expected: {}", expected);
-        log.info("Actual: {}", relationship);
-
-        assertEquals(expected, relationship.toString(), "Relationship toString should match the expected format.");
+        return relationship;
     }
 
     @Test
@@ -168,22 +205,14 @@ class RelationshipTest {
         assertNull(relationship.getInverseJoinColumn(), "Inverse join column should be null for one-to-many.");
     }
 
+
     @Test
     void testManyToManyRelationship() {
         log.info("Running test: testManyToManyRelationship");
 
-        Relationship relationship = new Relationship();
-        relationship.setSourceTable("students");
-        relationship.setSourceColumn("id");
-        relationship.setTargetTable("courses");
-        relationship.setTargetColumn("id");
-        relationship.setRelationshipType(RelationshipType.MANYTOMANY);
-        relationship.setJoinTableName("student_courses");
-        relationship.setInverseJoinColumn("course_id");
-        relationship.setOnUpdate("CASCADE");
-        relationship.setOnDelete("CASCADE");
+        Relationship relationship = createManyToManyRelationshipFixture();
 
-        log.info("Created Relationship : {}", relationship);
+        log.info("Created Relationship: {}", relationship);
 
         assertEquals("students", relationship.getSourceTable());
         assertEquals("id", relationship.getSourceColumn());
@@ -197,21 +226,34 @@ class RelationshipTest {
         assertNull(relationship.getMappedBy(), "MappedBy should be null for owning many-to-many.");
     }
 
+    /**
+     * Creates a many-to-many relationship fixture for getter validation.
+     *
+     * @return populated many-to-many relationship
+     */
+    private Relationship createManyToManyRelationshipFixture() {
+        Relationship relationship = new Relationship();
+
+        relationship.setSourceTable("students");
+        relationship.setSourceColumn("id");
+        relationship.setTargetTable("courses");
+        relationship.setTargetColumn("id");
+        relationship.setRelationshipType(RelationshipType.MANYTOMANY);
+        relationship.setJoinTableName("student_courses");
+        relationship.setInverseJoinColumn("course_id");
+        relationship.setOnUpdate("CASCADE");
+        relationship.setOnDelete("CASCADE");
+
+        return relationship;
+    }
+
+
+
     @Test
     void testManyToManyRelationshipWithMappedBy() {
         log.info("Running test: testManyToManyRelationshipWithMappedBy");
 
-        Relationship relationship = new Relationship();
-        relationship.setSourceTable("courses");
-        relationship.setSourceColumn("id");
-        relationship.setTargetTable("students");
-        relationship.setTargetColumn("id");
-        relationship.setRelationshipType(RelationshipType.MANYTOMANY);
-        relationship.setJoinTableName("student_courses");
-        relationship.setInverseJoinColumn("student_id");
-        relationship.setMappedBy("courses");
-        relationship.setOnUpdate("CASCADE");
-        relationship.setOnDelete("CASCADE");
+        Relationship relationship = createInverseManyToManyRelationshipFixture();
 
         log.info("Created inverse many-to-many Relationship: {}", relationship);
 
@@ -226,4 +268,27 @@ class RelationshipTest {
         assertEquals("CASCADE", relationship.getOnUpdate());
         assertEquals("CASCADE", relationship.getOnDelete());
     }
+
+    /**
+     * Creates an inverse many-to-many relationship fixture.
+     *
+     * @return populated inverse many-to-many relationship
+     */
+    private Relationship createInverseManyToManyRelationshipFixture() {
+        Relationship relationship = new Relationship();
+
+        relationship.setSourceTable("courses");
+        relationship.setSourceColumn("id");
+        relationship.setTargetTable("students");
+        relationship.setTargetColumn("id");
+        relationship.setRelationshipType(RelationshipType.MANYTOMANY);
+        relationship.setJoinTableName("student_courses");
+        relationship.setInverseJoinColumn("student_id");
+        relationship.setMappedBy("courses");
+        relationship.setOnUpdate("CASCADE");
+        relationship.setOnDelete("CASCADE");
+
+        return relationship;
+    }
+
 }
