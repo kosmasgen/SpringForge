@@ -50,7 +50,7 @@ public class SQLParser {
      * @throws IllegalArgumentException if {@code sqlContent} is null or blank
      */
     public PostgreSQLParser createParser() {
-        if (!isSQLContentValid()) {
+        if (isSQLContentInvalid()) {
             log.error(Constants.EMPTY_SQL_ERROR_MESSAGE);
             throw new IllegalArgumentException(Constants.EMPTY_SQL_ERROR_MESSAGE);
         }
@@ -58,8 +58,8 @@ public class SQLParser {
         log.debug("ANTLR trace is enabled (grammar rule tracing).");
 
         PostgreSQLLexer lexer = new PostgreSQLLexer(CharStreams.fromString(sqlContent));
-        CommonTokenStream tokens = new CommonTokenStream(lexer);
-        PostgreSQLParser parser = new PostgreSQLParser(tokens);
+        CommonTokenStream tokens = createTokenStream(lexer);
+        PostgreSQLParser parser = createParser(tokens);
 
         // Replace default listeners to fail fast on syntax errors.
         parser.removeErrorListeners();
@@ -81,13 +81,33 @@ public class SQLParser {
     }
 
     /**
+     * Creates a token stream from the PostgreSQL lexer.
+     *
+     * @param lexer PostgreSQL lexer
+     * @return token stream
+     */
+    private CommonTokenStream createTokenStream(PostgreSQLLexer lexer) {
+        return new CommonTokenStream(lexer);
+    }
+
+    /**
+     * Creates a PostgreSQL parser from the token stream.
+     *
+     * @param tokens parser token stream
+     * @return PostgreSQL parser
+     */
+    private PostgreSQLParser createParser(CommonTokenStream tokens) {
+        return new PostgreSQLParser(tokens);
+    }
+
+    /**
      * Parses the current SQL script and returns the produced {@link ParseTree}.
      *
      * @return the parse tree created by the ANTLR parser
      * @throws IllegalArgumentException if {@code sqlContent} is invalid or contains syntax errors
      */
     public ParseTree parseTreeFromSQL() {
-        if (!isSQLContentValid()) {
+        if (isSQLContentInvalid()) {
             log.error("Cannot generate ParseTree: SQL content is invalid.");
             throw new IllegalArgumentException(Constants.EMPTY_SQL_ERROR_MESSAGE);
         }
@@ -116,7 +136,7 @@ public class SQLParser {
      * @throws IllegalArgumentException if {@code sqlContent} is invalid
      */
     public TokenStream parseSQL() {
-        if (!isSQLContentValid()) {
+        if (isSQLContentInvalid()) {
             log.error("Cannot generate TokenStream: SQL content is invalid.");
             throw new IllegalArgumentException(Constants.EMPTY_SQL_ERROR_MESSAGE);
         }
@@ -135,11 +155,11 @@ public class SQLParser {
     }
 
     /**
-     * Validates that {@code sqlContent} is present.
+     * Returns true when SQL content is missing or empty.
      *
-     * @return true if SQL content is not null and not empty
+     * @return true when SQL content is invalid
      */
-    public boolean isSQLContentValid() {
-        return sqlContent != null && !sqlContent.isEmpty();
+    public boolean isSQLContentInvalid() {
+        return sqlContent == null || sqlContent.isEmpty();
     }
 }
