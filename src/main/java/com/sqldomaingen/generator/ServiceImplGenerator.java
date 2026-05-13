@@ -1323,9 +1323,9 @@ public class ServiceImplGenerator {
             stringBuilder.append("                            \"").append(entityName).append("\",\n");
             stringBuilder.append("                            \"")
                     .append(propertyName)
-                    .append("=\" + ")
+                    .append(" '\" + ")
                     .append(dtoAccessExpression)
-                    .append("\n");
+                    .append(" + \"'\"\n");
             stringBuilder.append("                    ))\n");
             stringBuilder.append("                    .build();\n");
             stringBuilder.append("        }\n");
