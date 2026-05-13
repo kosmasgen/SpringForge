@@ -226,6 +226,7 @@ public class ControllerTestGenerator {
             List<String> requiredDtoFieldNames
     ) {
         String exceptionPackage = PackageResolver.resolvePackageName(basePackage, "exception");
+        String utilPackage = PackageResolver.resolvePackageName(basePackage, "util");
 
         Set<String> imports = new java.util.TreeSet<>();
         Set<String> staticImports = new java.util.TreeSet<>();
@@ -238,6 +239,7 @@ public class ControllerTestGenerator {
         imports.add("import " + servicePackage + "." + serviceName + ";");
         imports.add("import " + exceptionPackage + ".ErrorCodes;");
         imports.add("import " + exceptionPackage + ".GeneratedRuntimeException;");
+        imports.add("import " + utilPackage + ".MessageResolver;");
 
         for (String nestedDtoType : resolveNestedDtoImports(dtoFields, requiredDtoFieldNames, dtoName)) {
             imports.add("import " + dtoPackage + "." + nestedDtoType + ";");
@@ -360,6 +362,9 @@ public class ControllerTestGenerator {
 
         content.append("    @MockitoBean\n");
         content.append("    private ").append(serviceName).append(" ").append(serviceVar).append(";\n\n");
+
+        content.append("    @MockitoBean\n");
+        content.append("    private MessageResolver messageResolver;\n\n");
     }
 
     /**

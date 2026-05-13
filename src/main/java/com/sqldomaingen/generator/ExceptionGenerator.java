@@ -649,7 +649,7 @@ public class ExceptionGenerator {
                     Exception exception,
                     HttpServletRequest request
             ) {
-                log.error("Unhandled exception at {} {}", request.getMethod(), request.getRequestURI(), exception);
+                log.error("Unhandled exception at {} {}: {}", request.getMethod(), request.getRequestURI(), exception.getMessage());
 
                 return build(
                         ErrorCodes.INTERNAL_ERROR,
