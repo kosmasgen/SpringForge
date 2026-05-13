@@ -119,14 +119,36 @@ public class RepositoryGenerator {
     }
 
     /**
-     * Returns whether the repository will contain custom unique-based query methods.
+     * Returns whether the repository will contain custom query methods.
      *
      * @param table table metadata
-     * @return true when at least one eligible unique definition exists
+     * @return true when at least one eligible custom query method exists
      */
     private boolean hasCustomRepositoryMethods(Table table) {
         return !getEligibleInlineUniqueColumns(table).isEmpty()
-                || !getEligibleCompositeUniqueConstraints(table).isEmpty();
+                || !getEligibleCompositeUniqueConstraints(table).isEmpty()
+                || hasRestrictRelationshipMethods(table);
+    }
+
+    /**
+     * Returns whether the table has at least one restrict relationship
+     * that can produce a repository existsBy method.
+     *
+     * @param table table metadata
+     * @return true when at least one eligible restrict relationship exists
+     */
+    private boolean hasRestrictRelationshipMethods(Table table) {
+        if (table.getRelationships() == null || table.getRelationships().isEmpty()) {
+            return false;
+        }
+
+        return table.getRelationships().stream()
+                .filter(Objects::nonNull)
+                .filter(relationship -> relationship.getSourceColumn() != null)
+                .filter(this::isRestrictRelationship)
+                .map(relationship -> findColumnByName(table, relationship.getSourceColumn()))
+                .filter(Objects::nonNull)
+                .anyMatch(column -> !isUnsupportedForDerivedQuery(column.getJavaType()));
     }
 
     /**
@@ -294,7 +316,7 @@ public class RepositoryGenerator {
     }
 
     /**
-     * Adds import lines required by ON DELETE RESTRICT relationship methods.
+     * Adds import lines required by ON DELETE RESTRICT or ON UPDATE RESTRICT relationship methods.
      *
      * @param importLines ordered import collection
      * @param table table metadata
@@ -311,8 +333,11 @@ public class RepositoryGenerator {
 
         for (Relationship relationship : table.getRelationships()) {
             if (relationship == null
-                    || relationship.getSourceColumn() == null
-                    || !"RESTRICT".equalsIgnoreCase(relationship.getOnDelete())) {
+                    || relationship.getSourceColumn() == null) {
+                continue;
+            }
+
+            if (!isRestrictRelationship(relationship)) {
                 continue;
             }
 
@@ -330,6 +355,17 @@ public class RepositoryGenerator {
 
             addDerivedQueryTypeImport(importLines, column.getJavaType());
         }
+    }
+
+    /**
+     * Returns whether the relationship has ON DELETE RESTRICT or ON UPDATE RESTRICT.
+     *
+     * @param relationship relationship metadata
+     * @return true when delete or update action is RESTRICT
+     */
+    private boolean isRestrictRelationship(Relationship relationship) {
+        return "RESTRICT".equalsIgnoreCase(relationship.getOnDelete())
+                || "RESTRICT".equalsIgnoreCase(relationship.getOnUpdate());
     }
 
     /**
@@ -682,7 +718,7 @@ public class RepositoryGenerator {
     }
 
     /**
-     * Appends existsBy methods for ON DELETE RESTRICT relationships.
+     * Appends existsBy methods for ON DELETE RESTRICT or ON UPDATE RESTRICT relationships.
      *
      * @param builder target source builder
      * @param table table metadata
@@ -699,8 +735,11 @@ public class RepositoryGenerator {
 
         for (Relationship relationship : table.getRelationships()) {
             if (relationship == null
-                    || relationship.getSourceColumn() == null
-                    || !"RESTRICT".equalsIgnoreCase(relationship.getOnDelete())) {
+                    || relationship.getSourceColumn() == null) {
+                continue;
+            }
+
+            if (!isRestrictRelationship(relationship)) {
                 continue;
             }
 
