@@ -2,6 +2,7 @@ package com.sqldomaingen.generator;
 
 import com.sqldomaingen.model.Column;
 import com.sqldomaingen.model.Table;
+import com.sqldomaingen.model.Relationship;
 import com.sqldomaingen.model.UniqueConstraint;
 import com.sqldomaingen.util.GeneratorSupport;
 import com.sqldomaingen.util.JavaTypeSupport;
@@ -96,6 +97,7 @@ public class RepositoryGenerator {
         appendRepositoryDeclaration(builder, repositoryName, entityName, primaryKeyTypeRef.simpleName());
         appendExistsByMethodsForUniqueColumns(builder, table);
         appendExistsByMethodsForCompositeUniqueConstraints(builder, table);
+        appendExistsByMethodsForRestrictRelationships(builder, table);
         builder.append("}\n");
 
         return builder.toString();
@@ -288,6 +290,46 @@ public class RepositoryGenerator {
     private void addUniqueMethodImports(Set<String> importLines, Table table) {
         addInlineUniqueMethodImports(importLines, table);
         addCompositeUniqueMethodImports(importLines, table);
+        addRestrictRelationshipMethodImports(importLines, table);
+    }
+
+    /**
+     * Adds import lines required by ON DELETE RESTRICT relationship methods.
+     *
+     * @param importLines ordered import collection
+     * @param table table metadata
+     */
+    private void addRestrictRelationshipMethodImports(
+            Set<String> importLines,
+            Table table
+    ) {
+        if (table.getRelationships() == null || table.getRelationships().isEmpty()) {
+            return;
+        }
+
+        Set<String> processedColumns = new LinkedHashSet<>();
+
+        for (Relationship relationship : table.getRelationships()) {
+            if (relationship == null
+                    || relationship.getSourceColumn() == null
+                    || !"RESTRICT".equalsIgnoreCase(relationship.getOnDelete())) {
+                continue;
+            }
+
+            String columnName = relationship.getSourceColumn();
+
+            if (!processedColumns.add(columnName.toLowerCase())) {
+                continue;
+            }
+
+            Column column = findColumnByName(table, columnName);
+
+            if (column == null) {
+                continue;
+            }
+
+            addDerivedQueryTypeImport(importLines, column.getJavaType());
+        }
     }
 
     /**
@@ -637,5 +679,64 @@ public class RepositoryGenerator {
      * @param importLine optional import line
      */
     private record TypeRef(String simpleName, String importLine) {
+    }
+
+    /**
+     * Appends existsBy methods for ON DELETE RESTRICT relationships.
+     *
+     * @param builder target source builder
+     * @param table table metadata
+     */
+    private void appendExistsByMethodsForRestrictRelationships(
+            StringBuilder builder,
+            Table table
+    ) {
+        if (table.getRelationships() == null || table.getRelationships().isEmpty()) {
+            return;
+        }
+
+        Set<String> generatedMethodNames = collectExistingExistsByMethodNames(table);
+
+        for (Relationship relationship : table.getRelationships()) {
+            if (relationship == null
+                    || relationship.getSourceColumn() == null
+                    || !"RESTRICT".equalsIgnoreCase(relationship.getOnDelete())) {
+                continue;
+            }
+
+            Column sourceColumn = findColumnByName(table, relationship.getSourceColumn());
+
+            if (sourceColumn == null || isUnsupportedForDerivedQuery(sourceColumn.getJavaType())) {
+                continue;
+            }
+
+            String methodName = buildExistsByMethodName(table, List.of(sourceColumn.getName()));
+
+            if (!generatedMethodNames.add(methodName)) {
+                continue;
+            }
+
+            appendExistsByMethodForSingleColumn(builder, table, sourceColumn);
+        }
+    }
+
+    /**
+     * Collects existing existsBy method names generated from unique definitions.
+     *
+     * @param table table metadata
+     * @return existing existsBy method names
+     */
+    private Set<String> collectExistingExistsByMethodNames(Table table) {
+        Set<String> methodNames = new LinkedHashSet<>();
+
+        for (Column column : getEligibleInlineUniqueColumns(table)) {
+            methodNames.add(buildExistsByMethodName(table, List.of(column.getName())));
+        }
+
+        for (UniqueConstraint uniqueConstraint : getEligibleCompositeUniqueConstraints(table)) {
+            methodNames.add(buildExistsByMethodName(table, uniqueConstraint.getColumns()));
+        }
+
+        return methodNames;
     }
 }
