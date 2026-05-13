@@ -511,6 +511,13 @@ entity.alreadyExistsByCompositeId={0} already exists with composite id: {1}
 validation.badRequest=Bad request
 validation.required=Field is required
 validation.invalidValue=Invalid value
+
+# Error messages
+error.unexpected=Unexpected error
+error.endpointNotFound=Endpoint not found: {0}
+error.invalidRequestBody=Invalid request body
+error.validationFailed=Validation failed
+error.invalid=Invalid
 """;
 
         String greekMessages = """
@@ -525,6 +532,13 @@ entity.alreadyExistsByCompositeId=Το {0} υπάρχει ήδη με σύνθε
 validation.badRequest=Μη έγκυρο αίτημα
 validation.required=Το πεδίο είναι υποχρεωτικό
 validation.invalidValue=Μη έγκυρη τιμή
+
+# Error messages
+error.unexpected=Μη αναμενόμενο σφάλμα
+error.endpointNotFound=Το endpoint δεν βρέθηκε: {0}
+error.invalidRequestBody=Μη έγκυρο σώμα αιτήματος
+error.validationFailed=Η επικύρωση απέτυχε
+error.invalid=Μη έγκυρο
 """;
 
         Path messagesFile = root.resolve("src/main/resources/messages.properties");
