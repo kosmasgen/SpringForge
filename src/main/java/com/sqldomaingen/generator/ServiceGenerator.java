@@ -345,8 +345,9 @@ public class ServiceGenerator {
         );
 
         stringBuilder.append("    /**\n");
-        stringBuilder.append("     * Retrieves all ").append(pluralLowerDisplayLabel).append(".\n");
-        stringBuilder.append("     * @return non-null list of {@link ").append(dtoName).append("}\n");
+        stringBuilder.append("     * Retrieves all available ").append(pluralLowerDisplayLabel).append(".\n");
+        stringBuilder.append("     *\n");
+        stringBuilder.append("     * @return a non-null list of {@link ").append(dtoName).append("}\n");
         stringBuilder.append("     */\n");
         stringBuilder.append("    List<").append(dtoName).append("> getAll").append(pluralMethodSuffix).append("();\n\n");
     }
@@ -369,9 +370,26 @@ public class ServiceGenerator {
             boolean compositePrimaryKey,
             String idMethodParameters
     ) {
+        String lowerDisplayLabel = NamingConverter.toLogLabel(entityName);
+
         stringBuilder.append("    /**\n");
-        stringBuilder.append("     * Retrieves a record by id.\n");
-        appendPrimaryKeyJavaDocParameters(stringBuilder, primaryKeyColumns, compositePrimaryKey);
+
+        if (compositePrimaryKey) {
+            stringBuilder.append("     * Retrieves ")
+                    .append(NamingConverter.resolveIndefiniteArticle(lowerDisplayLabel))
+                    .append(" ")
+                    .append(lowerDisplayLabel)
+                    .append(" by its composite identifier.\n");
+        } else {
+            stringBuilder.append("     * Retrieves ")
+                    .append(NamingConverter.resolveIndefiniteArticle(lowerDisplayLabel))
+                    .append(" ")
+                    .append(lowerDisplayLabel)
+                    .append(" by its identifier.\n");
+        }
+
+        stringBuilder.append("     *\n");
+        appendPrimaryKeyJavaDocParameters(stringBuilder, primaryKeyColumns, compositePrimaryKey, lowerDisplayLabel, "retrieve");
         stringBuilder.append("     * @return the matching {@link ").append(dtoName).append("}\n");
         stringBuilder.append("     */\n");
         stringBuilder.append("    ").append(dtoName).append(" get").append(entityName).append("ById(")
@@ -386,10 +404,13 @@ public class ServiceGenerator {
      * @param dtoName DTO simple name
      */
     private void appendCreateMethodSignature(StringBuilder stringBuilder, String entityName, String dtoName) {
+        String lowerDisplayLabel = NamingConverter.toLogLabel(entityName);
+
         stringBuilder.append("    /**\n");
-        stringBuilder.append("     * Creates a new record.\n");
-        stringBuilder.append("     * @param dto input payload\n");
-        stringBuilder.append("     * @return created {@link ").append(dtoName).append("}\n");
+        stringBuilder.append("     * Creates a new ").append(lowerDisplayLabel).append(".\n");
+        stringBuilder.append("     *\n");
+        stringBuilder.append("     * @param dto the ").append(lowerDisplayLabel).append(" payload to create\n");
+        stringBuilder.append("     * @return the created {@link ").append(dtoName).append("}\n");
         stringBuilder.append("     */\n");
         stringBuilder.append("    ").append(dtoName).append(" create").append(entityName).append("(")
                 .append(dtoName).append(" dto);\n\n");
@@ -413,13 +434,16 @@ public class ServiceGenerator {
             boolean compositePrimaryKey,
             String updateMethodParameters
     ) {
+        String lowerDisplayLabel = NamingConverter.toLogLabel(entityName);
+
         stringBuilder.append("    /**\n");
-        stringBuilder.append("     * Updates an existing record.\n");
+        stringBuilder.append("     * Updates an existing ").append(lowerDisplayLabel).append(".\n");
         stringBuilder.append("     * <p>\n");
         stringBuilder.append("     * Only non-null fields from the DTO are applied to the existing entity.\n");
-        appendPrimaryKeyJavaDocParameters(stringBuilder, primaryKeyColumns, compositePrimaryKey);
-        stringBuilder.append("     * @param dto input payload with partial fields\n");
-        stringBuilder.append("     * @return updated {@link ").append(dtoName).append("}\n");
+        stringBuilder.append("     *\n");
+        appendPrimaryKeyJavaDocParameters(stringBuilder, primaryKeyColumns, compositePrimaryKey, lowerDisplayLabel, "update");
+        stringBuilder.append("     * @param dto the partial ").append(lowerDisplayLabel).append(" payload\n");
+        stringBuilder.append("     * @return the updated {@link ").append(dtoName).append("}\n");
         stringBuilder.append("     */\n");
         stringBuilder.append("    ").append(dtoName).append(" update").append(entityName).append("(")
                 .append(updateMethodParameters).append(");\n\n");
@@ -441,9 +465,26 @@ public class ServiceGenerator {
             boolean compositePrimaryKey,
             String idMethodParameters
     ) {
+        String lowerDisplayLabel = NamingConverter.toLogLabel(entityName);
+
         stringBuilder.append("    /**\n");
-        stringBuilder.append("     * Deletes a record by id.\n");
-        appendPrimaryKeyJavaDocParameters(stringBuilder, primaryKeyColumns, compositePrimaryKey);
+
+        if (compositePrimaryKey) {
+            stringBuilder.append("     * Deletes ")
+                    .append(NamingConverter.resolveIndefiniteArticle(lowerDisplayLabel))
+                    .append(" ")
+                    .append(lowerDisplayLabel)
+                    .append(" by its composite identifier.\n");
+        } else {
+            stringBuilder.append("     * Deletes ")
+                    .append(NamingConverter.resolveIndefiniteArticle(lowerDisplayLabel))
+                    .append(" ")
+                    .append(lowerDisplayLabel)
+                    .append(" by its identifier.\n");
+        }
+
+        stringBuilder.append("     *\n");
+        appendPrimaryKeyJavaDocParameters(stringBuilder, primaryKeyColumns, compositePrimaryKey, lowerDisplayLabel, "delete");
         stringBuilder.append("     */\n");
         stringBuilder.append("    void delete").append(entityName).append("(")
                 .append(idMethodParameters).append(");\n");
@@ -455,31 +496,34 @@ public class ServiceGenerator {
      * @param stringBuilder target source builder
      * @param primaryKeyColumns primary key columns
      * @param compositePrimaryKey true when the entity uses a composite primary key
+     * @param lowerDisplayLabel lowercase display label
+     * @param action target action description
      */
     private void appendPrimaryKeyJavaDocParameters(
             StringBuilder stringBuilder,
             List<com.sqldomaingen.model.Column> primaryKeyColumns,
-            boolean compositePrimaryKey
+            boolean compositePrimaryKey,
+            String lowerDisplayLabel,
+            String action
     ) {
         if (!compositePrimaryKey) {
-            stringBuilder.append("     * @param id the record id\n");
+            stringBuilder.append("     * @param id the identifier of the ")
+                    .append(lowerDisplayLabel)
+                    .append(" to ")
+                    .append(action)
+                    .append("\n");
             return;
         }
 
         for (com.sqldomaingen.model.Column primaryKeyColumn : primaryKeyColumns) {
-            String columnName = GeneratorSupport.unquoteIdentifier(primaryKeyColumn.getName());
-
-            if (columnName == null || columnName.isBlank()) {
-                columnName = "id";
-            }
-
-            String parameterName = NamingConverter.toCamelCase(columnName);
+            String parameterName = resolvePrimaryKeyParameterName(primaryKeyColumn);
+            String readableParameterLabel = NamingConverter.toLogLabel(parameterName);
 
             stringBuilder.append("     * @param ")
                     .append(parameterName)
                     .append(" the ")
-                    .append(columnName)
-                    .append(" value\n");
+                    .append(readableParameterLabel)
+                    .append(" of the composite key\n");
         }
     }
 
