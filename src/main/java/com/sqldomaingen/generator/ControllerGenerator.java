@@ -150,24 +150,46 @@ public class ControllerGenerator {
         String pluralMethodSuffix = NamingConverter.toPascalCase(
                 NamingConverter.toCamelCasePlural(entityName)
         );
+
         String pluralLowerDisplayLabel = NamingConverter.toLogLabel(
                 NamingConverter.toCamelCasePlural(entityName)
         );
+
         String controllerMethodName = "getAll" + pluralMethodSuffix;
 
         sb.append("    /**\n");
-        sb.append("     * Retrieves all ").append(pluralLowerDisplayLabel).append(".\n");
-        sb.append("     * @return list of ").append(dtoName).append("\n");
+        sb.append("     * Retrieves all available ")
+                .append(pluralLowerDisplayLabel)
+                .append(".\n");
+        sb.append("     *\n");
+
+        sb.append("     * @return a {@link ResponseEntity} containing a list of {@link ")
+                .append(dtoName)
+                .append("}\n");
+
+        sb.append("     *         and HTTP status 200 (OK)\n");
         sb.append("     */\n");
 
-        sb.append("    @Operation(summary = \"Get all ").append(pluralLowerDisplayLabel).append("\")\n");
+        sb.append("    @Operation(summary = \"Get all ")
+                .append(pluralLowerDisplayLabel)
+                .append("\")\n");
 
         sb.append("    @GetMapping\n");
-        sb.append("    public ResponseEntity<List<").append(dtoName).append(">> ")
+
+        sb.append("    public ResponseEntity<List<")
+                .append(dtoName)
+                .append(">> ")
                 .append(controllerMethodName)
                 .append("() {\n");
-        sb.append("        return ResponseEntity.ok(").append(serviceName).append(".getAll")
-                .append(pluralMethodSuffix).append("());\n");
+
+        sb.append("        return ResponseEntity\n");
+        sb.append("                .status(HttpStatus.OK)\n");
+        sb.append("                .body(")
+                .append(serviceName)
+                .append(".getAll")
+                .append(pluralMethodSuffix)
+                .append("());\n");
+
         sb.append("    }\n\n");
     }
 
@@ -197,39 +219,65 @@ public class ControllerGenerator {
             boolean compositePrimaryKey
     ) {
         String controllerMethodName = "get" + entityName + "ById";
-        String article = NamingConverter.resolveIndefiniteArticle(lowerDisplayLabel);
 
         stringBuilder.append("    /**\n");
-        stringBuilder.append("     * Retrieves ")
-                .append(article)
-                .append(" ")
-                .append(lowerDisplayLabel)
-                .append(" record by id.\n");
+
+        if (compositePrimaryKey) {
+            stringBuilder.append("     * Retrieves ")
+                    .append(NamingConverter.resolveIndefiniteArticle(lowerDisplayLabel))
+                    .append(" ")
+                    .append(lowerDisplayLabel)
+                    .append(" by its composite identifier.\n");
+        } else {
+            stringBuilder.append("     * Retrieves ")
+                    .append(NamingConverter.resolveIndefiniteArticle(lowerDisplayLabel))
+                    .append(" ")
+                    .append(lowerDisplayLabel)
+                    .append(" by its identifier.\n");
+        }
+
+        stringBuilder.append("     *\n");
 
         if (compositePrimaryKey) {
             for (Column primaryKeyColumn : primaryKeyColumns) {
                 String parameterName = resolvePkParamName(primaryKeyColumn);
                 String readableParameterLabel = NamingConverter.toLogLabel(parameterName);
+
                 stringBuilder.append("     * @param ")
                         .append(parameterName)
-                        .append(" ")
+                        .append(" the ")
                         .append(readableParameterLabel)
-                        .append(" identifier\n");
+                        .append(" of the composite key\n");
             }
         } else {
-            stringBuilder.append("     * @param id ").append(lowerDisplayLabel).append(" identifier\n");
+            stringBuilder.append("     * @param id the identifier of the ")
+                    .append(lowerDisplayLabel)
+                    .append(" to retrieve\n");
         }
 
-        stringBuilder.append("     * @return ").append(dtoName).append("\n");
+        stringBuilder.append("     * @return a {@link ResponseEntity} containing the requested {@link ")
+                .append(dtoName)
+                .append("}\n");
+        stringBuilder.append("     *         and HTTP status 200 (OK)\n");
         stringBuilder.append("     */\n");
 
-        stringBuilder.append("    @Operation(summary = \"Get ").append(displayLabel).append(" by id\")\n");
+        if (compositePrimaryKey) {
+            stringBuilder.append("    @Operation(summary = \"Get ")
+                    .append(displayLabel)
+                    .append(" by composite id\")\n");
+        } else {
+            stringBuilder.append("    @Operation(summary = \"Get ")
+                    .append(displayLabel)
+                    .append(" by id\")\n");
+        }
 
         if (compositePrimaryKey) {
             stringBuilder.append("    @GetMapping(\"");
             appendCompositePath(stringBuilder, primaryKeyColumns);
             stringBuilder.append("\")\n");
-            stringBuilder.append("    public ResponseEntity<").append(dtoName).append("> ")
+            stringBuilder.append("    public ResponseEntity<")
+                    .append(dtoName)
+                    .append("> ")
                     .append(controllerMethodName)
                     .append("(\n");
 
@@ -250,7 +298,9 @@ public class ControllerGenerator {
                 }
             }
 
-            stringBuilder.append("        return ResponseEntity.ok(")
+            stringBuilder.append("        return ResponseEntity\n");
+            stringBuilder.append("                .status(HttpStatus.OK)\n");
+            stringBuilder.append("                .body(")
                     .append(serviceName)
                     .append(".get")
                     .append(entityName)
@@ -264,15 +314,23 @@ public class ControllerGenerator {
         }
 
         stringBuilder.append("    @GetMapping(\"/{id}\")\n");
-        stringBuilder.append("    public ResponseEntity<").append(dtoName).append("> ")
+        stringBuilder.append("    public ResponseEntity<")
+                .append(dtoName)
+                .append("> ")
                 .append(controllerMethodName)
                 .append("(\n");
-        stringBuilder.append("            @PathVariable ").append(primaryKeyType).append(" id) {\n");
-        stringBuilder.append("        return ResponseEntity.ok(")
+        stringBuilder.append("            @PathVariable ")
+                .append(primaryKeyType)
+                .append(" id) {\n");
+
+        stringBuilder.append("        return ResponseEntity\n");
+        stringBuilder.append("                .status(HttpStatus.OK)\n");
+        stringBuilder.append("                .body(")
                 .append(serviceName)
                 .append(".get")
                 .append(entityName)
                 .append("ById(id));\n");
+
         stringBuilder.append("    }\n\n");
     }
 
@@ -296,29 +354,50 @@ public class ControllerGenerator {
             String serviceName
     ) {
         String controllerMethodName = "create" + entityName;
-        String article = NamingConverter.resolveIndefiniteArticle("new");
 
         stringBuilder.append("    /**\n");
-        stringBuilder.append("     * Creates ")
-                .append(article)
-                .append(" new ")
+        stringBuilder.append("     * Creates a new ")
                 .append(lowerDisplayLabel)
-                .append(" record.\n");
-        stringBuilder.append("     * @param dto ").append(lowerDisplayLabel).append(" payload\n");
-        stringBuilder.append("     * @return created ").append(dtoName).append("\n");
+                .append(".\n");
+        stringBuilder.append("     *\n");
+        stringBuilder.append("     * @param dto the ")
+                .append(lowerDisplayLabel)
+                .append(" payload to create; must be valid\n");
+        stringBuilder.append("     * @return a {@link ResponseEntity} containing the created {@link ")
+                .append(dtoName)
+                .append("}\n");
+        stringBuilder.append("     *         and HTTP status 201 (Created)\n");
         stringBuilder.append("     */\n");
-        stringBuilder.append("    @Operation(summary = \"Create ").append(displayLabel).append("\")\n");
+
+        stringBuilder.append("    @Operation(summary = \"Create ")
+                .append(displayLabel)
+                .append("\")\n");
         stringBuilder.append("    @PostMapping\n");
-        stringBuilder.append("    public ResponseEntity<").append(dtoName).append("> ")
+        stringBuilder.append("    public ResponseEntity<")
+                .append(dtoName)
+                .append("> ")
                 .append(controllerMethodName)
                 .append("(\n");
-        stringBuilder.append("            @Valid @RequestBody ").append(dtoName).append(" dto) {\n");
-        stringBuilder.append("        ").append(dtoName).append(" created = ")
+        stringBuilder.append("            @Valid @RequestBody ")
+                .append(dtoName)
+                .append(" dto) {\n");
+
+        stringBuilder.append("        ")
+                .append(dtoName)
+                .append(" created")
+                .append(entityName)
+                .append(" = ")
                 .append(serviceName)
                 .append(".create")
                 .append(entityName)
-                .append("(dto);\n");
-        stringBuilder.append("        return ResponseEntity.status(HttpStatus.CREATED).body(created);\n");
+                .append("(dto);\n\n");
+
+        stringBuilder.append("        return ResponseEntity\n");
+        stringBuilder.append("                .status(HttpStatus.CREATED)\n");
+        stringBuilder.append("                .body(created")
+                .append(entityName)
+                .append(");\n");
+
         stringBuilder.append("    }\n\n");
     }
 
@@ -348,42 +427,58 @@ public class ControllerGenerator {
             boolean compositePrimaryKey
     ) {
         String label = lowerDisplayLabel.replaceAll("\\s+", " ").trim();
-        String article = NamingConverter.resolveIndefiniteArticle("existing");
         String controllerMethodName = "patch" + entityName;
 
         stringBuilder.append("    /**\n");
-        stringBuilder.append("     * Partially updates ")
-                .append(article)
-                .append(" existing ")
+        stringBuilder.append("     * Partially updates an existing ")
                 .append(label)
-                .append(" record.\n");
-        stringBuilder.append("     * Only fields that are not null in the request are updated.\n");
+                .append(".\n");
+        stringBuilder.append("     * Only non-null fields from the request payload are updated.\n");
+        stringBuilder.append("     *\n");
 
         if (compositePrimaryKey) {
             for (Column primaryKeyColumn : primaryKeyColumns) {
                 String parameterName = resolvePkParamName(primaryKeyColumn);
                 String readableParameterLabel = NamingConverter.toLogLabel(parameterName);
+
                 stringBuilder.append("     * @param ")
                         .append(parameterName)
-                        .append(" ")
+                        .append(" the ")
                         .append(readableParameterLabel)
-                        .append(" identifier\n");
+                        .append(" of the composite key\n");
             }
         } else {
-            stringBuilder.append("     * @param id ").append(label).append(" identifier\n");
+            stringBuilder.append("     * @param id the identifier of the ")
+                    .append(label)
+                    .append(" to update\n");
         }
 
-        stringBuilder.append("     * @param dto partial ").append(label).append(" payload\n");
-        stringBuilder.append("     * @return updated ").append(dtoName).append("\n");
+        stringBuilder.append("     * @param dto the partial ")
+                .append(label)
+                .append(" payload\n");
+        stringBuilder.append("     * @return a {@link ResponseEntity} containing the updated {@link ")
+                .append(dtoName)
+                .append("}\n");
+        stringBuilder.append("     *         and HTTP status 200 (OK)\n");
         stringBuilder.append("     */\n");
 
-        stringBuilder.append("    @Operation(summary = \"Patch ").append(displayLabel).append("\")\n");
+        if (compositePrimaryKey) {
+            stringBuilder.append("    @Operation(summary = \"Patch ")
+                    .append(displayLabel)
+                    .append(" by composite id\")\n");
+        } else {
+            stringBuilder.append("    @Operation(summary = \"Patch ")
+                    .append(displayLabel)
+                    .append("\")\n");
+        }
 
         if (compositePrimaryKey) {
             stringBuilder.append("    @PatchMapping(\"");
             appendCompositePath(stringBuilder, primaryKeyColumns);
             stringBuilder.append("\")\n");
-            stringBuilder.append("    public ResponseEntity<").append(dtoName).append("> ")
+            stringBuilder.append("    public ResponseEntity<")
+                    .append(dtoName)
+                    .append("> ")
                     .append(controllerMethodName)
                     .append("(\n");
 
@@ -398,8 +493,15 @@ public class ControllerGenerator {
                         .append(",\n");
             }
 
-            stringBuilder.append("            @RequestBody ").append(dtoName).append(" dto) {\n");
-            stringBuilder.append("        return ResponseEntity.ok(")
+            stringBuilder.append("            @RequestBody ")
+                    .append(dtoName)
+                    .append(" dto) {\n");
+
+            stringBuilder.append("        ")
+                    .append(dtoName)
+                    .append(" updated")
+                    .append(entityName)
+                    .append(" = ")
                     .append(serviceName)
                     .append(".update")
                     .append(entityName)
@@ -407,22 +509,47 @@ public class ControllerGenerator {
 
             appendCompositeServiceArguments(stringBuilder, primaryKeyColumns);
 
-            stringBuilder.append(", dto));\n");
+            stringBuilder.append(", dto);\n\n");
+
+            stringBuilder.append("        return ResponseEntity\n");
+            stringBuilder.append("                .status(HttpStatus.OK)\n");
+            stringBuilder.append("                .body(updated")
+                    .append(entityName)
+                    .append(");\n");
+
             stringBuilder.append("    }\n\n");
             return;
         }
 
         stringBuilder.append("    @PatchMapping(\"/{id}\")\n");
-        stringBuilder.append("    public ResponseEntity<").append(dtoName).append("> ")
+        stringBuilder.append("    public ResponseEntity<")
+                .append(dtoName)
+                .append("> ")
                 .append(controllerMethodName)
                 .append("(\n");
-        stringBuilder.append("            @PathVariable ").append(primaryKeyType).append(" id,\n");
-        stringBuilder.append("            @RequestBody ").append(dtoName).append(" dto) {\n");
-        stringBuilder.append("        return ResponseEntity.ok(")
+        stringBuilder.append("            @PathVariable ")
+                .append(primaryKeyType)
+                .append(" id,\n");
+        stringBuilder.append("            @RequestBody ")
+                .append(dtoName)
+                .append(" dto) {\n");
+
+        stringBuilder.append("        ")
+                .append(dtoName)
+                .append(" updated")
+                .append(entityName)
+                .append(" = ")
                 .append(serviceName)
                 .append(".update")
                 .append(entityName)
-                .append("(id, dto));\n");
+                .append("(id, dto);\n\n");
+
+        stringBuilder.append("        return ResponseEntity\n");
+        stringBuilder.append("                .status(HttpStatus.OK)\n");
+        stringBuilder.append("                .body(updated")
+                .append(entityName)
+                .append(");\n");
+
         stringBuilder.append("    }\n\n");
     }
 
@@ -452,31 +579,52 @@ public class ControllerGenerator {
         String controllerMethodName = "delete" + entityName + "ById";
 
         stringBuilder.append("    /**\n");
-        String article = NamingConverter.resolveIndefiniteArticle(lowerDisplayLabel);
 
-        stringBuilder.append("     * Deletes ")
-                .append(article)
-                .append(" ")
-                .append(lowerDisplayLabel)
-                .append(" record by id.\n");
+        if (compositePrimaryKey) {
+            stringBuilder.append("     * Deletes ")
+                    .append(NamingConverter.resolveIndefiniteArticle(lowerDisplayLabel))
+                    .append(" ")
+                    .append(lowerDisplayLabel)
+                    .append(" by its composite identifier.\n");
+        } else {
+            stringBuilder.append("     * Deletes ")
+                    .append(NamingConverter.resolveIndefiniteArticle(lowerDisplayLabel))
+                    .append(" ")
+                    .append(lowerDisplayLabel)
+                    .append(" by its identifier.\n");
+        }
+
+        stringBuilder.append("     *\n");
 
         if (compositePrimaryKey) {
             for (Column primaryKeyColumn : primaryKeyColumns) {
                 String parameterName = resolvePkParamName(primaryKeyColumn);
                 String readableParameterLabel = NamingConverter.toLogLabel(parameterName);
+
                 stringBuilder.append("     * @param ")
                         .append(parameterName)
-                        .append(" ")
+                        .append(" the ")
                         .append(readableParameterLabel)
-                        .append(" identifier\n");
+                        .append(" of the composite key\n");
             }
         } else {
-            stringBuilder.append("     * @param id ").append(lowerDisplayLabel).append(" identifier\n");
+            stringBuilder.append("     * @param id the identifier of the ")
+                    .append(lowerDisplayLabel)
+                    .append(" to delete\n");
         }
 
-        stringBuilder.append("     * @return HTTP 204 No Content response\n");
+        stringBuilder.append("     * @return a {@link ResponseEntity} with HTTP status 204 (No Content)\n");
         stringBuilder.append("     */\n");
-        stringBuilder.append("    @Operation(summary = \"Delete ").append(displayLabel).append("\")\n");
+
+        if (compositePrimaryKey) {
+            stringBuilder.append("    @Operation(summary = \"Delete ")
+                    .append(displayLabel)
+                    .append(" by composite id\")\n");
+        } else {
+            stringBuilder.append("    @Operation(summary = \"Delete ")
+                    .append(displayLabel)
+                    .append("\")\n");
+        }
 
         if (compositePrimaryKey) {
             stringBuilder.append("    @DeleteMapping(\"");
@@ -503,10 +651,18 @@ public class ControllerGenerator {
                 }
             }
 
-            stringBuilder.append("        ").append(serviceName).append(".delete").append(entityName).append("(");
+            stringBuilder.append("        ")
+                    .append(serviceName)
+                    .append(".delete")
+                    .append(entityName)
+                    .append("(");
+
             appendCompositeServiceArguments(stringBuilder, primaryKeyColumns);
-            stringBuilder.append(");\n");
-            stringBuilder.append("        return ResponseEntity.noContent().build();\n");
+
+            stringBuilder.append(");\n\n");
+            stringBuilder.append("        return ResponseEntity\n");
+            stringBuilder.append("                .status(HttpStatus.NO_CONTENT)\n");
+            stringBuilder.append("                .build();\n");
             stringBuilder.append("    }\n\n");
             return;
         }
@@ -515,9 +671,17 @@ public class ControllerGenerator {
         stringBuilder.append("    public ResponseEntity<Void> ")
                 .append(controllerMethodName)
                 .append("(\n");
-        stringBuilder.append("            @PathVariable ").append(primaryKeyType).append(" id) {\n");
-        stringBuilder.append("        ").append(serviceName).append(".delete").append(entityName).append("(id);\n");
-        stringBuilder.append("        return ResponseEntity.noContent().build();\n");
+        stringBuilder.append("            @PathVariable ")
+                .append(primaryKeyType)
+                .append(" id) {\n");
+        stringBuilder.append("        ")
+                .append(serviceName)
+                .append(".delete")
+                .append(entityName)
+                .append("(id);\n\n");
+        stringBuilder.append("        return ResponseEntity\n");
+        stringBuilder.append("                .status(HttpStatus.NO_CONTENT)\n");
+        stringBuilder.append("                .build();\n");
         stringBuilder.append("    }\n\n");
     }
 
