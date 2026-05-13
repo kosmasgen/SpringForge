@@ -37,10 +37,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -115,7 +112,11 @@ public class GeneratorCommands {
                     .collect(Collectors.toMap(Table::getName, tableValue -> tableValue));
 
             new MapperGenerator(tableMap).generateMappers(outputDir, packageName);
-            new RepositoryGenerator().generateRepositories(javaGenerationTables, outputDir, packageName);
+            Set<String> lookupTables = generatorConfig.getLookupTables() == null
+                    ? Set.of()
+                    : Set.copyOf(generatorConfig.getLookupTables());
+            new RepositoryGenerator().generateRepositories(javaGenerationTables, outputDir, packageName, overwrite, lookupTables
+            );
             new ServiceGenerator().generateAllServices(businessGenerationTables, outputDir, packageName);
             new ControllerGenerator().generateControllers(businessGenerationTables, outputDir, packageName, overwrite);
             new TestGenerator().generateTests(businessGenerationTables, javaGenerationTables, models, outputDir,

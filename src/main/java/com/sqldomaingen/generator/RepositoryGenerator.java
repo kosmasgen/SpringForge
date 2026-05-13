@@ -23,19 +23,12 @@ import java.util.Set;
 @Log4j2
 public class RepositoryGenerator {
 
-    /**
-     * Generates Spring Data JPA repositories for all tables.
-     *
-     * @param tables parsed SQL tables
-     * @param outputDir base output directory
-     * @param basePackage base Java package
-     * @param overwrite overwrite existing files when true
-     */
     public void generateRepositories(
             List<Table> tables,
             String outputDir,
             String basePackage,
-            boolean overwrite
+            boolean overwrite,
+            Set<String> lookupTables
     ) {
         Objects.requireNonNull(tables, "tables must not be null");
         Objects.requireNonNull(outputDir, "outputDir must not be null");
@@ -49,7 +42,7 @@ public class RepositoryGenerator {
             String entityName = NamingConverter.toPascalCase(
                     GeneratorSupport.normalizeTableName(table.getName())
             );
-            String repositoryCode = generateRepositoryForTable(table, basePackage);
+            String repositoryCode = generateRepositoryForTable(table, basePackage, lookupTables);
             Path filePath = repositoriesDir.resolve(entityName + "Repository.java");
             GeneratorSupport.writeFile(filePath, repositoryCode, overwrite);
         }
@@ -57,16 +50,7 @@ public class RepositoryGenerator {
         log.debug("Repository generation completed. Output directory: {}", repositoriesDir.toAbsolutePath());
     }
 
-    /**
-     * Backwards-compatible overload that overwrites existing files.
-     *
-     * @param tables parsed SQL tables
-     * @param outputDir base output directory
-     * @param basePackage base Java package
-     */
-    public void generateRepositories(List<Table> tables, String outputDir, String basePackage) {
-        generateRepositories(tables, outputDir, basePackage, true);
-    }
+
 
     /**
      * Generates repository code for a single table.
@@ -75,9 +59,11 @@ public class RepositoryGenerator {
      * @param basePackage base Java package
      * @return generated repository source code
      */
-    public String generateRepositoryForTable(Table table, String basePackage) {
+    public String generateRepositoryForTable(Table table, String basePackage, Set<String> lookupTables) {
         Objects.requireNonNull(table, "table must not be null");
         Objects.requireNonNull(basePackage, "basePackage must not be null");
+
+        boolean lookupTable = isLookupTable(table, lookupTables);
 
         String entityName = NamingConverter.toPascalCase(
                 GeneratorSupport.normalizeTableName(table.getName())
@@ -87,21 +73,26 @@ public class RepositoryGenerator {
         String entityPackage = PackageResolver.resolvePackageName(basePackage, "entity");
 
         TypeRef primaryKeyTypeRef = resolvePrimaryKeyTypeRef(table, entityName, entityPackage);
-        Set<String> importLines = collectRepositoryImports(entityPackage, entityName, primaryKeyTypeRef, table);
+        Set<String> importLines = collectRepositoryImports(entityPackage, entityName, primaryKeyTypeRef, table, lookupTable);
 
         StringBuilder builder = new StringBuilder();
 
         appendPackage(builder, repositoryPackage);
         appendImports(builder, importLines);
-        appendRepositoryJavaDoc(builder, entityName, hasCustomRepositoryMethods(table));
+        appendRepositoryJavaDoc(builder, entityName, !lookupTable && hasCustomRepositoryMethods(table));
         appendRepositoryDeclaration(builder, repositoryName, entityName, primaryKeyTypeRef.simpleName());
-        appendExistsByMethodsForUniqueColumns(builder, table);
-        appendExistsByMethodsForCompositeUniqueConstraints(builder, table);
-        appendExistsByMethodsForRestrictRelationships(builder, table);
+
+        if (!lookupTable) {
+            appendExistsByMethodsForUniqueColumns(builder, table);
+            appendExistsByMethodsForCompositeUniqueConstraints(builder, table);
+            appendExistsByMethodsForRestrictRelationships(builder, table);
+        }
+
         builder.append("}\n");
 
         return builder.toString();
     }
+
 
     /**
      * Resolves the primary key type reference for the repository.
@@ -286,7 +277,8 @@ public class RepositoryGenerator {
             String entityPackage,
             String entityName,
             TypeRef primaryKeyTypeRef,
-            Table table
+            Table table,
+            boolean lookupTable
     ) {
         Set<String> importLines = new LinkedHashSet<>();
 
@@ -298,9 +290,32 @@ public class RepositoryGenerator {
             importLines.add(primaryKeyTypeRef.importLine());
         }
 
-        addUniqueMethodImports(importLines, table);
+        if (!lookupTable) {
+            addUniqueMethodImports(importLines, table);
+        }
 
         return importLines;
+    }
+
+    /**
+     * Returns whether the table is configured as a lookup table.
+     *
+     * @param table table metadata
+     * @param lookupTables configured lookup table names
+     * @return true when the table is configured as lookup
+     */
+    private boolean isLookupTable(Table table, Set<String> lookupTables) {
+        if (table == null || lookupTables == null || lookupTables.isEmpty()) {
+            return false;
+        }
+
+        String normalizedTableName = GeneratorSupport.normalizeTableName(table.getName());
+
+        return lookupTables.stream()
+                .filter(Objects::nonNull)
+                .anyMatch(lookupTable -> normalizedTableName.equalsIgnoreCase(
+                        GeneratorSupport.normalizeTableName(lookupTable)
+                ));
     }
 
     /**
