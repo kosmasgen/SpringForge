@@ -216,7 +216,7 @@ public class RepositoryGenerator {
     private void appendExistsByMethodForSingleColumn(StringBuilder builder, Table table, Column column) {
         String parameterName = toParameterName(column.getName());
 
-        appendExistsMethodJavaDoc(builder, List.of(parameterName));
+        appendExistsMethodJavaDoc(builder, table, List.of(parameterName));
 
         builder.append("    boolean ")
                 .append(buildExistsByMethodName(table, List.of(column.getName())))
@@ -436,7 +436,7 @@ public class RepositoryGenerator {
                     .map(this::toParameterName)
                     .toList();
 
-            appendExistsMethodJavaDoc(builder, parameterNames);
+            appendExistsMethodJavaDoc(builder, table, parameterNames);
 
             builder.append("    ")
                     .append(methodSignature)
@@ -615,12 +615,15 @@ public class RepositoryGenerator {
      */
     private void appendRepositoryJavaDoc(StringBuilder builder, String entityName, boolean hasCustomMethods) {
         builder.append("/**\n");
-        builder.append(" * Repository for {@link ").append(entityName).append("} entity.\n");
 
         if (hasCustomMethods) {
-            builder.append(" * Provides database access methods for ").append(entityName).append(".\n");
+            builder.append(" * Repository interface for managing {@link ")
+                    .append(entityName)
+                    .append("} entities and custom persistence operations.\n");
         } else {
-            builder.append(" * Provides basic CRUD operations using JpaRepository.\n");
+            builder.append(" * Repository interface for managing {@link ")
+                    .append(entityName)
+                    .append("} entities.\n");
         }
 
         builder.append(" */\n");
@@ -630,23 +633,62 @@ public class RepositoryGenerator {
      * Appends Javadoc for an existsBy repository method.
      *
      * @param builder target source builder
+     * @param table table metadata
      * @param parameterNames repository method parameter names
      */
-    private void appendExistsMethodJavaDoc(StringBuilder builder, List<String> parameterNames) {
+    private void appendExistsMethodJavaDoc(
+            StringBuilder builder,
+            Table table,
+            List<String> parameterNames
+    ) {
+        String entityName = NamingConverter.toPascalCase(
+                GeneratorSupport.normalizeTableName(table.getName())
+        );
+        String lowerDisplayLabel = NamingConverter.toLogLabel(entityName);
+
         builder.append("\n    /**\n");
-        builder.append("     * Checks if an entity exists with the given ")
+        builder.append("     * Checks whether ")
+                .append(NamingConverter.resolveIndefiniteArticle(lowerDisplayLabel))
+                .append(" ")
+                .append(lowerDisplayLabel)
+                .append(" exists with the given ")
                 .append(buildParameterDescription(parameterNames))
                 .append(".\n");
         builder.append("     *\n");
 
         for (String parameterName : parameterNames) {
+            String readableParameterName = buildRepositoryParameterDescription(
+                    lowerDisplayLabel,
+                    parameterName
+            );
+
             builder.append("     * @param ")
                     .append(parameterName)
-                    .append(" value to check\n");
+                    .append(" ")
+                    .append(readableParameterName)
+                    .append("\n");
         }
 
-        builder.append("     * @return true if exists, false otherwise\n");
+        builder.append("     * @return {@code true} if a matching entity exists; otherwise {@code false}\n");
         builder.append("     */\n");
+    }
+
+    /**
+     * Builds a readable JavaDoc description for a repository method parameter.
+     *
+     * @param lowerDisplayLabel lowercase entity display label
+     * @param parameterName repository method parameter name
+     * @return readable parameter description
+     */
+    private String buildRepositoryParameterDescription(String lowerDisplayLabel, String parameterName) {
+        String readableParameterName = NamingConverter.toLogLabel(parameterName)
+                .replaceAll("\\bid\\b", "identifier");
+
+        if (readableParameterName.contains("identifier")) {
+            return readableParameterName;
+        }
+
+        return lowerDisplayLabel + " " + readableParameterName;
     }
 
     /**
