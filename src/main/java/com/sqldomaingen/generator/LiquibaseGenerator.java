@@ -63,17 +63,21 @@ public class LiquibaseGenerator {
                 overwrite
         );
 
-        GeneratorSupport.writeFile(
-                versionDir.resolve("extensions.xml"),
-                buildExtensionsChangelogContent(author, tables),
-                overwrite
-        );
+        boolean extensionsRequired = requiresExtensionsChangelog(tables);
+
+        if (extensionsRequired) {
+            GeneratorSupport.writeFile(
+                    versionDir.resolve("extensions.xml"),
+                    buildExtensionsChangelogContent(author, tables),
+                    overwrite
+            );
+        }
 
         generateTableChangelogFiles(versionDir, tables, overwrite, author);
 
         GeneratorSupport.writeFile(
                 versionDir.resolve("main.xml"),
-                buildVersionMainContent(orderedChangelogFiles),
+                buildVersionMainContent(orderedChangelogFiles, extensionsRequired),
                 overwrite
         );
 
@@ -88,6 +92,18 @@ public class LiquibaseGenerator {
                 versionDir.toAbsolutePath(),
                 orderedChangelogFiles.size()
         );
+    }
+
+
+    /**
+     * Returns whether the extensions changelog must be generated.
+     *
+     * @param tables parsed tables
+     * @return true when at least one PostgreSQL extension or helper function is required
+     */
+    private boolean requiresExtensionsChangelog(List<Table> tables) {
+        return requiresPgTrgmExtension(tables)
+                || requiresUnaccentExtension(tables);
     }
 
 
@@ -970,9 +986,13 @@ public class LiquibaseGenerator {
      * Builds the version main changelog content.
      *
      * @param changelogFiles ordered included changelog files
+     * @param extensionsRequired true when extensions.xml must be included
      * @return generated version main changelog XML
      */
-    private String buildVersionMainContent(List<String> changelogFiles) {
+    private String buildVersionMainContent(
+            List<String> changelogFiles,
+            boolean extensionsRequired
+    ) {
         StringBuilder builder = new StringBuilder();
 
         builder.append("""
@@ -986,7 +1006,10 @@ public class LiquibaseGenerator {
 """.formatted(Constants.DEFAULT_VERSION));
 
         builder.append("    <include file=\"audit.xml\" relativeToChangelogFile=\"true\" />\n");
-        builder.append("    <include file=\"extensions.xml\" relativeToChangelogFile=\"true\" />\n");
+
+        if (extensionsRequired) {
+            builder.append("    <include file=\"extensions.xml\" relativeToChangelogFile=\"true\" />\n");
+        }
 
         for (String changelogFile : changelogFiles) {
             builder.append("    <include file=\"")
@@ -995,6 +1018,7 @@ public class LiquibaseGenerator {
         }
 
         builder.append("\n</databaseChangeLog>\n");
+
         return builder.toString();
     }
 
