@@ -671,7 +671,7 @@ public class CreateTableDefinition {
 
     /**
      * Resolves duplicate Java field names by keeping foreign key relation names unchanged
-     * and renaming scalar duplicates.
+     * and renaming scalar duplicates only when a real foreign-key naming collision exists.
      *
      * @param columns table columns
      */
@@ -685,6 +685,7 @@ public class CreateTableDefinition {
 
         columnsByFieldName.values().stream()
                 .filter(duplicates -> duplicates.size() > 1)
+                .filter(duplicates -> duplicates.stream().anyMatch(Column::isForeignKey))
                 .forEach(this::resolveDuplicateFieldNameGroup);
     }
 

@@ -801,24 +801,70 @@ public class EntitySchemaValidator {
         }
     }
 
+    /**
+     * Parses CREATE TABLE statements from a SQL script.
+     *
+     * @param sql SQL script content
+     * @return parsed table definitions keyed by normalized physical table name
+     */
     private Map<String, TableDefinition> parseSchema(String sql) {
         Map<String, TableDefinition> tables = new LinkedHashMap<>();
 
-        Pattern createTablePattern = Pattern.compile(
-                "(?is)CREATE\\s+TABLE\\s+([\\w.\"]+)\\s*\\((.*?)\\)\\s*;",
-                Pattern.DOTALL
-        );
+        Matcher matcher = Pattern.compile(
+                "(?is)\\bCREATE\\s+TABLE\\s+([\\w.\"]+)\\s*\\("
+        ).matcher(sql);
 
-        Matcher matcher = createTablePattern.matcher(sql);
         while (matcher.find()) {
             String rawTableName = sanitizeIdentifier(matcher.group(1));
-            String tableBody = matcher.group(2);
+            int bodyStartIndex = matcher.end();
+            int bodyEndIndex = findMatchingClosingParenthesis(sql, bodyStartIndex - 1);
 
+            if (bodyEndIndex < 0) {
+                continue;
+            }
+
+            String tableBody = sql.substring(bodyStartIndex, bodyEndIndex);
             TableDefinition tableDefinition = parseTableBlock(rawTableName, tableBody);
+
             tables.put(normalizeName(rawTableName), tableDefinition);
         }
 
         return tables;
+    }
+
+    /**
+     * Finds the matching closing parenthesis for an opening parenthesis.
+     *
+     * @param sql SQL content
+     * @param openingParenthesisIndex opening parenthesis index
+     * @return matching closing parenthesis index, or -1 when not found
+     */
+    private int findMatchingClosingParenthesis(String sql, int openingParenthesisIndex) {
+        int parenthesesDepth = 0;
+        boolean inSingleQuote = false;
+        boolean inDoubleQuote = false;
+
+        for (int index = openingParenthesisIndex; index < sql.length(); index++) {
+            char currentChar = sql.charAt(index);
+
+            if (currentChar == '\'' && !inDoubleQuote) {
+                inSingleQuote = !inSingleQuote;
+            } else if (currentChar == '"' && !inSingleQuote) {
+                inDoubleQuote = !inDoubleQuote;
+            } else if (!inSingleQuote && !inDoubleQuote) {
+                if (currentChar == '(') {
+                    parenthesesDepth++;
+                } else if (currentChar == ')') {
+                    parenthesesDepth--;
+
+                    if (parenthesesDepth == 0) {
+                        return index;
+                    }
+                }
+            }
+        }
+
+        return -1;
     }
 
     /**
@@ -1336,6 +1382,12 @@ public class EntitySchemaValidator {
                 .toList();
     }
 
+    /**
+     * Checks whether a SQL segment is a table-level constraint.
+     *
+     * @param sqlSegment SQL segment
+     * @return true when the segment is a table-level constraint
+     */
     private boolean isTableConstraint(String sqlSegment) {
         String normalized = sqlSegment.trim().toUpperCase(Locale.ROOT);
 
@@ -1343,7 +1395,8 @@ public class EntitySchemaValidator {
                 || normalized.startsWith("PRIMARY KEY")
                 || normalized.startsWith("FOREIGN KEY")
                 || normalized.startsWith("UNIQUE")
-                || normalized.startsWith("CHECK")
+                || normalized.startsWith("CHECK ")
+                || normalized.startsWith("CHECK(")
                 || normalized.startsWith("EXCLUDE ");
     }
 
