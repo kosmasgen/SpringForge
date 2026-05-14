@@ -223,7 +223,9 @@ public class ServiceImplGenerator {
             String displayLabel
     ) {
         stringBuilder.append("/**\n");
-        stringBuilder.append(" * Service implementation for {@code ").append(displayLabel).append("} domain operations.\n");
+        stringBuilder.append(" * Service implementation for managing ")
+                .append(displayLabel)
+                .append(" records.\n");
         stringBuilder.append(" */\n");
         stringBuilder.append("@Service\n");
         stringBuilder.append("@RequiredArgsConstructor\n");
