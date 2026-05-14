@@ -71,63 +71,49 @@ public class ServiceImplGenerator {
         String displayLabel = buildDisplayLabel(entityName, lowerDisplayLabel);
 
         String pluralMethodSuffix = NamingConverter.toPascalCase(
-                NamingConverter.toCamelCasePlural(entityName)
-        );
+                NamingConverter.toCamelCasePlural(entityName));
         String pluralLowerDisplayLabel = NamingConverter.toLogLabel(
-                NamingConverter.toCamelCasePlural(entityName)
-        );
+                NamingConverter.toCamelCasePlural(entityName));
 
         String findByIdOrThrowMethodName = "find" + entityName + "ByIdOrThrow";
-        String createNotFoundExceptionMethodName = "create" + entityName + "NotFoundException";
+        String createNotFoundExceptionMethodName = "notFoundException";
         String validateDoesNotExistMethodName = "validate" + entityName + "DoesNotExist";
         String buildKeyMethodName = "buildKey";
-        String buildCompositeIdMethodName = "buildCompositeId";
 
         StringBuilder stringBuilder = new StringBuilder();
 
         appendServiceImplPackage(stringBuilder, serviceImplPackage);
-        appendServiceImplImports(
-                stringBuilder, dtoPackage, dtoName, mapperPackage, mapperName, modelPackage, entityName, repositoryPackage,
-                repositoryName, servicePackage, serviceName, exceptionPackage, utilPackage, primaryKeyImportLine, additionalImportLines
-        );
+        appendServiceImplImports(stringBuilder, dtoPackage, dtoName, mapperPackage, mapperName, modelPackage, entityName, repositoryPackage,
+                repositoryName, servicePackage, serviceName, exceptionPackage, utilPackage, primaryKeyImportLine, additionalImportLines);
         appendServiceImplClassHeader(stringBuilder, entityName, serviceName, displayLabel);
         appendServiceImplFields(stringBuilder, repositoryName, repositoryVariableName, mapperName, mapperVariableName);
 
-        appendGetAllServiceMethod(stringBuilder, dtoName, pluralMethodSuffix, pluralLowerDisplayLabel, repositoryVariableName,
-                mapperVariableName
-        );
+        appendGetAllServiceMethod(stringBuilder, dtoName, pluralMethodSuffix, pluralLowerDisplayLabel,
+                repositoryVariableName, mapperVariableName);
         appendGetByIdServiceMethod(stringBuilder, entityName, dtoName, lowerDisplayLabel, mapperVariableName,
-                findByIdOrThrowMethodName, buildCompositeIdMethodName, primaryKeyType, primaryKeyColumns, compositePrimaryKey
-        );
+                findByIdOrThrowMethodName, primaryKeyType, primaryKeyColumns, compositePrimaryKey);
         appendCreateServiceMethod(stringBuilder, table, entityName, dtoName, lowerDisplayLabel, repositoryVariableName,
-                mapperVariableName, validateDoesNotExistMethodName, compositePrimaryKey
-        );
+                mapperVariableName, validateDoesNotExistMethodName, compositePrimaryKey);
         appendPatchServiceMethod(stringBuilder, entityName, dtoName, lowerDisplayLabel, repositoryVariableName,
-                mapperVariableName, findByIdOrThrowMethodName,
-                buildCompositeIdMethodName, primaryKeyType, primaryKeyColumns, compositePrimaryKey
-        );
+                mapperVariableName, findByIdOrThrowMethodName, primaryKeyType, primaryKeyColumns, compositePrimaryKey);
         appendDeleteServiceMethod(stringBuilder, entityName, lowerDisplayLabel, repositoryVariableName, findByIdOrThrowMethodName,
-                buildKeyMethodName, buildCompositeIdMethodName, primaryKeyType, primaryKeyColumns, compositePrimaryKey
-        );
+                buildKeyMethodName, primaryKeyType, primaryKeyColumns, compositePrimaryKey);
 
-        appendCreateUniqueValidationMethod(stringBuilder, table, entityName, dtoName, repositoryVariableName, compositePrimaryKey
-        );
+        appendCreateUniqueValidationMethod(stringBuilder, table, entityName, dtoName, repositoryVariableName, compositePrimaryKey);
 
         appendFindByIdOrThrowServiceMethod(stringBuilder, entityName, lowerDisplayLabel, repositoryVariableName, findByIdOrThrowMethodName,
-                createNotFoundExceptionMethodName, buildKeyMethodName, primaryKeyType, primaryKeyColumns, compositePrimaryKey
-        );
-        appendCreateNotFoundExceptionServiceMethod(stringBuilder, entityName, lowerDisplayLabel, createNotFoundExceptionMethodName, buildCompositeIdMethodName,
-                primaryKeyType, primaryKeyColumns, compositePrimaryKey
-        );
+                createNotFoundExceptionMethodName, buildKeyMethodName, primaryKeyType, primaryKeyColumns, compositePrimaryKey);
+        appendCreateNotFoundExceptionServiceMethod(stringBuilder, entityName, lowerDisplayLabel, createNotFoundExceptionMethodName,
+                primaryKeyType, primaryKeyColumns, compositePrimaryKey);
+
+        if (hasCreateUniqueValidations(table, compositePrimaryKey)) {
+            appendThrowUniqueConstraintViolationMethod(stringBuilder, entityName);
+        }
 
         if (compositePrimaryKey) {
             appendValidateDoesNotExistServiceMethod(stringBuilder, entityName, dtoName, repositoryVariableName, validateDoesNotExistMethodName,
-                    buildKeyMethodName, buildCompositeIdMethodName, primaryKeyType, primaryKeyColumns, table
-            );
-            appendBuildKeyServiceMethod(stringBuilder, primaryKeyType, primaryKeyColumns, buildKeyMethodName
-            );
-            appendBuildCompositeIdServiceMethod(stringBuilder, primaryKeyColumns, buildCompositeIdMethodName
-            );
+                    buildKeyMethodName, primaryKeyColumns, table);
+            appendBuildKeyServiceMethod(stringBuilder, primaryKeyType, primaryKeyColumns, buildKeyMethodName);
         }
 
         appendServiceImplClassFooter(stringBuilder);
@@ -327,7 +313,6 @@ public class ServiceImplGenerator {
      * @param lowerDisplayLabel lowercase display label
      * @param mapperVariableName mapper variable name
      * @param findByIdOrThrowMethodName helper method name
-     * @param buildCompositeIdMethodName composite id helper method name
      * @param primaryKeyType primary key simple type or composite key type
      * @param primaryKeyColumns primary key columns
      * @param compositePrimaryKey true when the entity uses a composite primary key
@@ -339,7 +324,6 @@ public class ServiceImplGenerator {
             String lowerDisplayLabel,
             String mapperVariableName,
             String findByIdOrThrowMethodName,
-            String buildCompositeIdMethodName,
             String primaryKeyType,
             List<Column> primaryKeyColumns,
             boolean compositePrimaryKey
@@ -396,14 +380,13 @@ public class ServiceImplGenerator {
                 .append(") {\n");
 
         if (compositePrimaryKey) {
-            stringBuilder.append("        String compositeId = ")
-                    .append(buildCompositeIdMethodName)
-                    .append("(")
-                    .append(methodArguments)
-                    .append(");\n");
             stringBuilder.append("        log.info(\"Fetching ")
                     .append(label)
-                    .append(" with composite id: {}\", compositeId);\n\n");
+                    .append(" with composite id: ")
+                    .append(buildCompositePrimaryKeyLogMessage(primaryKeyColumns))
+                    .append("\", ")
+                    .append(methodArguments)
+                    .append(");\n\n");
         } else {
             stringBuilder.append("        log.info(\"Fetching ")
                     .append(label)
@@ -426,6 +409,14 @@ public class ServiceImplGenerator {
     }
 
 
+    private String buildCompositePrimaryKeyLogMessage(List<Column> primaryKeyColumns) {
+        return primaryKeyColumns.stream()
+                .map(column -> resolvePrimaryKeyParameterName(column) + "={}")
+                .reduce((left, right) -> left + ", " + right)
+                .orElse("{}");
+    }
+
+
     /**
      * Appends the NOT_FOUND exception factory method.
      *
@@ -433,7 +424,6 @@ public class ServiceImplGenerator {
      * @param entityName entity simple name
      * @param lowerDisplayLabel lowercase display label
      * @param createNotFoundExceptionMethodName exception factory method name
-     * @param buildCompositeIdMethodName composite id builder method name
      * @param primaryKeyType primary key type
      * @param primaryKeyColumns primary key columns
      * @param compositePrimaryKey true when the entity uses a composite primary key
@@ -443,7 +433,6 @@ public class ServiceImplGenerator {
             String entityName,
             String lowerDisplayLabel,
             String createNotFoundExceptionMethodName,
-            String buildCompositeIdMethodName,
             String primaryKeyType,
             List<Column> primaryKeyColumns,
             boolean compositePrimaryKey
@@ -453,10 +442,6 @@ public class ServiceImplGenerator {
         String methodParameters = compositePrimaryKey
                 ? buildCompositePrimaryKeyMethodParameters(primaryKeyColumns)
                 : primaryKeyType + " id";
-
-        String methodArguments = compositePrimaryKey
-                ? buildCompositePrimaryKeyMethodArguments(primaryKeyColumns)
-                : "id";
 
         stringBuilder.append("    /**\n");
         stringBuilder.append("     * Creates a NOT_FOUND exception for the missing ")
@@ -475,7 +460,7 @@ public class ServiceImplGenerator {
         stringBuilder.append("     * @return the generated {@link GeneratedRuntimeException}\n");
         stringBuilder.append("     */\n");
 
-        stringBuilder.append("    private RuntimeException ")
+        stringBuilder.append("    private GeneratedRuntimeException ")
                 .append(createNotFoundExceptionMethodName)
                 .append("(")
                 .append(methodParameters)
@@ -483,10 +468,8 @@ public class ServiceImplGenerator {
 
         if (compositePrimaryKey) {
             stringBuilder.append("        String compositeId = ")
-                    .append(buildCompositeIdMethodName)
-                    .append("(")
-                    .append(methodArguments)
-                    .append(");\n");
+                    .append(buildCompositePrimaryKeyDisplayExpression(primaryKeyColumns))
+                    .append(";\n");
         }
 
         stringBuilder.append("        log.warn(\"")
@@ -501,22 +484,19 @@ public class ServiceImplGenerator {
         stringBuilder.append("                .code(ErrorCodes.NOT_FOUND)\n");
 
         if (compositePrimaryKey) {
-            stringBuilder.append("                .message(messageResolver.resolve(\n");
-            stringBuilder.append("                        \"entity.notFoundByCompositeId\",\n");
-            stringBuilder.append("                        \"").append(entityName).append("\",\n");
-            stringBuilder.append("                        compositeId\n");
-            stringBuilder.append("                ))\n");
+            stringBuilder.append("                .message(messageResolver.resolve(\"entity.notFoundByCompositeId\", \"")
+                    .append(entityName)
+                    .append("\", compositeId))\n");
         } else {
-            stringBuilder.append("                .message(messageResolver.resolve(\n");
-            stringBuilder.append("                        \"entity.notFoundById\",\n");
-            stringBuilder.append("                        \"").append(entityName).append("\",\n");
-            stringBuilder.append("                        id\n");
-            stringBuilder.append("                ))\n");
+            stringBuilder.append("                .message(messageResolver.resolve(\"entity.notFoundById\", \"")
+                    .append(entityName)
+                    .append("\", id))\n");
         }
 
         stringBuilder.append("                .build();\n");
         stringBuilder.append("    }\n\n");
     }
+
 
 
     /**
@@ -529,7 +509,6 @@ public class ServiceImplGenerator {
      * @param repositoryVariableName repository variable name
      * @param mapperVariableName mapper variable name
      * @param findByIdOrThrowMethodName helper method name
-     * @param buildCompositeIdMethodName composite id helper method name
      * @param primaryKeyType primary key simple type or composite key type
      * @param primaryKeyColumns primary key columns
      * @param compositePrimaryKey true when the entity uses a composite primary key
@@ -542,7 +521,6 @@ public class ServiceImplGenerator {
             String repositoryVariableName,
             String mapperVariableName,
             String findByIdOrThrowMethodName,
-            String buildCompositeIdMethodName,
             String primaryKeyType,
             List<Column> primaryKeyColumns,
             boolean compositePrimaryKey
@@ -558,9 +536,7 @@ public class ServiceImplGenerator {
                 : "id";
 
         stringBuilder.append("    /**\n");
-        stringBuilder.append("     * Updates an existing ")
-                .append(label)
-                .append(".\n");
+        stringBuilder.append("     * Updates an existing ").append(label).append(".\n");
         stringBuilder.append("     * <p>\n");
         stringBuilder.append("     * Only non-null fields from the DTO are applied to the existing entity.\n");
         stringBuilder.append("     *\n");
@@ -573,59 +549,41 @@ public class ServiceImplGenerator {
                     .append(" to update\n");
         }
 
-        stringBuilder.append("     * @param dto the partial ")
-                .append(label)
-                .append(" payload\n");
-        stringBuilder.append("     * @return the updated {@link ")
-                .append(dtoName)
-                .append("}\n");
+        stringBuilder.append("     * @param dto the partial ").append(label).append(" payload\n");
+        stringBuilder.append("     * @return the updated {@link ").append(dtoName).append("}\n");
         stringBuilder.append("     */\n");
 
         stringBuilder.append("    @Override\n");
-        stringBuilder.append("    public ")
-                .append(dtoName)
-                .append(" update")
-                .append(entityName)
-                .append("(")
-                .append(methodParameters)
-                .append(") {\n");
+        stringBuilder.append("    public ").append(dtoName)
+                .append(" update").append(entityName)
+                .append("(").append(methodParameters).append(") {\n");
 
         if (compositePrimaryKey) {
-            stringBuilder.append("        String compositeId = ")
-                    .append(buildCompositeIdMethodName)
-                    .append("(")
-                    .append(idArguments)
-                    .append(");\n");
             stringBuilder.append("        log.info(\"Updating ")
                     .append(label)
-                    .append(" with composite id: {}\", compositeId);\n\n");
+                    .append(" with composite id: ")
+                    .append(buildCompositePrimaryKeyLogMessage(primaryKeyColumns))
+                    .append("\", ")
+                    .append(idArguments)
+                    .append(");\n\n");
         } else {
             stringBuilder.append("        log.info(\"Updating ")
                     .append(label)
                     .append(" with id: {}\", id);\n\n");
         }
 
-        stringBuilder.append("        ")
-                .append(entityName)
+        stringBuilder.append("        ").append(entityName)
                 .append(" existingEntity = ")
                 .append(findByIdOrThrowMethodName)
-                .append("(")
-                .append(idArguments)
-                .append(");\n");
+                .append("(").append(idArguments).append(");\n");
 
-        stringBuilder.append("        ")
-                .append(mapperVariableName)
-                .append(".partialUpdate(existingEntity, dto);\n");
+        stringBuilder.append("        ").append(mapperVariableName)
+                .append(".partialUpdate(existingEntity, dto);\n\n");
 
-        stringBuilder.append("        ")
-                .append(entityName)
-                .append(" savedEntity = ")
+        stringBuilder.append("        return ").append(mapperVariableName)
+                .append(".toDTO(")
                 .append(repositoryVariableName)
-                .append(".save(existingEntity);\n\n");
-
-        stringBuilder.append("        return ")
-                .append(mapperVariableName)
-                .append(".toDTO(savedEntity);\n");
+                .append(".save(existingEntity));\n");
 
         stringBuilder.append("    }\n\n");
     }
@@ -658,6 +616,8 @@ public class ServiceImplGenerator {
         String label = lowerDisplayLabel.replaceAll("\\s+", " ").trim();
         String validateCreateUniqueConstraintsMethodName = "validate" + entityName + "CreateUniqueConstraints";
 
+        boolean hasUniqueValidations = hasCreateUniqueValidations(table, compositePrimaryKey);
+
         stringBuilder.append("    /**\n");
         stringBuilder.append("     * Creates a new ")
                 .append(label)
@@ -682,16 +642,23 @@ public class ServiceImplGenerator {
 
         stringBuilder.append("        log.info(\"Creating ")
                 .append(label)
-                .append(".\");\n\n");
+                .append(".\");\n");
 
-        if (compositePrimaryKey) {
-            appendCreateCompositePrimaryKeyValidationInvocation(
-                    stringBuilder,
-                    validateDoesNotExistMethodName
-            );
+        if (compositePrimaryKey && hasUniqueValidations) {
+            stringBuilder.append("\n");
         }
 
-        if (hasCreateUniqueValidations(table, compositePrimaryKey)) {
+        if (compositePrimaryKey) {
+            stringBuilder.append("        ")
+                    .append(validateDoesNotExistMethodName)
+                    .append("(dto);\n");
+
+            if (hasUniqueValidations) {
+                stringBuilder.append("\n");
+            }
+        }
+
+        if (hasUniqueValidations) {
             stringBuilder.append("        ")
                     .append(validateCreateUniqueConstraintsMethodName)
                     .append("(dto);\n\n");
@@ -716,21 +683,6 @@ public class ServiceImplGenerator {
         stringBuilder.append("    }\n\n");
     }
 
-
-    /**
-     * Appends the composite primary key validation invocation for the create method.
-     *
-     * @param stringBuilder target source builder
-     * @param validateDoesNotExistMethodName validation helper method name
-     */
-    private void appendCreateCompositePrimaryKeyValidationInvocation(
-            StringBuilder stringBuilder,
-            String validateDoesNotExistMethodName
-    ) {
-        stringBuilder.append("        ")
-                .append(validateDoesNotExistMethodName)
-                .append("(dto);\n\n");
-    }
 
     /**
      * Returns whether the noun creation flow has any unique validations to generate.
@@ -772,7 +724,7 @@ public class ServiceImplGenerator {
 
 
     /**
-     * Appends the create unique constraints validation helper method.
+     * Appends a creation unique constraints validation helper method.
      *
      * @param stringBuilder target source builder
      * @param table table metadata
@@ -835,7 +787,6 @@ public class ServiceImplGenerator {
      * @param repositoryVariableName repository variable name
      * @param findByIdOrThrowMethodName helper method name
      * @param buildKeyMethodName key builder method name
-     * @param buildCompositeIdMethodName composite id helper method name
      * @param primaryKeyType primary key simple type or composite key type
      * @param primaryKeyColumns primary key columns
      * @param compositePrimaryKey true when the entity uses a composite primary key
@@ -847,7 +798,6 @@ public class ServiceImplGenerator {
             String repositoryVariableName,
             String findByIdOrThrowMethodName,
             String buildKeyMethodName,
-            String buildCompositeIdMethodName,
             String primaryKeyType,
             List<Column> primaryKeyColumns,
             boolean compositePrimaryKey
@@ -898,14 +848,13 @@ public class ServiceImplGenerator {
                 .append(") {\n");
 
         if (compositePrimaryKey) {
-            stringBuilder.append("        String compositeId = ")
-                    .append(buildCompositeIdMethodName)
-                    .append("(")
-                    .append(idArguments)
-                    .append(");\n");
             stringBuilder.append("        log.info(\"Deleting ")
                     .append(label)
-                    .append(" with composite id: {}\", compositeId);\n\n");
+                    .append(" with composite id: ")
+                    .append(buildCompositePrimaryKeyLogMessage(primaryKeyColumns))
+                    .append("\", ")
+                    .append(idArguments)
+                    .append(");\n\n");
             stringBuilder.append("        ")
                     .append(findByIdOrThrowMethodName)
                     .append("(")
@@ -1167,36 +1116,38 @@ public class ServiceImplGenerator {
         }
     }
 
-
-
     /**
-     * Builds a composite id description expression using method parameters.
+     * Appends the unique constraint violation helper method.
      *
-     * @param primaryKeyColumns primary key columns
-     * @return Java string expression
+     * @param stringBuilder target source builder
+     * @param entityName entity simple name
      */
-    private String buildCompositePrimaryKeyParameterDescriptionExpression(
-            List<Column> primaryKeyColumns
+    private void appendThrowUniqueConstraintViolationMethod(
+            StringBuilder stringBuilder,
+            String entityName
     ) {
-        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("    /**\n");
+        stringBuilder.append("     * Throws a unique constraint violation exception.\n");
+        stringBuilder.append("     *\n");
+        stringBuilder.append("     * @param fieldDescription the violated field description\n");
+        stringBuilder.append("     */\n");
 
-        for (int index = 0; index < primaryKeyColumns.size(); index++) {
-            Column primaryKeyColumn = primaryKeyColumns.get(index);
+        stringBuilder.append("    private void throwUniqueConstraintViolation(String fieldDescription) {\n");
 
-            String parameterName = resolvePrimaryKeyParameterName(primaryKeyColumn);
+        stringBuilder.append("        log.warn(\"")
+                .append(entityName)
+                .append(" unique constraint violation for {}.\", fieldDescription);\n");
 
-            if (index > 0) {
-                stringBuilder.append(" + \", \" + ");
-            }
+        stringBuilder.append("        throw GeneratedRuntimeException.builder()\n");
+        stringBuilder.append("                .code(ErrorCodes.BAD_REQUEST)\n");
+        stringBuilder.append("                .message(messageResolver.resolve(\"entity.uniqueConstraintViolation\", \"")
+                .append(entityName)
+                .append("\", fieldDescription))\n");
+        stringBuilder.append("                .build();\n");
 
-            stringBuilder.append("\"")
-                    .append(parameterName)
-                    .append("=\" + ")
-                    .append(parameterName);
-        }
-
-        return stringBuilder.toString();
+        stringBuilder.append("    }\n\n");
     }
+
 
 
     /**
@@ -1297,7 +1248,6 @@ public class ServiceImplGenerator {
         appendInlineUniqueCreateValidation(
                 stringBuilder,
                 table,
-                entityName,
                 repositoryVariableName,
                 compositePrimaryKey
         );
@@ -1346,14 +1296,12 @@ public class ServiceImplGenerator {
      *
      * @param stringBuilder target source builder
      * @param table table metadata
-     * @param entityName entity simple name
      * @param repositoryVariableName repository variable name
      * @param compositePrimaryKey true when the entity uses a composite primary key
      */
     private void appendInlineUniqueCreateValidation(
             StringBuilder stringBuilder,
             Table table,
-            String entityName,
             String repositoryVariableName,
             boolean compositePrimaryKey
     ) {
@@ -1378,18 +1326,11 @@ public class ServiceImplGenerator {
                     .append("(")
                     .append(dtoAccessExpression)
                     .append(")) {\n");
-            stringBuilder.append("            throw GeneratedRuntimeException.builder()\n");
-            stringBuilder.append("                    .code(ErrorCodes.BAD_REQUEST)\n");
-            stringBuilder.append("                    .message(messageResolver.resolve(\n");
-            stringBuilder.append("                            \"entity.uniqueConstraintViolation\",\n");
-            stringBuilder.append("                            \"").append(entityName).append("\",\n");
-            stringBuilder.append("                            \"")
+            stringBuilder.append("            throwUniqueConstraintViolation(\"")
                     .append(propertyName)
                     .append(" '\" + ")
                     .append(dtoAccessExpression)
-                    .append(" + \"'\"\n");
-            stringBuilder.append("                    ))\n");
-            stringBuilder.append("                    .build();\n");
+                    .append(" + \"'\");\n");
             stringBuilder.append("        }\n");
         }
     }
@@ -1424,15 +1365,6 @@ public class ServiceImplGenerator {
 
         String repositoryMethodName = buildExistsByMethodName(table, uniqueConstraint.getColumns());
 
-        String repositoryArguments = uniqueColumns.stream()
-                .map(column -> buildDtoAccessExpressionForColumn(table, column, compositePrimaryKey))
-                .reduce((left, right) -> left + ", " + right)
-                .orElse("");
-
-        if (repositoryArguments.isBlank()) {
-            return;
-        }
-
         if (compositePrimaryKey) {
             stringBuilder.append("        if (dto == null || dto.getId() == null) {\n");
             stringBuilder.append("            return;\n");
@@ -1442,9 +1374,10 @@ public class ServiceImplGenerator {
                     .append("Key id = dto.getId();\n\n");
         }
 
+        appendCompositeUniqueLocalVariables(stringBuilder, table, uniqueColumns, compositePrimaryKey);
+
         String requiredFieldsCheckExpression = uniqueColumns.stream()
-                .map(column -> buildDtoAccessExpressionForColumn(table, column, compositePrimaryKey)
-                        .replace("dto.getId()", "id") + " == null")
+                .map(column -> resolveCompositeUniqueLocalVariableName(column) + " == null")
                 .reduce((left, right) -> left + " || " + right)
                 .orElse("");
 
@@ -1456,26 +1389,90 @@ public class ServiceImplGenerator {
             stringBuilder.append("        }\n\n");
         }
 
-        stringBuilder.append("        boolean exists = ")
-                .append(repositoryVariableName)
-                .append("\n");
-        stringBuilder.append("                .")
-                .append(repositoryMethodName)
-                .append("(\n");
-        stringBuilder.append("                        ")
-                .append(repositoryArguments.replace("dto.getId()", "id").replace(", ", ",\n                        "))
-                .append("\n");
-        stringBuilder.append("                );\n\n");
+        String repositoryArguments = uniqueColumns.stream()
+                .map(this::resolveCompositeUniqueLocalVariableName)
+                .reduce((left, right) -> left + ", " + right)
+                .orElse("");
 
-        stringBuilder.append("        if (!exists) {\n");
+        if (repositoryArguments.isBlank()) {
+            return;
+        }
+
+        stringBuilder.append("        if (!")
+                .append(repositoryVariableName)
+                .append(".")
+                .append(repositoryMethodName)
+                .append("(")
+                .append(repositoryArguments)
+                .append(")) {\n");
         stringBuilder.append("            return;\n");
         stringBuilder.append("        }\n\n");
 
-        stringBuilder.append("        throw GeneratedRuntimeException.builder()\n");
-        stringBuilder.append("                .code(ErrorCodes.BAD_REQUEST)\n");
-        stringBuilder.append("                .message(messageResolver.resolve(\n");
-        stringBuilder.append("                        \"entity.uniqueConstraintViolation\",\n");
-        stringBuilder.append("                        \"").append(entityName).append("\",\n");
+        stringBuilder.append("        throwUniqueConstraintViolation(")
+                .append(buildCompositeUniqueFieldDescriptionExpression(table, uniqueColumns, compositePrimaryKey))
+                .append(");\n");
+    }
+
+
+    /**
+     * Appends local variables for composite unique validation fields.
+     *
+     * @param stringBuilder target source builder
+     * @param table table metadata
+     * @param uniqueColumns unique constraint columns
+     * @param compositePrimaryKey true when the entity uses a composite primary key
+     */
+    private void appendCompositeUniqueLocalVariables(
+            StringBuilder stringBuilder,
+            Table table,
+            List<Column> uniqueColumns,
+            boolean compositePrimaryKey
+    ) {
+        for (Column column : uniqueColumns) {
+            String variableName = resolveCompositeUniqueLocalVariableName(column);
+            String variableType = JavaTypeSupport.resolveSimpleType(column.getJavaType());
+            String accessExpression = buildDtoAccessExpressionForColumn(table, column, compositePrimaryKey)
+                    .replace("dto.getId()", "id");
+
+            stringBuilder.append("        ")
+                    .append(variableType)
+                    .append(" ")
+                    .append(variableName)
+                    .append(" = ")
+                    .append(accessExpression)
+                    .append(";\n");
+        }
+
+        stringBuilder.append("\n");
+    }
+
+    /**
+     * Resolves the local variable name for a composite unique validation column.
+     *
+     * @param column unique constraint column
+     * @return local variable name
+     */
+    private String resolveCompositeUniqueLocalVariableName(Column column) {
+        return NamingConverter.toCamelCase(
+                GeneratorSupport.unquoteIdentifier(column.getName())
+        );
+    }
+
+
+    /**
+     * Builds the field description expression for a composite unique constraint violation.
+     *
+     * @param table table metadata
+     * @param uniqueColumns unique constraint columns
+     * @param compositePrimaryKey true when the entity uses a composite primary key
+     * @return Java expression that describes the violated fields
+     */
+    private String buildCompositeUniqueFieldDescriptionExpression(
+            Table table,
+            List<Column> uniqueColumns,
+            boolean compositePrimaryKey
+    ) {
+        StringBuilder stringBuilder = new StringBuilder();
 
         for (int index = 0; index < uniqueColumns.size(); index++) {
             Column column = uniqueColumns.get(index);
@@ -1491,23 +1488,17 @@ public class ServiceImplGenerator {
             ).replace("dto.getId()", "id");
 
             if (index == 0) {
-                stringBuilder.append("                        \"");
+                stringBuilder.append("\"");
             } else {
-                stringBuilder.append("                                + \", ");
+                stringBuilder.append(" + \", ");
             }
 
             stringBuilder.append(propertyName)
                     .append("=\" + ")
                     .append(accessExpression);
-
-            if (index < uniqueColumns.size() - 1) {
-                stringBuilder.append("\n");
-            }
         }
 
-        stringBuilder.append("\n");
-        stringBuilder.append("                ))\n");
-        stringBuilder.append("                .build();\n");
+        return stringBuilder.toString();
     }
 
 
@@ -1816,8 +1807,6 @@ public class ServiceImplGenerator {
      * @param repositoryVariableName repository variable name
      * @param validateDoesNotExistMethodName validation helper method name
      * @param buildKeyMethodName key builder method name
-     * @param buildCompositeIdMethodName composite id helper method name
-     * @param primaryKeyType composite key type
      * @param primaryKeyColumns primary key columns
      * @param table table metadata
      */
@@ -1828,8 +1817,6 @@ public class ServiceImplGenerator {
             String repositoryVariableName,
             String validateDoesNotExistMethodName,
             String buildKeyMethodName,
-            String buildCompositeIdMethodName,
-            String primaryKeyType,
             List<Column> primaryKeyColumns,
             Table table
     ) {
@@ -1837,25 +1824,28 @@ public class ServiceImplGenerator {
 
         String nullCheckExpression = primaryKeyColumns.stream()
                 .map(column -> buildDtoAccessExpressionForColumn(table, column, true) + " == null")
-                .reduce((left, right) -> left + " || " + right)
-                .orElse("dto == null || dto.getId() == null");
+                .reduce((left, right) -> left + "\n                || " + right)
+                .orElse("dto.getId() == null");
 
-        String methodArguments = primaryKeyColumns.stream()
-                .map(column -> buildDtoAccessExpressionForColumn(table, column, true))
-                .reduce((left, right) -> left + ", " + right)
-                .orElse("");
+        String parameterDeclarations = primaryKeyColumns.stream()
+                .map(column -> {
+                    String parameterName = resolvePrimaryKeyParameterName(column);
+                    String parameterType = resolvePrimaryKeyParameterType(column);
+                    String accessExpression = buildDtoAccessExpressionForColumn(table, column, true);
+                    return "        " + parameterType + " " + parameterName + " = " + accessExpression + ";\n";
+                })
+                .reduce("", String::concat);
+
+        String parameterArguments = buildCompositePrimaryKeyMethodArguments(primaryKeyColumns);
 
         stringBuilder.append("    /**\n");
-        stringBuilder.append("     * Validates that a ")
+        stringBuilder.append("     * Validates that an ")
                 .append(label)
                 .append(" does not already exist for the given composite identifier.\n");
         stringBuilder.append("     *\n");
         stringBuilder.append("     * @param dto the ")
                 .append(label)
                 .append(" payload to validate\n");
-        stringBuilder.append("     * @throws GeneratedRuntimeException if the ")
-                .append(label)
-                .append(" already exists\n");
         stringBuilder.append("     */\n");
 
         stringBuilder.append("    private void ")
@@ -1864,44 +1854,68 @@ public class ServiceImplGenerator {
                 .append(dtoName)
                 .append(" dto) {\n");
 
-        stringBuilder.append("        if (dto == null || ")
+        stringBuilder.append("        if (dto == null\n");
+        stringBuilder.append("                || dto.getId() == null\n");
+        stringBuilder.append("                || ")
                 .append(nullCheckExpression)
                 .append(") {\n");
         stringBuilder.append("            return;\n");
         stringBuilder.append("        }\n\n");
 
-        stringBuilder.append("        ")
-                .append(primaryKeyType)
-                .append(" key = ")
+        stringBuilder.append(parameterDeclarations).append("\n");
+
+        stringBuilder.append("        if (!")
+                .append(repositoryVariableName)
+                .append(".existsById(")
                 .append(buildKeyMethodName)
                 .append("(")
-                .append(methodArguments)
-                .append(");\n\n");
+                .append(parameterArguments)
+                .append("))) {\n");
+        stringBuilder.append("            return;\n");
+        stringBuilder.append("        }\n\n");
 
-        stringBuilder.append("        if (")
-                .append(repositoryVariableName)
-                .append(".existsById(key)) {\n");
+        stringBuilder.append("        String compositeId = ")
+                .append(buildCompositePrimaryKeyDisplayExpression(primaryKeyColumns))
+                .append(";\n\n");
 
-        stringBuilder.append("            String compositeId = ")
-                .append(buildCompositeIdMethodName)
-                .append("(")
-                .append(methodArguments)
-                .append(");\n");
-
-        stringBuilder.append("            log.warn(\"")
+        stringBuilder.append("        log.warn(\"")
                 .append(entityName)
                 .append(" already exists with composite id: {}\", compositeId);\n\n");
 
-        stringBuilder.append("            throw GeneratedRuntimeException.builder()\n");
-        stringBuilder.append("                    .code(ErrorCodes.BAD_REQUEST)\n");
-        stringBuilder.append("                    .message(messageResolver.resolve(\n");
-        stringBuilder.append("                            \"entity.alreadyExistsByCompositeId\",\n");
-        stringBuilder.append("                            \"").append(entityName).append("\",\n");
-        stringBuilder.append("                            compositeId\n");
-        stringBuilder.append("                    ))\n");
-        stringBuilder.append("                    .build();\n");
-        stringBuilder.append("        }\n");
+        stringBuilder.append("        throw GeneratedRuntimeException.builder()\n");
+        stringBuilder.append("                .code(ErrorCodes.BAD_REQUEST)\n");
+        stringBuilder.append("                .message(messageResolver.resolve(\"entity.alreadyExistsByCompositeId\", \"")
+                .append(entityName)
+                .append("\", compositeId))\n");
+        stringBuilder.append("                .build();\n");
         stringBuilder.append("    }\n\n");
+    }
+
+    /**
+     * Builds a Java string expression for composite primary key display.
+     *
+     * @param primaryKeyColumns primary key columns
+     * @return Java expression that renders composite key values
+     */
+    private String buildCompositePrimaryKeyDisplayExpression(List<Column> primaryKeyColumns) {
+        StringBuilder expression = new StringBuilder();
+
+        for (int index = 0; index < primaryKeyColumns.size(); index++) {
+            Column column = primaryKeyColumns.get(index);
+            String parameterName = resolvePrimaryKeyParameterName(column);
+
+            if (index > 0) {
+                expression.append(" + \", ");
+            } else {
+                expression.append("\"");
+            }
+
+            expression.append(parameterName)
+                    .append("=\" + ")
+                    .append(parameterName);
+        }
+
+        return expression.toString();
     }
 
     /**
@@ -1935,31 +1949,4 @@ public class ServiceImplGenerator {
         stringBuilder.append("    }\n\n");
     }
 
-    /**
-     * Appends the composite id builder helper method.
-     *
-     * @param stringBuilder target source builder
-     * @param primaryKeyColumns primary key columns
-     * @param buildCompositeIdMethodName composite id helper method name
-     */
-    private void appendBuildCompositeIdServiceMethod(
-            StringBuilder stringBuilder,
-            List<Column> primaryKeyColumns,
-            String buildCompositeIdMethodName
-    ) {
-        String methodParameters = buildCompositePrimaryKeyMethodParameters(primaryKeyColumns);
-
-        stringBuilder.append("    /**\n");
-        stringBuilder.append("     * Builds the composite id string.\n");
-        stringBuilder.append("     *\n");
-        appendCompositePrimaryKeyJavaDocParameters(stringBuilder, primaryKeyColumns);
-        stringBuilder.append("     * @return composite id string\n");
-        stringBuilder.append("     */\n");
-        stringBuilder.append("    private String ").append(buildCompositeIdMethodName)
-                .append("(").append(methodParameters).append(") {\n");
-        stringBuilder.append("        return ").append(
-                buildCompositePrimaryKeyParameterDescriptionExpression(primaryKeyColumns)
-        ).append(";\n");
-        stringBuilder.append("    }\n\n");
-    }
 }
