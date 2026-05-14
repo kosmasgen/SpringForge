@@ -446,7 +446,7 @@ public class ServiceImplGenerator {
                 : primaryKeyType + " id";
 
         stringBuilder.append("    /**\n");
-        stringBuilder.append("     * Creates a NOT_FOUND exception for the missing ")
+        stringBuilder.append("     * Creates a NOT FOUND exception for the missing ")
                 .append(label)
                 .append(".\n");
         stringBuilder.append("     *\n");
@@ -538,8 +538,10 @@ public class ServiceImplGenerator {
                 : "id";
 
         stringBuilder.append("    /**\n");
-        stringBuilder.append("     * Updates an existing ").append(label).append(".\n");
-        stringBuilder.append("     * <p>\n");
+        stringBuilder.append("     * Updates an existing ")
+                .append(label)
+                .append(".\n");
+        stringBuilder.append("     *\n");
         stringBuilder.append("     * Only non-null fields from the DTO are applied to the existing entity.\n");
         stringBuilder.append("     *\n");
 
