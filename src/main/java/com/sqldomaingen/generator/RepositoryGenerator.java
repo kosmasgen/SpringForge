@@ -57,6 +57,7 @@ public class RepositoryGenerator {
      *
      * @param table table metadata
      * @param basePackage base Java package
+     * @param lookupTables configured lookup table names
      * @return generated repository source code
      */
     public String generateRepositoryForTable(Table table, String basePackage, Set<String> lookupTables) {
@@ -85,7 +86,6 @@ public class RepositoryGenerator {
         if (!lookupTable) {
             appendExistsByMethodsForUniqueColumns(builder, table);
             appendExistsByMethodsForCompositeUniqueConstraints(builder, table);
-            appendExistsByMethodsForRestrictRelationships(builder, table);
         }
 
         builder.append("}\n");
@@ -117,8 +117,7 @@ public class RepositoryGenerator {
      */
     private boolean hasCustomRepositoryMethods(Table table) {
         return !getEligibleInlineUniqueColumns(table).isEmpty()
-                || !getEligibleCompositeUniqueConstraints(table).isEmpty()
-                || hasRestrictRelationshipMethods(table);
+                || !getEligibleCompositeUniqueConstraints(table).isEmpty();
     }
 
     /**
@@ -327,7 +326,6 @@ public class RepositoryGenerator {
     private void addUniqueMethodImports(Set<String> importLines, Table table) {
         addInlineUniqueMethodImports(importLines, table);
         addCompositeUniqueMethodImports(importLines, table);
-        addRestrictRelationshipMethodImports(importLines, table);
     }
 
     /**
