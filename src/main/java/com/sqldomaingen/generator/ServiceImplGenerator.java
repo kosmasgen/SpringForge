@@ -401,7 +401,21 @@ public class ServiceImplGenerator {
                 .append(findByIdOrThrowMethodName)
                 .append("(")
                 .append(methodArguments)
-                .append(");\n");
+                .append(");\n\n");
+
+        if (compositePrimaryKey) {
+            stringBuilder.append("        log.info(\"")
+                    .append(entityName)
+                    .append(" with composite id: ")
+                    .append(buildCompositePrimaryKeyLogMessage(primaryKeyColumns))
+                    .append(" retrieved successfully.\", ")
+                    .append(methodArguments)
+                    .append(");\n");
+        } else {
+            stringBuilder.append("        log.info(\"")
+                    .append(entityName)
+                    .append(" with id: {} retrieved successfully.\", id);\n");
+        }
 
         stringBuilder.append("        return ")
                 .append(mapperVariableName)
@@ -541,7 +555,6 @@ public class ServiceImplGenerator {
         stringBuilder.append("     * Updates an existing ")
                 .append(label)
                 .append(".\n");
-        stringBuilder.append("     *\n");
         stringBuilder.append("     * Only non-null fields from the DTO are applied to the existing entity.\n");
         stringBuilder.append("     *\n");
 
@@ -584,10 +597,27 @@ public class ServiceImplGenerator {
         stringBuilder.append("        ").append(mapperVariableName)
                 .append(".partialUpdate(existingEntity, dto);\n\n");
 
-        stringBuilder.append("        return ").append(mapperVariableName)
-                .append(".toDTO(")
+        stringBuilder.append("        ").append(entityName)
+                .append(" updatedEntity = ")
                 .append(repositoryVariableName)
-                .append(".save(existingEntity));\n");
+                .append(".save(existingEntity);\n\n");
+
+        if (compositePrimaryKey) {
+            stringBuilder.append("        log.info(\"")
+                    .append(entityName)
+                    .append(" with composite id: ")
+                    .append(buildCompositePrimaryKeyLogMessage(primaryKeyColumns))
+                    .append(" updated successfully.\", ")
+                    .append(idArguments)
+                    .append(");\n");
+        } else {
+            stringBuilder.append("        log.info(\"")
+                    .append(entityName)
+                    .append(" with id: {} updated successfully.\", id);\n");
+        }
+
+        stringBuilder.append("        return ").append(mapperVariableName)
+                .append(".toDTO(updatedEntity);\n");
 
         stringBuilder.append("    }\n\n");
     }
@@ -648,18 +678,10 @@ public class ServiceImplGenerator {
                 .append(label)
                 .append(".\");\n");
 
-        if (compositePrimaryKey && hasUniqueValidations) {
-            stringBuilder.append("\n");
-        }
-
         if (compositePrimaryKey) {
             stringBuilder.append("        ")
                     .append(validateDoesNotExistMethodName)
-                    .append("(dto);\n");
-
-            if (hasUniqueValidations) {
-                stringBuilder.append("\n");
-            }
+                    .append("(dto);\n\n");
         }
 
         if (hasUniqueValidations) {
@@ -679,6 +701,10 @@ public class ServiceImplGenerator {
                 .append(" savedEntity = ")
                 .append(repositoryVariableName)
                 .append(".save(entity);\n\n");
+
+        stringBuilder.append("        log.info(\"")
+                .append(entityName)
+                .append(" created successfully with id: {}\", savedEntity.getId());\n");
 
         stringBuilder.append("        return ")
                 .append(mapperVariableName)
@@ -859,28 +885,44 @@ public class ServiceImplGenerator {
                     .append("\", ")
                     .append(idArguments)
                     .append(");\n\n");
+
             stringBuilder.append("        ")
                     .append(findByIdOrThrowMethodName)
                     .append("(")
                     .append(idArguments)
                     .append(");\n");
+
             stringBuilder.append("        ")
                     .append(repositoryVariableName)
                     .append(".deleteById(")
                     .append(buildKeyMethodName)
                     .append("(")
                     .append(idArguments)
-                    .append("));\n");
+                    .append("));\n\n");
+
+            stringBuilder.append("        log.info(\"")
+                    .append(entityName)
+                    .append(" with composite id: ")
+                    .append(buildCompositePrimaryKeyLogMessage(primaryKeyColumns))
+                    .append(" deleted successfully.\", ")
+                    .append(idArguments)
+                    .append(");\n");
         } else {
             stringBuilder.append("        log.info(\"Deleting ")
                     .append(label)
                     .append(" with id: {}\", id);\n\n");
+
             stringBuilder.append("        ")
                     .append(findByIdOrThrowMethodName)
                     .append("(id);\n");
+
             stringBuilder.append("        ")
                     .append(repositoryVariableName)
-                    .append(".deleteById(id);\n");
+                    .append(".deleteById(id);\n\n");
+
+            stringBuilder.append("        log.info(\"")
+                    .append(entityName)
+                    .append(" with id: {} deleted successfully.\", id);\n");
         }
 
         stringBuilder.append("    }\n\n");
@@ -1828,7 +1870,7 @@ public class ServiceImplGenerator {
 
         String nullCheckExpression = primaryKeyColumns.stream()
                 .map(column -> buildDtoAccessExpressionForColumn(table, column, true) + " == null")
-                .reduce((left, right) -> left + "\n                || " + right)
+                .reduce((left, right) -> left + " || " + right)
                 .orElse("dto.getId() == null");
 
         String parameterDeclarations = primaryKeyColumns.stream()
@@ -1858,9 +1900,7 @@ public class ServiceImplGenerator {
                 .append(dtoName)
                 .append(" dto) {\n");
 
-        stringBuilder.append("        if (dto == null\n");
-        stringBuilder.append("                || dto.getId() == null\n");
-        stringBuilder.append("                || ")
+        stringBuilder.append("        if (dto == null || dto.getId() == null || ")
                 .append(nullCheckExpression)
                 .append(") {\n");
         stringBuilder.append("            return;\n");
