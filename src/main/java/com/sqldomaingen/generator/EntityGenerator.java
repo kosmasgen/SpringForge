@@ -655,7 +655,7 @@ public class EntityGenerator {
 
             generatedFieldNames.add(fieldName);
 
-            builder.append("    @OneToOne(mappedBy = \"").append(mappedBy).append("\", fetch = FetchType.LAZY)\n");
+            builder.append("    @OneToOne(mappedBy = \"").append(mappedBy).append("\")\n");
             builder.append("    private ").append(targetEntity).append(" ").append(fieldName).append(";\n\n");
         }
     }
