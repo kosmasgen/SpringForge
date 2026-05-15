@@ -2242,6 +2242,10 @@ public class EntitySchemaValidator {
             JavaFieldDefinition javaFieldDefinition,
             List<String> violations
     ) {
+        if (isUuidGeneratedValue(columnDefinition, javaFieldDefinition)) {
+            return;
+        }
+
         if (columnDefinition.defaultValue() == null || columnDefinition.defaultValue().isBlank()) {
             return;
         }
@@ -2681,5 +2685,36 @@ public class EntitySchemaValidator {
         } catch (Exception exception) {
             return List.of();
         }
+    }
+
+    /**
+     * Returns true when the field uses Hibernate/JPA UUID generation
+     * and the SQL default is gen_random_uuid().
+     *
+     * @param columnDefinition parsed SQL column definition
+     * @param javaFieldDefinition parsed Java field definition
+     * @return true when UUID generation metadata is already covered
+     */
+    private boolean isUuidGeneratedValue(
+            ColumnDefinition columnDefinition,
+            JavaFieldDefinition javaFieldDefinition
+    ) {
+        String defaultValue = columnDefinition.defaultValue();
+
+        if (defaultValue == null || defaultValue.isBlank()) {
+            return false;
+        }
+
+        boolean sqlUsesUuidGeneration =
+                normalizeName(defaultValue).contains("gen_random_uuid()");
+
+        if (!sqlUsesUuidGeneration) {
+            return false;
+        }
+
+        return javaFieldDefinition.hasAnnotation("GeneratedValue")
+                && javaFieldDefinition.annotationRawArguments("GeneratedValue") != null
+                && javaFieldDefinition.annotationRawArguments("GeneratedValue")
+                .contains("GenerationType.UUID");
     }
 }

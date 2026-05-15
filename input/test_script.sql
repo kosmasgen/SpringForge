@@ -1782,3 +1782,158 @@ CREATE TABLE neo_schema.api_client_scope (
 CREATE INDEX idx_api_client_scope_client
     ON neo_schema.api_client_scope USING btree (api_client_id);
 
+
+CREATE TABLE neo_schema.vendor_registry (
+                                            id BIGSERIAL PRIMARY KEY,
+                                            code VARCHAR(50) NOT NULL UNIQUE,
+                                            name VARCHAR(255) NOT NULL,
+                                            vat_number VARCHAR(20),
+                                            active BOOLEAN NOT NULL DEFAULT true
+);
+
+CREATE TABLE neo_schema.vendor_registry_contact (
+                                                    id BIGSERIAL PRIMARY KEY,
+                                                    vendor_registry_id BIGINT NOT NULL,
+                                                    full_name VARCHAR(255) NOT NULL,
+                                                    email VARCHAR(255),
+                                                    phone VARCHAR(50),
+                                                    CONSTRAINT fk_vendor_registry_contact_vendor
+                                                        FOREIGN KEY (vendor_registry_id) REFERENCES neo_schema.vendor_registry(id) ON DELETE CASCADE
+);
+
+CREATE TABLE neo_schema.procurement_request (
+                                                id BIGSERIAL PRIMARY KEY,
+                                                vendor_registry_id BIGINT NOT NULL,
+                                                request_number VARCHAR(100) NOT NULL UNIQUE,
+                                                request_date DATE NOT NULL,
+                                                status VARCHAR(50) NOT NULL,
+                                                CONSTRAINT fk_procurement_request_vendor
+                                                    FOREIGN KEY (vendor_registry_id) REFERENCES neo_schema.vendor_registry(id)
+);
+
+CREATE TABLE neo_schema.procurement_request_line (
+                                                     id BIGSERIAL PRIMARY KEY,
+                                                     procurement_request_id BIGINT NOT NULL,
+                                                     item_name VARCHAR(255) NOT NULL,
+                                                     quantity NUMERIC(19,2) NOT NULL,
+                                                     unit_price NUMERIC(19,2) NOT NULL,
+                                                     CONSTRAINT fk_procurement_request_line_request
+                                                         FOREIGN KEY (procurement_request_id) REFERENCES neo_schema.procurement_request(id) ON DELETE CASCADE
+);
+
+CREATE TABLE neo_schema.storage_site (
+                                         id BIGSERIAL PRIMARY KEY,
+                                         code VARCHAR(50) NOT NULL UNIQUE,
+                                         name VARCHAR(255) NOT NULL,
+                                         location VARCHAR(255)
+);
+
+CREATE TABLE neo_schema.stock_catalog_item (
+                                               id BIGSERIAL PRIMARY KEY,
+                                               sku VARCHAR(100) NOT NULL UNIQUE,
+                                               name VARCHAR(255) NOT NULL,
+                                               unit VARCHAR(20) NOT NULL,
+                                               active BOOLEAN NOT NULL DEFAULT true
+);
+
+CREATE TABLE neo_schema.storage_stock_balance (
+                                                  id BIGSERIAL PRIMARY KEY,
+                                                  storage_site_id BIGINT NOT NULL,
+                                                  stock_catalog_item_id BIGINT NOT NULL,
+                                                  quantity NUMERIC(19,2) NOT NULL,
+                                                  CONSTRAINT fk_storage_stock_balance_site
+                                                      FOREIGN KEY (storage_site_id) REFERENCES neo_schema.storage_site(id),
+                                                  CONSTRAINT fk_storage_stock_balance_item
+                                                      FOREIGN KEY (stock_catalog_item_id) REFERENCES neo_schema.stock_catalog_item(id),
+                                                  CONSTRAINT uk_storage_stock_balance UNIQUE (storage_site_id, stock_catalog_item_id)
+);
+
+CREATE TABLE neo_schema.support_case (
+                                         id BIGSERIAL PRIMARY KEY,
+                                         case_number VARCHAR(100) NOT NULL UNIQUE,
+                                         title VARCHAR(255) NOT NULL,
+                                         priority VARCHAR(50) NOT NULL,
+                                         status VARCHAR(50) NOT NULL,
+                                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE neo_schema.support_case_note (
+                                              id BIGSERIAL PRIMARY KEY,
+                                              support_case_id BIGINT NOT NULL,
+                                              note_text TEXT NOT NULL,
+                                              created_by VARCHAR(255),
+                                              created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                              CONSTRAINT fk_support_case_note_case
+                                                  FOREIGN KEY (support_case_id) REFERENCES neo_schema.support_case(id) ON DELETE CASCADE
+);
+
+CREATE TABLE neo_schema.vendor_agreement (
+                                             id BIGSERIAL PRIMARY KEY,
+                                             vendor_registry_id BIGINT NOT NULL,
+                                             agreement_number VARCHAR(100) NOT NULL UNIQUE,
+                                             start_date DATE NOT NULL,
+                                             end_date DATE,
+                                             CONSTRAINT fk_vendor_agreement_vendor
+                                                 FOREIGN KEY (vendor_registry_id) REFERENCES neo_schema.vendor_registry(id)
+);
+
+CREATE TABLE neo_schema.vendor_agreement_file (
+                                                  id BIGSERIAL PRIMARY KEY,
+                                                  vendor_agreement_id BIGINT NOT NULL,
+                                                  file_name VARCHAR(255) NOT NULL,
+                                                  file_url VARCHAR(1000) NOT NULL,
+                                                  uploaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                                  CONSTRAINT fk_vendor_agreement_file_agreement
+                                                      FOREIGN KEY (vendor_agreement_id) REFERENCES neo_schema.vendor_agreement(id) ON DELETE CASCADE
+);
+
+CREATE TABLE neo_schema.billing_import_batch (
+                                                 id BIGSERIAL PRIMARY KEY,
+                                                 batch_code VARCHAR(100) NOT NULL UNIQUE,
+                                                 batch_date DATE NOT NULL,
+                                                 total_amount NUMERIC(19,2) NOT NULL
+);
+
+CREATE TABLE neo_schema.billing_import_record (
+                                                  id BIGSERIAL PRIMARY KEY,
+                                                  billing_import_batch_id BIGINT NOT NULL,
+                                                  vendor_registry_id BIGINT NOT NULL,
+                                                  external_invoice_number VARCHAR(100) NOT NULL,
+                                                  amount NUMERIC(19,2) NOT NULL,
+                                                  CONSTRAINT fk_billing_import_record_batch
+                                                      FOREIGN KEY (billing_import_batch_id) REFERENCES neo_schema.billing_import_batch(id),
+                                                  CONSTRAINT fk_billing_import_record_vendor
+                                                      FOREIGN KEY (vendor_registry_id) REFERENCES neo_schema.vendor_registry(id),
+                                                  CONSTRAINT uk_billing_import_record UNIQUE (vendor_registry_id, external_invoice_number)
+);
+
+CREATE TABLE neo_schema.runtime_setting_group (
+                                                  id BIGSERIAL PRIMARY KEY,
+                                                  code VARCHAR(100) NOT NULL UNIQUE,
+                                                  name VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE neo_schema.runtime_setting_value (
+                                                  id BIGSERIAL PRIMARY KEY,
+                                                  runtime_setting_group_id BIGINT NOT NULL,
+                                                  setting_key VARCHAR(255) NOT NULL,
+                                                  setting_value TEXT,
+                                                  CONSTRAINT fk_runtime_setting_value_group
+                                                      FOREIGN KEY (runtime_setting_group_id) REFERENCES neo_schema.runtime_setting_group(id) ON DELETE CASCADE,
+                                                  CONSTRAINT uk_runtime_setting_value UNIQUE (runtime_setting_group_id, setting_key)
+);
+
+CREATE INDEX idx_vendor_registry_contact_vendor
+    ON neo_schema.vendor_registry_contact(vendor_registry_id);
+
+CREATE INDEX idx_procurement_request_vendor
+    ON neo_schema.procurement_request(vendor_registry_id);
+
+CREATE INDEX idx_storage_stock_balance_item
+    ON neo_schema.storage_stock_balance(stock_catalog_item_id);
+
+CREATE INDEX idx_support_case_status
+    ON neo_schema.support_case(status);
+
+CREATE INDEX idx_billing_import_record_vendor
+    ON neo_schema.billing_import_record(vendor_registry_id);

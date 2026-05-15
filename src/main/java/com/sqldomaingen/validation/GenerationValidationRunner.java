@@ -43,15 +43,99 @@ public class GenerationValidationRunner {
         appendInfrastructureSection(report, outputDir, basePackage);
         appendI18nSupportSection(report, outputDir, basePackage);
         appendParsedTableNamesSection(report, parsedTables);
-
         appendGeneratedModelsSection(report, outputDir, basePackage);
 
         appendLiquibaseSection(report, outputDir, liquibaseWarnings);
+
         appendSchemaValidationChecklistSection(report, inputFile, outputDir);
         appendTodoEntitiesSection(report, inputFile, outputDir);
         appendSchemaValidationSection(report, inputFile, outputDir);
 
+        appendLiquibaseSchemaParitySection(report, inputFile, outputDir, parsedTables);
+        appendEntityDtoConsistencySection(report, outputDir);
+
         return report;
+    }
+
+    /**
+     * Appends entity/DTO consistency validation results into the unified report.
+     *
+     * @param report target report
+     * @param outputDir output project directory
+     */
+    private void appendEntityDtoConsistencySection(
+            GenerationValidationReport report,
+            String outputDir
+    ) {
+        List<String> details = new ArrayList<>();
+        List<String> violations = new ArrayList<>();
+
+        try {
+            EntityDtoConsistencyValidationService service =
+                    new EntityDtoConsistencyValidationService(
+                            Paths.get(outputDir, "src", "main", "java")
+                    );
+
+            List<String> results = service.validate();
+
+            details.add("Entity/DTO consistency checks executed.");
+
+            if (!results.isEmpty()) {
+                details.add("Entity/DTO consistency violations detected: " + results.size());
+                violations.addAll(results);
+            }
+
+            report.addSection("Entity DTO Consistency", details, violations);
+
+        } catch (Exception exception) {
+            violations.add(
+                    "Entity/DTO consistency validation failed: "
+                            + exception.getMessage()
+            );
+
+            report.addSection("Entity DTO Consistency", details, violations);
+        }
+    }
+
+    /**
+     * Appends Liquibase/schema parity validation results into the unified report.
+     *
+     * @param report target report
+     * @param inputFile input SQL file path
+     * @param outputDir output project directory
+     * @param parsedTables parsed schema tables
+     */
+    private void appendLiquibaseSchemaParitySection(
+            GenerationValidationReport report,
+            String inputFile,
+            String outputDir,
+            List<Table> parsedTables
+    ) {
+        List<String> details = new ArrayList<>();
+        List<String> violations = new ArrayList<>();
+
+        try {
+            LiquibaseSchemaParityValidationService service = new LiquibaseSchemaParityValidationService(
+                    Paths.get(inputFile),
+                    Paths.get(outputDir, "src", "main", "resources", "db", "migration", "changelogs", "v0.1.0"),
+                    parsedTables
+            );
+
+            List<String> results = service.validate();
+
+            details.add("Liquibase schema parity checks executed.");
+            details.add("Parsed tables checked: " + safeSize(parsedTables));
+
+            if (!results.isEmpty()) {
+                details.add("Liquibase parity violations detected: " + results.size());
+                violations.addAll(results);
+            }
+
+            report.addSection("Liquibase Schema Parity", details, violations);
+        } catch (Exception exception) {
+            violations.add("Liquibase schema parity validation failed: " + exception.getMessage());
+            report.addSection("Liquibase Schema Parity", details, violations);
+        }
     }
 
     /**

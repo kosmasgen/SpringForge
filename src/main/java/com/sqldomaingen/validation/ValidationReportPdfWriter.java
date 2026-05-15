@@ -114,12 +114,12 @@ public class ValidationReportPdfWriter {
      * @param section report section
      */
     private void appendViolations(List<PdfLine> lines, GenerationValidationReport.Section section) {
-        lines.add(PdfLine.subheading("Violations"));
-
         if (section.violations().isEmpty()) {
-            lines.add(PdfLine.detail("None"));
+            lines.add(PdfLine.subheading("Violations: None"));
             return;
         }
+
+        lines.add(PdfLine.subheading("Violations"));
 
         for (String violation : section.violations()) {
             lines.add(PdfLine.violation("[VIOLATION] " + violation));
@@ -133,12 +133,12 @@ public class ValidationReportPdfWriter {
      * @param section report section
      */
     private void appendWarnings(List<PdfLine> lines, GenerationValidationReport.Section section) {
-        lines.add(PdfLine.subheading("Warnings"));
-
         if (section.warnings().isEmpty()) {
-            lines.add(PdfLine.detail("None"));
+            lines.add(PdfLine.subheading("Warnings: None"));
             return;
         }
+
+        lines.add(PdfLine.subheading("Warnings"));
 
         for (String warning : section.warnings()) {
             lines.add(PdfLine.warning("[WARNING] " + warning));
