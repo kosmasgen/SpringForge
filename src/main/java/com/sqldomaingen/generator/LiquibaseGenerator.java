@@ -301,31 +301,27 @@ public class LiquibaseGenerator {
     <changeSet id="%s" author="%s">
 """.formatted(changeSetId, resolvedAuthor));
 
-        appendMainTableCreateBlock(builder, tableName, table);
-        builder.append("\n");
+        StringBuilder changeSetBuilder = new StringBuilder();
 
-        appendGeneratedStoredColumnsBlock(builder, tableName, table);
-        builder.append("\n");
+        appendMainTableCreateBlock(changeSetBuilder, tableName, table);
+        appendSectionSpacing(changeSetBuilder);
+        appendGeneratedStoredColumnsBlock(changeSetBuilder, tableName, table);
+        appendSectionSpacing(changeSetBuilder);
+        appendMainTableCheckConstraints(changeSetBuilder, table);
+        appendSectionSpacing(changeSetBuilder);
+        appendMainTableUniqueConstraints(changeSetBuilder, tableName, table);
+        appendSectionSpacing(changeSetBuilder);
+        appendMainTableIndexes(changeSetBuilder, tableName, table);
+        appendSectionSpacing(changeSetBuilder);
+        appendMainTableForeignKeys(changeSetBuilder, tableName, table, availableTableReferences);
+        appendSectionSpacing(changeSetBuilder);
+        appendAuditTableCreateBlock(changeSetBuilder, auditTableName, table);
+        appendSectionSpacing(changeSetBuilder);
+        appendAuditPrimaryKeyBlock(changeSetBuilder, auditTableName, table);
+        appendSectionSpacing(changeSetBuilder);
+        appendAuditForeignKeyBlock(changeSetBuilder, tableName, auditTableName);
 
-        appendMainTableCheckConstraints(builder, table);
-        builder.append("\n");
-
-        appendMainTableUniqueConstraints(builder, tableName, table);
-        builder.append("\n");
-
-        appendMainTableIndexes(builder, tableName, table);
-        builder.append("\n");
-
-        appendMainTableForeignKeys(builder, tableName, table, availableTableReferences);
-        builder.append("\n");
-
-        appendAuditTableCreateBlock(builder, auditTableName, table);
-        builder.append("\n");
-
-        appendAuditPrimaryKeyBlock(builder, auditTableName, table);
-        builder.append("\n");
-
-        appendAuditForeignKeyBlock(builder, tableName, auditTableName);
+        builder.append(normalizeLiquibaseSectionSpacing(changeSetBuilder.toString()));
 
         builder.append("""
 
@@ -337,6 +333,30 @@ public class LiquibaseGenerator {
         return builder.toString();
     }
 
+    /**
+     * Normalizes spacing between Liquibase blocks inside a changeSet.
+     *
+     * @param content raw generated changeSet content
+     * @return content with exactly two empty lines between XML blocks
+     */
+    private String normalizeLiquibaseSectionSpacing(String content) {
+        if (content == null || content.isBlank()) {
+            return "";
+        }
+
+        return content
+                .replaceAll("\\R{3,}", "\n\n\n")
+                .stripTrailing();
+    }
+
+    /**
+     * Appends visual spacing between Liquibase sections.
+     *
+     * @param builder target builder
+     */
+    private void appendSectionSpacing(StringBuilder builder) {
+        builder.append("\n\n");
+    }
 
     /**
      * Appends table-level CHECK constraints for the main table.
@@ -722,6 +742,8 @@ public class LiquibaseGenerator {
 
         String defaultAttribute = buildDefaultValueAttribute(column);
 
+        boolean hasConstraints = primaryKey || unique || !nullable;
+
         builder.append("            <column name=\"")
                 .append(escapeXml(columnName))
                 .append("\" type=\"")
@@ -732,32 +754,36 @@ public class LiquibaseGenerator {
             builder.append(" autoIncrement=\"true\"");
         }
 
-        builder.append(defaultAttribute)
-                .append(">\n");
+        builder.append(defaultAttribute);
 
-        if (primaryKey || unique || !nullable) {
-            builder.append("                <constraints");
-
-            if (primaryKey) {
-                builder.append(" primaryKey=\"true\"");
-
-                if (primaryKeyConstraintName != null && !primaryKeyConstraintName.isBlank()) {
-                    builder.append(" primaryKeyName=\"")
-                            .append(escapeXml(primaryKeyConstraintName))
-                            .append("\"");
-                }
-            }
-
-            if (unique) {
-                builder.append(" unique=\"true\"");
-            }
-
-            if (!nullable) {
-                builder.append(" nullable=\"false\"");
-            }
-
+        if (!hasConstraints) {
             builder.append("/>\n");
+            return;
         }
+
+        builder.append(">\n");
+
+        builder.append("                <constraints");
+
+        if (primaryKey) {
+            builder.append(" primaryKey=\"true\"");
+
+            if (primaryKeyConstraintName != null && !primaryKeyConstraintName.isBlank()) {
+                builder.append(" primaryKeyName=\"")
+                        .append(escapeXml(primaryKeyConstraintName))
+                        .append("\"");
+            }
+        }
+
+        if (unique) {
+            builder.append(" unique=\"true\"");
+        }
+
+        if (!nullable) {
+            builder.append(" nullable=\"false\"");
+        }
+
+        builder.append("/>\n");
 
         builder.append("            </column>\n");
     }
