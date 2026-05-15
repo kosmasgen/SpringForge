@@ -172,7 +172,7 @@ public class ExceptionGenerator {
                     @Schema(description = "HTTP status reason phrase", example = "Not Found")
                     private String error;
 
-                    @Schema(description = "Human-readable error message", example = "Resource not found with id: 10")
+                    @Schema(description = "Error message", example = "Resource not found with id: 10")
                     private String message;
 
                     @Schema(description = "Request path", example = "/api/absences/10")

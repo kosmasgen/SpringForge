@@ -2,7 +2,6 @@ package com.sqldomaingen.generator;
 
 import com.sqldomaingen.model.Column;
 import com.sqldomaingen.model.Table;
-import com.sqldomaingen.model.Relationship;
 import com.sqldomaingen.model.UniqueConstraint;
 import com.sqldomaingen.util.GeneratorSupport;
 import com.sqldomaingen.util.JavaTypeSupport;
@@ -120,26 +119,6 @@ public class RepositoryGenerator {
                 || !getEligibleCompositeUniqueConstraints(table).isEmpty();
     }
 
-    /**
-     * Returns whether the table has at least one restrict relationship
-     * that can produce a repository existsBy method.
-     *
-     * @param table table metadata
-     * @return true when at least one eligible restrict relationship exists
-     */
-    private boolean hasRestrictRelationshipMethods(Table table) {
-        if (table.getRelationships() == null || table.getRelationships().isEmpty()) {
-            return false;
-        }
-
-        return table.getRelationships().stream()
-                .filter(Objects::nonNull)
-                .filter(relationship -> relationship.getSourceColumn() != null)
-                .filter(this::isRestrictRelationship)
-                .map(relationship -> findColumnByName(table, relationship.getSourceColumn()))
-                .filter(Objects::nonNull)
-                .anyMatch(column -> !isUnsupportedForDerivedQuery(column.getJavaType()));
-    }
 
     /**
      * Returns all eligible inline unique columns.
@@ -328,58 +307,6 @@ public class RepositoryGenerator {
         addCompositeUniqueMethodImports(importLines, table);
     }
 
-    /**
-     * Adds import lines required by ON DELETE RESTRICT or ON UPDATE RESTRICT relationship methods.
-     *
-     * @param importLines ordered import collection
-     * @param table table metadata
-     */
-    private void addRestrictRelationshipMethodImports(
-            Set<String> importLines,
-            Table table
-    ) {
-        if (table.getRelationships() == null || table.getRelationships().isEmpty()) {
-            return;
-        }
-
-        Set<String> processedColumns = new LinkedHashSet<>();
-
-        for (Relationship relationship : table.getRelationships()) {
-            if (relationship == null
-                    || relationship.getSourceColumn() == null) {
-                continue;
-            }
-
-            if (!isRestrictRelationship(relationship)) {
-                continue;
-            }
-
-            String columnName = relationship.getSourceColumn();
-
-            if (!processedColumns.add(columnName.toLowerCase())) {
-                continue;
-            }
-
-            Column column = findColumnByName(table, columnName);
-
-            if (column == null) {
-                continue;
-            }
-
-            addDerivedQueryTypeImport(importLines, column.getJavaType());
-        }
-    }
-
-    /**
-     * Returns whether the relationship has ON DELETE RESTRICT or ON UPDATE RESTRICT.
-     *
-     * @param relationship relationship metadata
-     * @return true when delete or update action is RESTRICT
-     */
-    private boolean isRestrictRelationship(Relationship relationship) {
-        return "RESTRICT".equalsIgnoreCase(relationship.getOnDelete())
-                || "RESTRICT".equalsIgnoreCase(relationship.getOnUpdate());
-    }
 
     /**
      * Adds import lines required by inline unique methods.
@@ -682,7 +609,7 @@ public class RepositoryGenerator {
                     .append("\n");
         }
 
-        builder.append("     * @return {@code true} if a matching entity exists; otherwise {@code false}\n");
+        builder.append("     * @return true if a matching entity exists; otherwise false\n");
         builder.append("     */\n");
     }
 
@@ -770,67 +697,5 @@ public class RepositoryGenerator {
      * @param importLine optional import line
      */
     private record TypeRef(String simpleName, String importLine) {
-    }
-
-    /**
-     * Appends existsBy methods for ON DELETE RESTRICT or ON UPDATE RESTRICT relationships.
-     *
-     * @param builder target source builder
-     * @param table table metadata
-     */
-    private void appendExistsByMethodsForRestrictRelationships(
-            StringBuilder builder,
-            Table table
-    ) {
-        if (table.getRelationships() == null || table.getRelationships().isEmpty()) {
-            return;
-        }
-
-        Set<String> generatedMethodNames = collectExistingExistsByMethodNames(table);
-
-        for (Relationship relationship : table.getRelationships()) {
-            if (relationship == null
-                    || relationship.getSourceColumn() == null) {
-                continue;
-            }
-
-            if (!isRestrictRelationship(relationship)) {
-                continue;
-            }
-
-            Column sourceColumn = findColumnByName(table, relationship.getSourceColumn());
-
-            if (sourceColumn == null || isUnsupportedForDerivedQuery(sourceColumn.getJavaType())) {
-                continue;
-            }
-
-            String methodName = buildExistsByMethodName(table, List.of(sourceColumn.getName()));
-
-            if (!generatedMethodNames.add(methodName)) {
-                continue;
-            }
-
-            appendExistsByMethodForSingleColumn(builder, table, sourceColumn);
-        }
-    }
-
-    /**
-     * Collects existing existsBy method names generated from unique definitions.
-     *
-     * @param table table metadata
-     * @return existing existsBy method names
-     */
-    private Set<String> collectExistingExistsByMethodNames(Table table) {
-        Set<String> methodNames = new LinkedHashSet<>();
-
-        for (Column column : getEligibleInlineUniqueColumns(table)) {
-            methodNames.add(buildExistsByMethodName(table, List.of(column.getName())));
-        }
-
-        for (UniqueConstraint uniqueConstraint : getEligibleCompositeUniqueConstraints(table)) {
-            methodNames.add(buildExistsByMethodName(table, uniqueConstraint.getColumns()));
-        }
-
-        return methodNames;
     }
 }
