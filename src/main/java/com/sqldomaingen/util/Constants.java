@@ -6,8 +6,7 @@ import java.util.regex.Pattern;
 
 public class Constants {
 
-    public static final Path SCHEMA_PATH = Path.of("input", "test_script.sql");
-    public static final Path GENERATED_JAVA_ROOT = Path.of("output", "PepTest", "src", "main", "java");
+    public static final Path SCHEMA_PATH = Path.of("input", "schema.sql");
 
 
     public static final String CONTROLLER_PACKAGE = "controller";
@@ -35,7 +34,7 @@ public class Constants {
     public static final String JAVA_LANG_PACKAGE = "java.lang.";
     public static final String ARRAY_SUFFIX = "[]";
     public static final String API_ENTITY_PREFIX = "Api";
-    public static final String BY_ID_SUFFIX = "ById";
+
 
     public static final String DEFAULT_ID_PARAM = "id";
     public static final String DEFAULT_PK_TYPE = "Long";

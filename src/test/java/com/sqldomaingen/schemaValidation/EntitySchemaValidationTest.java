@@ -1,6 +1,7 @@
 package com.sqldomaingen.schemaValidation;
 
 import com.sqldomaingen.util.Constants;
+import com.sqldomaingen.util.GeneratedProjectPathResolver;
 import com.sqldomaingen.validation.EntitySchemaValidator;
 import org.junit.jupiter.api.Test;
 
@@ -22,7 +23,7 @@ class EntitySchemaValidationTest {
     void shouldValidateGeneratedEntitySourceFilesAgainstSchema() {
         EntitySchemaValidator validator = new EntitySchemaValidator(
                 Constants.SCHEMA_PATH,
-                Constants.GENERATED_JAVA_ROOT
+                GeneratedProjectPathResolver.resolveGeneratedJavaRoot()
         );
 
         printValidationChecklist();
@@ -68,7 +69,7 @@ class EntitySchemaValidationTest {
     private void printValidationChecklist() {
         EntitySchemaValidator validator = new EntitySchemaValidator(
                 Constants.SCHEMA_PATH,
-                Constants.GENERATED_JAVA_ROOT
+                GeneratedProjectPathResolver.resolveGeneratedJavaRoot()
         );
 
         List<String> checks = validator.getValidationChecklistLines();

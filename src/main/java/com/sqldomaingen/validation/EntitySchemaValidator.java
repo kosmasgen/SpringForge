@@ -2671,7 +2671,7 @@ public class EntitySchemaValidator {
         List<String> violations = new ArrayList<>();
 
         try {
-            if (!Files.exists(Constants.GENERATED_JAVA_ROOT)) {
+            if (!Files.exists(generatedJavaRoot)) {
                 return List.of();
             }
 

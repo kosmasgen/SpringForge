@@ -48,7 +48,6 @@ import java.util.stream.Collectors;
 @Log4j2
 public class GeneratorCommands {
 
-
     private final EntityGenerator entityGenerator = new EntityGenerator();
 
     /**
@@ -56,7 +55,6 @@ public class GeneratorCommands {
      * and produces validation XML and PDF reports in the output directory.
      *
      * @param inputFile input SQL file path
-     * @param outputDir output project directory
      * @param packageName base package name
      * @param overwrite whether existing files should be overwritten
      * @param useBuilder whether builder generation should be enabled
@@ -66,13 +64,13 @@ public class GeneratorCommands {
     @ShellMethod("Generate full Spring backend from a SQL file.")
     public String generateEntity(
             @ShellOption(value = {"--input-file", "-i"}) String inputFile,
-            @ShellOption(value = {"--output-dir", "-o"}) String outputDir,
             @ShellOption(value = {"--package-name", "-p"}) String packageName,
             @ShellOption(value = {"--overwrite", "-w"}, defaultValue = "false") boolean overwrite,
             @ShellOption(value = {"--use-builder", "-b"}, defaultValue = "false") boolean useBuilder,
             @ShellOption(value = {"--author", "-a"}, defaultValue = ShellOption.NULL) String author
     ) {
         try {
+            String outputDir = resolveProjectOutputDirectory(packageName);
             validateOutputDirectory(outputDir);
 
             List<Table> parsedTables = processSQLFile(inputFile);
@@ -99,6 +97,7 @@ public class GeneratorCommands {
                     defaultSchemaName,
                     overwrite
             );
+
             new ConfigGenerator().generateConfigs(outputDir, packageName, overwrite);
             new ExceptionGenerator().generateExceptionHandling(outputDir, packageName, overwrite);
 
@@ -112,15 +111,21 @@ public class GeneratorCommands {
                     .collect(Collectors.toMap(Table::getName, tableValue -> tableValue));
 
             new MapperGenerator(tableMap).generateMappers(outputDir, packageName);
+
             Set<String> lookupTables = generatorConfig.getLookupTables() == null
                     ? Set.of()
                     : Set.copyOf(generatorConfig.getLookupTables());
-            new RepositoryGenerator().generateRepositories(javaGenerationTables, outputDir, packageName, overwrite, lookupTables
+
+            new RepositoryGenerator().generateRepositories(
+                    javaGenerationTables, outputDir, packageName, overwrite, lookupTables
             );
+
             new ServiceGenerator().generateAllServices(businessGenerationTables, outputDir, packageName);
             new ControllerGenerator().generateControllers(businessGenerationTables, outputDir, packageName, overwrite);
-            new TestGenerator().generateTests(businessGenerationTables, javaGenerationTables, models, outputDir,
-                    packageName, overwrite);
+
+            new TestGenerator().generateTests(
+                    businessGenerationTables, javaGenerationTables, models, outputDir, packageName, overwrite
+            );
 
             LiquibaseGenerator liquibaseGenerator = new LiquibaseGenerator();
             liquibaseGenerator.generateLiquibaseFiles(outputDir, parsedTables, overwrite, author);
@@ -128,7 +133,8 @@ public class GeneratorCommands {
             Path validationDir = createValidationOutputDirectory(outputDir);
 
             GenerationValidationReport validationReport = new GenerationValidationRunner().run(
-                    inputFile, outputDir, packageName, author, parsedTables,liquibaseGenerator.getGenerationWarnings()
+                    inputFile, outputDir, packageName, author, parsedTables,
+                    liquibaseGenerator.getGenerationWarnings()
             );
 
             Path xmlPath = validationDir.resolve("validation-report.xml");
@@ -152,6 +158,34 @@ public class GeneratorCommands {
     }
 
     /**
+     * Resolves the project output directory from the last part of the package name.
+     *
+     * Example:
+     * com.personalfinance -> output/personalfinance
+     *
+     * @param packageName base package name
+     * @return resolved project output directory
+     */
+    private String resolveProjectOutputDirectory(String packageName) {
+        if (packageName == null || packageName.isBlank()) {
+            throw new IllegalArgumentException("Package name cannot be null or empty.");
+        }
+
+        String normalizedPackageName = packageName.trim();
+        int lastDotIndex = normalizedPackageName.lastIndexOf('.');
+
+        String projectName = lastDotIndex >= 0
+                ? normalizedPackageName.substring(lastDotIndex + 1)
+                : normalizedPackageName;
+
+        if (projectName.isBlank()) {
+            throw new IllegalArgumentException("Cannot resolve project name from package: " + packageName);
+        }
+
+        return Paths.get("output", projectName).toString();
+    }
+
+    /**
      * Creates the validation report output directory under the generated project root.
      *
      * @param outputDir output project directory
@@ -163,7 +197,6 @@ public class GeneratorCommands {
         Files.createDirectories(validationDir);
         return validationDir;
     }
-
 
     /**
      * Filters parsed tables and removes those that must not participate
@@ -197,7 +230,6 @@ public class GeneratorCommands {
         return filteredTables;
     }
 
-
     /**
      * Ensures the output directory exists and is usable.
      * Creates it if missing.
@@ -223,7 +255,7 @@ public class GeneratorCommands {
      * Reads a SQL file and converts its CREATE TABLE statements into {@link Table} objects.
      *
      * @param inputFile SQL file path
-     * @return list of parsed tables
+     * @return list of tables parsed from the SQL input
      * @throws IOException if the file exists but cannot be read
      */
     public List<Table> processSQLFile(String inputFile) throws IOException {
@@ -250,7 +282,7 @@ public class GeneratorCommands {
      * Parses SQL content using the ANTLR PostgreSQL grammar and returns table models.
      *
      * @param sqlContent raw SQL string
-     * @return list of tables parsed from the SQL content
+     * @return list of parsed tables
      */
     public List<Table> parseSQLToTables(String sqlContent) {
         try {
@@ -300,6 +332,12 @@ public class GeneratorCommands {
         }
     }
 
+    /**
+     * Resolves the default application schema from parsed tables.
+     *
+     * @param tables parsed tables
+     * @return resolved schema or public
+     */
     private String resolveDefaultSchemaName(List<Table> tables) {
         if (tables == null || tables.isEmpty()) {
             return "public";
@@ -354,6 +392,4 @@ public class GeneratorCommands {
 
         return filteredTables;
     }
-
-
 }

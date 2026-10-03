@@ -1,6 +1,6 @@
 package com.sqldomaingen.schemaValidation;
 
-import com.sqldomaingen.util.Constants;
+import com.sqldomaingen.util.GeneratedProjectPathResolver;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,7 +94,7 @@ class GeneratedSourcesJavacCompilationTest {
      * @return generated project root
      */
     private Path resolveGeneratedProjectRoot() {
-        return Constants.GENERATED_JAVA_ROOT.getParent().getParent().getParent();
+        return GeneratedProjectPathResolver.resolveGeneratedProjectRoot();
     }
 
     /**

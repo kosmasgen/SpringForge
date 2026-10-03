@@ -1,6 +1,6 @@
 package com.sqldomaingen.schemaValidation;
 
-import com.sqldomaingen.util.Constants;
+import com.sqldomaingen.util.GeneratedProjectPathResolver;
 import com.sqldomaingen.validation.EntityDtoConsistencyValidation;
 import org.junit.jupiter.api.Test;
 
@@ -19,7 +19,9 @@ class EntityDtoConsistencyValidationTest {
     @Test
     void shouldValidateGeneratedDtoSourceFilesAgainstGeneratedEntitySourceFiles() {
         EntityDtoConsistencyValidation validation =
-                new EntityDtoConsistencyValidation(Constants.GENERATED_JAVA_ROOT);
+                new EntityDtoConsistencyValidation(
+                        GeneratedProjectPathResolver.resolveGeneratedJavaRoot()
+                );
 
         List<String> violations = validation.validate();
 
