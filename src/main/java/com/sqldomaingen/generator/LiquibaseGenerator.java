@@ -79,11 +79,25 @@ public class LiquibaseGenerator {
             );
         }
 
+        boolean updatedAtSupportRequired = requiresUpdatedAtSupport(tables);
+
+        if (updatedAtSupportRequired) {
+            GeneratorSupport.writeFile(
+                    versionDir.resolve("functions.xml"),
+                    buildUpdatedAtFunctionsChangelogContent(author, tables),
+                    overwrite
+            );
+        }
+
         generateTableChangelogFiles(versionDir, tables, overwrite, author);
 
         GeneratorSupport.writeFile(
                 versionDir.resolve("main.xml"),
-                buildVersionMainContent(orderedChangelogFiles, extensionsRequired),
+                buildVersionMainContent(
+                        orderedChangelogFiles,
+                        extensionsRequired,
+                        updatedAtSupportRequired
+                ),
                 overwrite
         );
 
@@ -164,6 +178,117 @@ public class LiquibaseGenerator {
     private boolean requiresExtensionsChangelog(List<Table> tables) {
         return requiresPgTrgmExtension(tables)
                 || requiresUnaccentExtension(tables);
+    }
+
+    /**
+     * Returns whether database-managed updated-at support is required
+     * for at least one parsed table.
+     *
+     * @param tables parsed tables
+     * @return true when at least one table contains a database-managed updated-at column
+     */
+    private boolean requiresUpdatedAtSupport(List<Table> tables) {
+        if (tables == null || tables.isEmpty()) {
+            return false;
+        }
+
+        return tables.stream()
+                .filter(Objects::nonNull)
+                .anyMatch(this::hasDatabaseManagedUpdatedAt);
+    }
+
+    /**
+     * Checks whether the given table contains a database-managed
+     * updated-at timestamp column.
+     *
+     * @param table parsed table
+     * @return true when the table contains a supported updated-at column
+     */
+    private boolean hasDatabaseManagedUpdatedAt(Table table) {
+        if (table == null || table.getColumns() == null) {
+            return false;
+        }
+
+        return table.getColumns().stream()
+                .filter(Objects::nonNull)
+                .anyMatch(this::isDatabaseManagedUpdatedAtColumn);
+    }
+
+    /**
+     * Determines whether the given column represents a database-managed
+     * updated-at timestamp.
+     * <p>The column must be named {@code updated_at}
+     * and use a database-side timestamp default such as CURRENT_TIMESTAMP,
+     * NOW(), or LOCALTIMESTAMP.</p>
+     *
+     * @param column parsed column
+     * @return true when the column should be maintained by a database trigger
+     */
+    private boolean isDatabaseManagedUpdatedAtColumn(Column column) {
+        if (column == null || column.getName() == null) {
+            return false;
+        }
+
+        String columnName = normalizeIdentifier(column.getName());
+
+        if (!"updated_at".equalsIgnoreCase(columnName)) {
+            return false;
+        }
+
+        String defaultValue = column.getDefaultValue();
+        if (defaultValue == null || defaultValue.isBlank()) {
+            return false;
+        }
+
+        String normalizedDefault = defaultValue.trim().toLowerCase(Locale.ROOT);
+
+        return normalizedDefault.contains("now()")
+                || normalizedDefault.equals("current_timestamp")
+                || normalizedDefault.equals("localtimestamp");
+    }
+
+
+    /**
+     * Builds the Liquibase changelog that creates the shared PostgreSQL
+     * function used to maintain updated-at timestamp columns.
+     *
+     * <p>The generated function is shared by all table-specific triggers
+     * that manage {@code updated_at}  columns.</p>
+     *
+     * @param author liquibase author
+     * @param tables parsed tables
+     * @return generated functions changelog XML
+     */
+    private String buildUpdatedAtFunctionsChangelogContent(String author, List<Table> tables) {
+        String resolvedAuthor = resolveLiquibaseAuthor(author);
+        String schemaName = resolveRevisionSequenceSchema(tables);
+
+        return """
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.11.xsd">
+
+    <changeSet id="create_set_updated_at_function" author="%s">
+        <sql splitStatements="false"><![CDATA[
+            CREATE OR REPLACE FUNCTION %s.set_updated_at()
+            RETURNS TRIGGER
+            LANGUAGE plpgsql
+            AS $$
+            BEGIN
+                NEW.updated_at = CURRENT_TIMESTAMP;
+                RETURN NEW;
+            END;
+            $$;
+        ]]></sql>
+    </changeSet>
+
+</databaseChangeLog>
+""".formatted(
+                escapeXml(resolvedAuthor),
+                schemaName
+        );
     }
 
 
@@ -375,6 +500,8 @@ public class LiquibaseGenerator {
         appendSectionSpacing(changeSetBuilder);
         appendMainTableForeignKeys(changeSetBuilder, tableName, table, availableTableReferences);
         appendSectionSpacing(changeSetBuilder);
+        appendUpdatedAtTriggerBlock(changeSetBuilder, tableName, table);
+        appendSectionSpacing(changeSetBuilder);
         appendAuditTableCreateBlock(changeSetBuilder, auditTableName, table);
         appendSectionSpacing(changeSetBuilder);
         appendAuditPrimaryKeyBlock(changeSetBuilder, auditTableName, table);
@@ -511,6 +638,43 @@ public class LiquibaseGenerator {
                     availableTableReferences
             );
         }
+    }
+
+    /**
+     * Appends the PostgreSQL trigger that automatically updates the
+     * {@code updated_at} column before each row update.
+     *
+     * <p>The trigger is generated only when the table contains a supported
+     * database-managed {@code updated_at} column.</p>
+     *
+     * @param builder XML builder
+     * @param tableName physical table name without schema
+     * @param table parsed table
+     */
+    private void appendUpdatedAtTriggerBlock(StringBuilder builder, String tableName, Table table) {
+        if (!hasDatabaseManagedUpdatedAt(table)) {
+            return;
+        }
+
+        String qualifiedTableName = buildQualifiedTableName(table.getName());
+        String schemaName = extractSchemaNameFromTable(table.getName());
+
+        String functionName = (schemaName == null || schemaName.isBlank())
+                ? "set_updated_at"
+                : schemaName + ".set_updated_at";
+
+        builder.append("""
+        <sql><![CDATA[
+            CREATE TRIGGER trg_%s_updated_at
+            BEFORE UPDATE ON %s
+            FOR EACH ROW
+            EXECUTE FUNCTION %s();
+        ]]></sql>
+""".formatted(
+                tableName,
+                qualifiedTableName,
+                functionName
+        ));
     }
 
     /**
@@ -1077,7 +1241,8 @@ public class LiquibaseGenerator {
      */
     private String buildVersionMainContent(
             List<String> changelogFiles,
-            boolean extensionsRequired
+            boolean extensionsRequired,
+            boolean updatedAtSupportRequired
     ) {
         StringBuilder builder = new StringBuilder();
 
@@ -1096,6 +1261,10 @@ public class LiquibaseGenerator {
 
         if (extensionsRequired) {
             builder.append("    <include file=\"extensions.xml\" relativeToChangelogFile=\"true\" />\n");
+        }
+
+        if (updatedAtSupportRequired) {
+            builder.append("    <include file=\"functions.xml\" relativeToChangelogFile=\"true\" />\n");
         }
 
         for (String changelogFile : changelogFiles) {

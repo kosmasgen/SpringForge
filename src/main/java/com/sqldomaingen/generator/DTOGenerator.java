@@ -322,6 +322,8 @@ public class DTOGenerator {
 
         return !field.isNullable()
                 && !field.isPrimaryKey()
+                && !"createdAt".equals(fieldName)
+                && !"updatedAt".equals(fieldName)
                 && !"dateCreated".equals(fieldName)
                 && !"lastUpdated".equals(fieldName);
     }

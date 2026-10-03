@@ -241,8 +241,7 @@ public class EntityGenerator {
 
         Set<String> imports = new TreeSet<>();
 
-        boolean needsCreationTimestamp = false;
-        boolean needsUpdateTimestamp = false;
+
         boolean needsJsonImports = false;
 
         boolean compositePrimaryKey = hasCompositePrimaryKey(table);
@@ -266,13 +265,6 @@ public class EntityGenerator {
                 }
             }
 
-            if (shouldUseCreationTimestamp(column)) {
-                needsCreationTimestamp = true;
-            }
-
-            if (shouldUseUpdateTimestamp(column)) {
-                needsUpdateTimestamp = true;
-            }
 
             if (TypeMapper.isJsonType(column)) {
                 needsJsonImports = true;
@@ -291,13 +283,6 @@ public class EntityGenerator {
             imports.add("import java.util.ArrayList;");
         }
 
-        if (needsCreationTimestamp) {
-            imports.add("import org.hibernate.annotations.CreationTimestamp;");
-        }
-
-        if (needsUpdateTimestamp) {
-            imports.add("import org.hibernate.annotations.UpdateTimestamp;");
-        }
 
         if (needsJsonImports) {
             imports.add("import org.hibernate.annotations.JdbcTypeCode;");
@@ -1606,11 +1591,6 @@ public class EntityGenerator {
         boolean isJsonColumn = TypeMapper.isJsonType(column);
         boolean isGeneratedStoredColumn = column.getGeneratedAs() != null && !column.getGeneratedAs().isBlank();
 
-        if (shouldUseCreationTimestamp(column)) {
-            builder.append("    @CreationTimestamp\n");
-        } else if (shouldUseUpdateTimestamp(column)) {
-            builder.append("    @UpdateTimestamp\n");
-        }
 
         if (!isForeignKey) {
             if (isJsonColumn) {
@@ -1645,8 +1625,8 @@ public class EntityGenerator {
                     builder.append(", nullable = false");
                 }
 
-                if (isCreationTimestampColumnName(columnName)) {
-                    builder.append(", updatable = false");
+                if (isDatabaseManagedTimestamp(column)) {
+                    builder.append(", insertable = false, updatable = false");
                 }
 
                 if (isGeneratedStoredColumn) {
@@ -1687,6 +1667,11 @@ public class EntityGenerator {
         }
         String name = columnName.trim().toLowerCase(Locale.ROOT);
         return name.equals("updated_at") || name.equals("last_updated");
+    }
+
+    private boolean isDatabaseManagedTimestamp(Column column) {
+        return shouldUseCreationTimestamp(column)
+                || shouldUseUpdateTimestamp(column);
     }
 
     private String normalizeSqlType(String sqlType) {
@@ -2235,8 +2220,24 @@ public class EntityGenerator {
             return false;
         }
 
-        return isLocalDateTimeType(column.getJavaType())
-                && isUpdateTimestampColumnName(column.getName());
+        if (!isLocalDateTimeType(column.getJavaType())) {
+            return false;
+        }
+
+        if (!isUpdateTimestampColumnName(column.getName())) {
+            return false;
+        }
+
+        String defaultValue = column.getDefaultValue();
+        if (defaultValue == null || defaultValue.isBlank()) {
+            return false;
+        }
+
+        String normalizedDefaultValue = defaultValue.trim().toLowerCase(Locale.ROOT);
+
+        return normalizedDefaultValue.contains("now()")
+                || normalizedDefaultValue.equals("current_timestamp")
+                || normalizedDefaultValue.equals("localtimestamp");
     }
 
     /**
