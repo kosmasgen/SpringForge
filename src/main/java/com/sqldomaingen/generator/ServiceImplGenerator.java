@@ -183,6 +183,7 @@ public class ServiceImplGenerator {
         imports.add("import " + exceptionPackage + ".ErrorMessages;");
         imports.add("import " + exceptionPackage + ".GeneratedRuntimeException;");
         imports.add("import " + utilPackage + ".MessageResolver;");
+        imports.add("import jakarta.persistence.EntityManager;");
 
         if (primaryKeyImportLine != null && !primaryKeyImportLine.isBlank()) {
             imports.add(primaryKeyImportLine);
@@ -257,6 +258,7 @@ public class ServiceImplGenerator {
         stringBuilder.append("    private final ").append(mapperName).append(" ")
                 .append(mapperVariableName).append(";\n");
         stringBuilder.append("    private final MessageResolver messageResolver;\n\n");
+        stringBuilder.append("    private final EntityManager entityManager;\n\n");
     }
 
     /**
@@ -602,6 +604,9 @@ public class ServiceImplGenerator {
                 .append(" updatedEntity = ")
                 .append(repositoryVariableName)
                 .append(".save(existingEntity);\n\n");
+
+        stringBuilder.append("        entityManager.flush();\n");
+        stringBuilder.append("        entityManager.refresh(updatedEntity);\n\n");
 
         if (compositePrimaryKey) {
             stringBuilder.append("        log.info(\"")
