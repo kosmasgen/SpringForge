@@ -444,9 +444,9 @@ spring.application.name=%s
 ############################
 # PostgreSQL
 ############################
-spring.datasource.url=jdbc:postgresql://localhost:5432/schooldb
-spring.datasource.username=schooluser
-spring.datasource.password=Strong_Pass_123!
+spring.datasource.url=jdbc:postgresql://localhost:5432/%s
+spring.datasource.username=postgres
+spring.datasource.password=postgres
 
 ############################
 # Liquibase
@@ -454,6 +454,7 @@ spring.datasource.password=Strong_Pass_123!
 spring.liquibase.enabled=true
 spring.liquibase.change-log=classpath:db/migration/changelog-master.xml
 spring.liquibase.default-schema=%s
+spring.liquibase.liquibase-schema=public
 
 ############################
 # JPA
@@ -486,7 +487,7 @@ springdoc.writer-with-order-by-keys=true
 ############################
 logging.level.root=INFO
 logging.level.%s=INFO
-""".formatted(name, resolvedSchemaName, resolvedSchemaName, resolvedBasePackage);
+""".formatted(name, resolvedSchemaName, resolvedSchemaName, resolvedSchemaName, resolvedBasePackage);
 
         Path file = root.resolve("src/main/resources/application.properties");
         GeneratorSupport.writeFile(file, props, overwrite);
