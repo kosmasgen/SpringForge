@@ -7,3 +7,17 @@ lookupTables:
   - project_tag
   - company_category
   - project_label
+
+security:
+  enabled: true
+  userTable: users
+  usernameField: email
+  passwordField: password_hash
+
+  # JWT authentication configuration.
+  jwt:
+    # Enables JWT authentication generation.
+    enabled: true
+
+    # Access token lifetime in minutes (24 hours).
+    expirationMinutes: 1440

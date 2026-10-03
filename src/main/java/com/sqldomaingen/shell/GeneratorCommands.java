@@ -24,6 +24,7 @@ import com.sqldomaingen.parser.PostgreSQLParser;
 import com.sqldomaingen.parser.SQLParser;
 import com.sqldomaingen.util.Constants;
 import com.sqldomaingen.validation.ValidationReportXmlWriter;
+import com.sqldomaingen.generator.SecurityGenerator;
 import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.antlr.v4.runtime.TokenStream;
@@ -95,10 +96,12 @@ public class GeneratorCommands {
                     outputDir,
                     packageName,
                     defaultSchemaName,
+                    generatorConfig,
                     overwrite
             );
 
             new ConfigGenerator().generateConfigs(outputDir, packageName, overwrite);
+            new SecurityGenerator().generate(outputDir, packageName, generatorConfig);
             new ExceptionGenerator().generateExceptionHandling(outputDir, packageName, overwrite);
 
             entityGenerator.generate(javaGenerationTables, outputDir, packageName, overwrite, useBuilder);

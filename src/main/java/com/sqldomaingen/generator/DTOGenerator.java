@@ -425,7 +425,13 @@ public class DTOGenerator {
             return null;
         }
 
-        return field.getName();
+        String fieldName = GeneratorSupport.trimToEmpty(field.getName());
+
+        if ("passwordHash".equals(fieldName)) {
+            return "password";
+        }
+
+        return fieldName;
     }
 
     /**

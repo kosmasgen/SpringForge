@@ -1,5 +1,6 @@
 package com.sqldomaingen.generator;
 
+import com.sqldomaingen.config.GeneratorConfig;
 import com.sqldomaingen.util.PackageResolver;
 import lombok.extern.log4j.Log4j2;
 
@@ -31,7 +32,9 @@ public class ProjectScaffoldGenerator {
     public void generateScaffold(String outputDir,
                                  String basePackage,
                                  String defaultSchemaName,
+                                 GeneratorConfig generatorConfig,
                                  boolean overwrite) {
+        Objects.requireNonNull(generatorConfig, "generatorConfig must not be null");
         Objects.requireNonNull(outputDir, "outputDir must not be null");
         Objects.requireNonNull(basePackage, "basePackage must not be null");
 
@@ -52,7 +55,7 @@ public class ProjectScaffoldGenerator {
 
         writePom(projectRoot, pkg, artifactId, overwrite);
         writeApplication(projectRoot, pkg, overwrite);
-        createApplicationProperties(projectRoot, artifactId, defaultSchemaName, pkg, overwrite);
+        createApplicationProperties(projectRoot, artifactId, defaultSchemaName, pkg, generatorConfig, overwrite);
         createMessageProperties(projectRoot, overwrite);
         createMessageResolver(projectRoot, pkg, overwrite);
         writeGitignore(projectRoot, overwrite);
@@ -412,7 +415,8 @@ public class MessageResolver {
 
     /**
      * Creates the application.properties file for the generated project.
-     *
+
+     * @param generatorConfig generator configuration used to create application properties
      * @param root project root directory
      * @param applicationName Spring application name
      * @param defaultSchemaName default database schema name
@@ -424,6 +428,7 @@ public class MessageResolver {
             String applicationName,
             String defaultSchemaName,
             String basePackage,
+            GeneratorConfig generatorConfig,
             boolean overwrite
     ) {
         String name = (applicationName == null || applicationName.isBlank())
@@ -437,6 +442,11 @@ public class MessageResolver {
         String resolvedBasePackage = (basePackage == null || basePackage.isBlank())
                 ? "com.generated"
                 : basePackage.trim();
+
+        long jwtExpirationMinutes = generatorConfig
+                .getSecurity()
+                .getJwt()
+                .getExpirationMinutes();
 
         String props = """
 spring.application.name=%s
@@ -472,6 +482,11 @@ spring.web.resources.add-mappings=false
 server.port=8081
 
 ############################
+# JWT
+############################
+security.jwt.expiration-minutes=%d
+
+############################
 # Swagger
 ############################
 springdoc.default-produces-media-type=application/json
@@ -486,7 +501,7 @@ springdoc.writer-with-order-by-keys=true
 ############################
 logging.level.root=INFO
 logging.level.%s=INFO
-""".formatted(name, resolvedSchemaName, resolvedSchemaName, resolvedBasePackage);
+""".formatted(name, resolvedSchemaName, resolvedSchemaName,jwtExpirationMinutes, resolvedBasePackage);
 
         Path file = root.resolve("src/main/resources/application.properties");
         GeneratorSupport.writeFile(file, props, overwrite);

@@ -12,8 +12,6 @@ import java.util.Map;
  */
 public final class GeneratorConfigLoader {
 
-
-
     private GeneratorConfigLoader() {
     }
 
@@ -49,6 +47,62 @@ public final class GeneratorConfigLoader {
                             .map(String::valueOf)
                             .toList()
             );
+        }
+
+        Object securityObject = yamlMap.get("security");
+
+        if (securityObject instanceof Map<?, ?> securityMap) {
+            GeneratorConfig.Security security = new GeneratorConfig.Security();
+
+            Object enabled = securityMap.get("enabled");
+            if (enabled instanceof Boolean enabledValue) {
+                security.setEnabled(enabledValue);
+            }
+
+            Object userTable = securityMap.get("userTable");
+            if (userTable != null) {
+                security.setUserTable(String.valueOf(userTable));
+            }
+
+            Object usernameField = securityMap.get("usernameField");
+            if (usernameField != null) {
+                security.setUsernameField(String.valueOf(usernameField));
+            }
+
+            Object passwordField = securityMap.get("passwordField");
+            if (passwordField != null) {
+                security.setPasswordField(String.valueOf(passwordField));
+            }
+
+            /*
+             * Load JWT configuration when it is defined under the security section.
+             */
+            Object jwtObject = securityMap.get("jwt");
+
+            if (jwtObject instanceof Map<?, ?> jwtMap) {
+                GeneratorConfig.Jwt jwt = new GeneratorConfig.Jwt();
+
+                /*
+                 * Enable or disable JWT authentication generation.
+                 */
+                Object jwtEnabled = jwtMap.get("enabled");
+                if (jwtEnabled instanceof Boolean jwtEnabledValue) {
+                    jwt.setEnabled(jwtEnabledValue);
+                }
+
+                /*
+                 * Configure the access token lifetime in minutes.
+                 * The default value remains 60 when the property is not provided.
+                 */
+                Object expirationMinutes = jwtMap.get("expirationMinutes");
+                if (expirationMinutes instanceof Number expirationMinutesValue) {
+                    jwt.setExpirationMinutes(expirationMinutesValue.longValue());
+                }
+
+                security.setJwt(jwt);
+            }
+
+            config.setSecurity(security);
         }
 
         return config;

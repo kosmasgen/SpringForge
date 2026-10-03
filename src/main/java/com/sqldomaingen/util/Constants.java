@@ -51,7 +51,7 @@ public class Constants {
     public static final String SPRING_BOOT_VERSION = "3.4.13";
     public static final String SPRINGDOC_VERSION = "2.8.17";
     public static final String MODELMAPPER_VERSION = "3.2.0";
-
+    public static final long DEFAULT_JWT_EXPIRATION_MINUTES = 24 * 60;
     public static final String DEFAULT_VERSION = "v0.1.0";
     public static final Path MAIN_XML_RELATIVE_PATH = Path.of(
             "src", "main", "resources", "db", "migration", "changelogs", DEFAULT_VERSION, "main.xml"
