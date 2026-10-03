@@ -453,7 +453,6 @@ spring.datasource.password=postgres
 ############################
 spring.liquibase.enabled=true
 spring.liquibase.change-log=classpath:db/migration/changelog-master.xml
-spring.liquibase.default-schema=%s
 spring.liquibase.liquibase-schema=public
 
 ############################
@@ -487,7 +486,7 @@ springdoc.writer-with-order-by-keys=true
 ############################
 logging.level.root=INFO
 logging.level.%s=INFO
-""".formatted(name, resolvedSchemaName, resolvedSchemaName, resolvedSchemaName, resolvedBasePackage);
+""".formatted(name, resolvedSchemaName, resolvedSchemaName, resolvedBasePackage);
 
         Path file = root.resolve("src/main/resources/application.properties");
         GeneratorSupport.writeFile(file, props, overwrite);
