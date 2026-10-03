@@ -58,6 +58,12 @@ public class LiquibaseGenerator {
         List<String> orderedChangelogFiles = buildOrderedChangelogFiles(tables);
 
         GeneratorSupport.writeFile(
+                versionDir.resolve("schema.xml"),
+                buildSchemaChangelogContent(author, tables),
+                overwrite
+        );
+
+        GeneratorSupport.writeFile(
                 versionDir.resolve("audit.xml"),
                 buildAuditChangelogContent(author,tables),
                 overwrite
@@ -92,6 +98,60 @@ public class LiquibaseGenerator {
                 versionDir.toAbsolutePath(),
                 orderedChangelogFiles.size()
         );
+    }
+
+
+    /**
+     * Builds the Liquibase changelog that creates all application schemas
+     * referenced by the parsed tables.
+     *
+     * @param author liquibase author
+     * @param tables parsed tables
+     * @return generated schema changelog XML
+     */
+    private String buildSchemaChangelogContent(String author, List<Table> tables) {
+        String resolvedAuthor = resolveLiquibaseAuthor(author);
+
+        Set<String> schemas = tables.stream()
+                .filter(Objects::nonNull)
+                .map(Table::getName)
+                .filter(Objects::nonNull)
+                .map(this::extractSchemaNameFromTable)
+                .filter(Objects::nonNull)
+                .filter(schema -> !schema.isBlank())
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+
+        StringBuilder builder = new StringBuilder();
+
+        builder.append("""
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.11.xsd">
+
+""");
+
+        for (String schema : schemas) {
+            builder.append("""
+    <changeSet id="create_schema_%s" author="%s">
+        <sql>
+            CREATE SCHEMA IF NOT EXISTS %s;
+        </sql>
+    </changeSet>
+
+""".formatted(
+                    schema.replace('-', '_'),
+                    escapeXml(resolvedAuthor),
+                    schema
+            ));
+        }
+
+        builder.append("""
+</databaseChangeLog>
+""");
+
+        return builder.toString();
     }
 
 
@@ -1031,6 +1091,7 @@ public class LiquibaseGenerator {
 
 """.formatted(Constants.DEFAULT_VERSION));
 
+        builder.append("    <include file=\"schema.xml\" relativeToChangelogFile=\"true\" />\n");
         builder.append("    <include file=\"audit.xml\" relativeToChangelogFile=\"true\" />\n");
 
         if (extensionsRequired) {
