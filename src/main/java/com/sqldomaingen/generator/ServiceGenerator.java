@@ -107,6 +107,7 @@ public class ServiceGenerator {
         GeneratorSupport.writeFile(serviceDir.resolve("AuthService.java"), stringBuilder.toString());
     }
 
+
     /**
      * Generates the authentication service implementation.
      *

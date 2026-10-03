@@ -13,6 +13,7 @@ import java.util.Objects;
 @Log4j2
 public class ConfigGenerator {
 
+
     /**
      * Generates all configuration files required by the generated project.
      * @param outputDir generated project root directory

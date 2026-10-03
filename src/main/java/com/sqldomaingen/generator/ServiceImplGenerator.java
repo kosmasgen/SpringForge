@@ -165,6 +165,7 @@ public class ServiceImplGenerator {
         return stringBuilder.toString();
     }
 
+
     /**
      * Appends the user login service method.
      *

@@ -148,6 +148,7 @@ public class SecurityGenerator {
             return configuration.getAuthenticationManager();
         }
     }
+    
     """.formatted(securityPackage);
 
         Path file = securityDir.resolve("SecurityConfig.java");
