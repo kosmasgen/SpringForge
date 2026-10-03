@@ -108,7 +108,7 @@ public class GeneratorCommands {
 
             List<Entity> models = entityGenerator.toEntities(javaGenerationTables);
 
-            new DTOGenerator().generateDTOs(models, outputDir, packageName);
+            new DTOGenerator().generateDTOs(models, outputDir, packageName, generatorConfig);
 
             Map<String, Table> tableMap = javaGenerationTables.stream()
                     .collect(Collectors.toMap(Table::getName, tableValue -> tableValue));
@@ -123,8 +123,9 @@ public class GeneratorCommands {
                     javaGenerationTables, outputDir, packageName, overwrite, lookupTables, generatorConfig
             );
 
-            new ServiceGenerator().generateAllServices(businessGenerationTables, outputDir, packageName);
-            new ControllerGenerator().generateControllers(businessGenerationTables, outputDir, packageName, overwrite);
+            new ServiceGenerator().generateAllServices(businessGenerationTables, outputDir, packageName, generatorConfig);
+            new ControllerGenerator().generateControllers(businessGenerationTables, outputDir, packageName, overwrite,
+                    generatorConfig);
 
             new TestGenerator().generateTests(
                     businessGenerationTables, javaGenerationTables, models, outputDir, packageName, overwrite

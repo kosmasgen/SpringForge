@@ -1,5 +1,6 @@
 package com.sqldomaingen.generator;
 
+import com.sqldomaingen.config.GeneratorConfig;
 import com.sqldomaingen.util.Constants;
 import com.sqldomaingen.util.GeneratorSupport;
 import com.sqldomaingen.util.JavaTypeSupport;
@@ -35,10 +36,11 @@ public class ServiceGenerator {
      * @param outputDir base output directory
      * @param basePackage base package
      */
-    public void generateAllServices(List<Table> tables, String outputDir, String basePackage) {
+    public void generateAllServices(List<Table> tables, String outputDir, String basePackage, GeneratorConfig generatorConfig) {
         Objects.requireNonNull(tables, "tables must not be null");
         Objects.requireNonNull(outputDir, "outputDir must not be null");
         Objects.requireNonNull(basePackage, "basePackage must not be null");
+        Objects.requireNonNull(generatorConfig, "generatorConfig must not be null");
 
         Path serviceDir = GeneratorSupport.ensureDirectory(
                 PackageResolver.resolvePath(outputDir, basePackage, "service")
@@ -59,7 +61,103 @@ public class ServiceGenerator {
             GeneratorSupport.writeFile(serviceImplDir.resolve(entityName + "ServiceImpl.java"), serviceImplCode);
         }
 
+        GeneratorConfig.Security security = generatorConfig.getSecurity();
+
+        if (security != null && security.isEnabled()) {
+            generateAuthService(serviceDir, basePackage, security);
+            generateAuthServiceImpl(tables, serviceImplDir, basePackage, security);
+        }
+
         log.debug("Services generated under: {}", serviceDir.getParent().toAbsolutePath());
+    }
+
+    /**
+     * Generates the authentication service contract.
+     *
+     * @param serviceDir target service directory
+     * @param basePackage base Java package
+     * @param security security generator configuration
+     */
+    private void generateAuthService(Path serviceDir, String basePackage, GeneratorConfig.Security security) {
+        Objects.requireNonNull(serviceDir, "serviceDir must not be null");
+        Objects.requireNonNull(basePackage, "basePackage must not be null");
+        Objects.requireNonNull(security, "security must not be null");
+
+        String servicePackage = PackageResolver.resolvePackageName(basePackage, "service");
+        String securityDtoPackage = PackageResolver.resolvePackageName(basePackage, "security.dto");
+
+        StringBuilder stringBuilder = new StringBuilder();
+
+        stringBuilder.append("package ").append(servicePackage).append(";\n\n");
+
+        stringBuilder.append("import ").append(securityDtoPackage).append(".LoginRequest;\n");
+        stringBuilder.append("import ").append(securityDtoPackage).append(".LoginResponse;\n");
+        stringBuilder.append("import ").append(securityDtoPackage).append(".RegisterRequest;\n\n");
+
+        stringBuilder.append("/**\n");
+        stringBuilder.append(" * Service contract for user registration and authentication.\n");
+        stringBuilder.append(" */\n");
+        stringBuilder.append("public interface AuthService {\n\n");
+
+        appendRegisterMethodSignature(stringBuilder);
+        appendLoginMethodSignature(stringBuilder);
+
+        stringBuilder.append("}\n");
+
+        GeneratorSupport.writeFile(serviceDir.resolve("AuthService.java"), stringBuilder.toString());
+    }
+
+    /**
+     * Generates the authentication service implementation.
+     *
+     * @param tables parsed SQL tables
+     * @param serviceImplDir target service implementation directory
+     * @param basePackage base Java package
+     * @param security security generator configuration
+     */
+    private void generateAuthServiceImpl(List<Table> tables, Path serviceImplDir, String basePackage, GeneratorConfig.Security security) {
+        Objects.requireNonNull(tables, "tables must not be null");
+        Objects.requireNonNull(serviceImplDir, "serviceImplDir must not be null");
+        Objects.requireNonNull(basePackage, "basePackage must not be null");
+        Objects.requireNonNull(security, "security must not be null");
+
+        Table userTable = tables.stream()
+                .filter(Objects::nonNull)
+                .filter(table -> GeneratorSupport.normalizeTableName(table.getName()).equalsIgnoreCase(GeneratorSupport.normalizeTableName(security.getUserTable())))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Security user table not found: " + security.getUserTable()));
+
+        String authServiceImplCode = serviceImplGenerator.generateAuthServiceImpl(userTable, basePackage, security);
+        GeneratorSupport.writeFile(serviceImplDir.resolve("AuthServiceImpl.java"), authServiceImplCode);
+    }
+
+    /**
+     * Appends the user registration method signature.
+     *
+     * @param stringBuilder target source builder
+     */
+    private void appendRegisterMethodSignature(StringBuilder stringBuilder) {
+        stringBuilder.append("    /**\n");
+        stringBuilder.append("     * Registers a new application user.\n");
+        stringBuilder.append("     *\n");
+        stringBuilder.append("     * @param request user registration request\n");
+        stringBuilder.append("     */\n");
+        stringBuilder.append("    void register(RegisterRequest request);\n\n");
+    }
+
+    /**
+     * Appends the user login method signature.
+     *
+     * @param stringBuilder target source builder
+     */
+    private void appendLoginMethodSignature(StringBuilder stringBuilder) {
+        stringBuilder.append("    /**\n");
+        stringBuilder.append("     * Authenticates an existing application user.\n");
+        stringBuilder.append("     *\n");
+        stringBuilder.append("     * @param request user login request\n");
+        stringBuilder.append("     * @return authentication response containing the generated access token\n");
+        stringBuilder.append("     */\n");
+        stringBuilder.append("    LoginResponse login(LoginRequest request);\n\n");
     }
 
     /**

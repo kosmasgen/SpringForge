@@ -88,18 +88,8 @@ public class MapperTestGenerator {
             List<Field> dtoFields = loadGeneratedDtoFields(outputDir, basePackage, dtoName);
 
             String content = generateMapperTestContent(
-                    table,
-                    entities,
-                    entityMetadata,
-                    dtoFields,
-                    testPackage,
-                    mapperPackage,
-                    entityPackage,
-                    dtoPackage,
-                    entityName,
-                    dtoName,
-                    mapperName
-            );
+                    table, entities, entityMetadata, dtoFields, testPackage, mapperPackage,
+                    entityPackage, dtoPackage, entityName, dtoName, mapperName, outputDir, basePackage);
 
             GeneratorSupport.writeFile(
                     mapperTestDir.resolve(testName + ".java"),
@@ -129,32 +119,15 @@ public class MapperTestGenerator {
      */
     private String generateMapperTestContent(
             Table table,
-            List<Entity> entities,
-            Entity entityMetadata,
-            List<Field> dtoFields,
-            String testPackage,
-            String mapperPackage,
-            String entityPackage,
-            String dtoPackage,
-            String entityName,
-            String dtoName,
-            String mapperName
+            List<Entity> entities, Entity entityMetadata, List<Field> dtoFields, String testPackage,
+            String mapperPackage, String entityPackage, String dtoPackage, String entityName,
+            String dtoName, String mapperName, String outputDir, String basePackage
     ) {
         StringBuilder content = new StringBuilder();
 
         appendPackageAndImports(
-                content,
-                entities,
-                entityMetadata,
-                dtoFields,
-                testPackage,
-                mapperPackage,
-                entityPackage,
-                dtoPackage,
-                entityName,
-                dtoName,
-                mapperName
-        );
+                content, entities, entityMetadata, dtoFields, testPackage, mapperPackage, entityPackage, dtoPackage,
+                entityName, dtoName, mapperName);
 
         appendClassHeader(content, mapperName);
         appendEntityToDtoTest(content, entityName, dtoName);
@@ -164,7 +137,7 @@ public class MapperTestGenerator {
         appendPartialUpdateTest(content, table, entityMetadata, entityName, dtoName);
         appendNullAndEmptyListTests(content, entityName, dtoName);
         appendNullPartialUpdateTest(content, entityName);
-        appendRootFixtureMethods(content, entities, entityMetadata, dtoFields, entityName, dtoName, table);
+        appendRootFixtureMethods(content, entities, entityMetadata, dtoFields, entityName, dtoName, table, outputDir, basePackage);
         content.append("}\n");
 
         return content.toString();
@@ -186,17 +159,9 @@ public class MapperTestGenerator {
      * @param mapperName mapper simple name
      */
     private void appendPackageAndImports(
-            StringBuilder content,
-            List<Entity> entities,
-            Entity entityMetadata,
-            List<Field> dtoFields,
-            String testPackage,
-            String mapperPackage,
-            String entityPackage,
-            String dtoPackage,
-            String entityName,
-            String dtoName,
-            String mapperName
+            StringBuilder content, List<Entity> entities, Entity entityMetadata, List<Field> dtoFields,
+            String testPackage, String mapperPackage, String entityPackage, String dtoPackage, String entityName,
+            String dtoName, String mapperName
     ) {
         content.append("package ").append(testPackage).append(";\n\n");
 
@@ -235,12 +200,7 @@ public class MapperTestGenerator {
      * @param dtoMode true when collecting DTO fixture imports, false for entity fixture imports
      */
     private void collectDirectFixtureImports(
-            Set<String> imports,
-            List<Entity> entities,
-            List<Field> fields,
-            String entityPackage,
-            String dtoPackage,
-            boolean dtoMode
+            Set<String> imports, List<Entity> entities, List<Field> fields, String entityPackage, String dtoPackage, boolean dtoMode
     ) {
         for (Field field : fields) {
             if (field == null) {
@@ -290,10 +250,7 @@ public class MapperTestGenerator {
      * @param dtoPackage target dto package
      */
     private void collectRequiredImports(
-            Set<String> imports,
-            String fieldType,
-            String entityPackage,
-            String dtoPackage
+            Set<String> imports, String fieldType, String entityPackage, String dtoPackage
     ) {
         String normalizedType = normalizeType(fieldType);
 
@@ -470,12 +427,7 @@ public class MapperTestGenerator {
      * @param entityName entity simple name
      * @param dtoName dto simple name
      */
-    private void appendPartialUpdateTest(
-            StringBuilder content,
-            Table table,
-            Entity entityMetadata,
-            String entityName,
-            String dtoName
+    private void appendPartialUpdateTest(StringBuilder content, Table table, Entity entityMetadata, String entityName, String dtoName
     ) {
         String mapperVar = NamingConverter.decapitalizeFirstLetter(entityName) + "Mapper";
         Set<String> primaryKeyFieldNames = resolvePrimaryKeyFieldNames(table);
@@ -580,12 +532,7 @@ public class MapperTestGenerator {
      * @param expectedExpression expected value expression
      * @param field source field
      */
-    private void appendGeneratedComparisonAssertion(
-            StringBuilder content,
-            String actualExpression,
-            String expectedExpression,
-            Field field
-    ) {
+    private void appendGeneratedComparisonAssertion(StringBuilder content, String actualExpression, String expectedExpression, Field field) {
         content.append("        assertThat(").append(actualExpression).append(")\n");
 
         if (shouldUseRecursiveComparison(field)) {
@@ -631,65 +578,18 @@ public class MapperTestGenerator {
      * @param dtoName dto simple name
      * @param table current table metadata
      */
-    private void appendRootFixtureMethods(
-            StringBuilder content,
-            List<Entity> entities,
-            Entity entityMetadata,
-            List<Field> dtoFields,
-            String entityName,
-            String dtoName,
-            Table table
+    private void appendRootFixtureMethods(StringBuilder content, List<Entity> entities, Entity entityMetadata, List<Field> dtoFields, String entityName, String dtoName,
+            Table table, String outputDir, String basePackage
     ) {
-        appendEntityFixtureMethod(
-                content,
-                entities,
-                entityMetadata,
-                entityName,
-                "createSample" + entityName + "Entity",
-                1
-        );
+        appendEntityFixtureMethod(content, entities, entityMetadata, entityName, "createSample" + entityName + "Entity", 1, outputDir, basePackage);
 
-        appendEntityFixtureMethod(
-                content,
-                entities,
-                entityMetadata,
-                entityName,
-                "createAnother" + entityName + "Entity",
-                2
-        );
+        appendEntityFixtureMethod(content, entities, entityMetadata, entityName, "createAnother" + entityName + "Entity", 2, outputDir, basePackage);
 
-        appendDtoFixtureMethod(
-                content,
-                entities,
-                dtoFields,
-                dtoName,
-                "createSample" + entityName + "Dto",
-                1,
-                false,
-                table
-        );
+        appendDtoFixtureMethod(content, entities, dtoFields, dtoName, "createSample" + entityName + "Dto", 1, false, table, outputDir, basePackage);
 
-        appendDtoFixtureMethod(
-                content,
-                entities,
-                dtoFields,
-                dtoName,
-                "createAnother" + entityName + "Dto",
-                2,
-                false,
-                table
-        );
+        appendDtoFixtureMethod(content, entities, dtoFields, dtoName, "createAnother" + entityName + "Dto", 2, false, table, outputDir, basePackage);
 
-        appendDtoFixtureMethod(
-                content,
-                entities,
-                dtoFields,
-                dtoName,
-                "createPatch" + entityName + "Dto",
-                3,
-                true,
-                table
-        );
+        appendDtoFixtureMethod(content, entities, dtoFields, dtoName, "createPatch" + entityName + "Dto", 3, true, table, outputDir, basePackage);
     }
 
 
@@ -712,7 +612,9 @@ public class MapperTestGenerator {
             Entity entityMetadata,
             String entityName,
             String methodName,
-            int variant
+            int variant,
+            String outputDir,
+            String basePackage
     ) {
         content.append("    /**\n");
         content.append("     * Creates a populated ").append(entityName).append(" fixture for mapper tests.\n");
@@ -721,7 +623,7 @@ public class MapperTestGenerator {
         content.append("     */\n");
         content.append("    private ").append(entityName).append(" ").append(methodName).append("() {\n");
         content.append("        ").append(entityName).append(" entity = new ").append(entityName).append("();\n");
-        appendEntityFixtureSetterLines(content, entities, entityMetadata, variant);
+        appendEntityFixtureSetterLines(content, entities, entityMetadata, variant, outputDir, basePackage);
         content.append("        return entity;\n");
         content.append("    }\n\n");
     }
@@ -746,7 +648,9 @@ public class MapperTestGenerator {
             String methodName,
             int variant,
             boolean skipPrimaryKeys,
-            Table table
+            Table table,
+            String outputDir,
+            String basePackage
     ) {
         Set<String> primaryKeyFieldNames = resolvePrimaryKeyFieldNames(table);
 
@@ -757,7 +661,18 @@ public class MapperTestGenerator {
         content.append("     */\n");
         content.append("    private ").append(dtoName).append(" ").append(methodName).append("() {\n");
         content.append("        ").append(dtoName).append(" dto = new ").append(dtoName).append("();\n");
-        appendDtoFixtureSetterLines(content, entities, dtoFields, variant, skipPrimaryKeys, primaryKeyFieldNames);
+
+        appendDtoFixtureSetterLines(
+                content,
+                entities,
+                dtoFields,
+                variant,
+                skipPrimaryKeys,
+                primaryKeyFieldNames,
+                outputDir,
+                basePackage
+        );
+
         content.append("        return dto;\n");
         content.append("    }\n\n");
     }
@@ -778,7 +693,9 @@ public class MapperTestGenerator {
             List<Field> dtoFields,
             int variant,
             boolean skipPrimaryKeys,
-            Set<String> primaryKeyFieldNames
+            Set<String> primaryKeyFieldNames,
+            String outputDir,
+            String basePackage
     ) {
         boolean hasAssignedField = false;
 
@@ -800,7 +717,9 @@ public class MapperTestGenerator {
                         "dto",
                         field,
                         variant,
-                        true
+                        true,
+                        outputDir,
+                        basePackage
                 );
                 hasAssignedField = true;
                 continue;
@@ -822,7 +741,14 @@ public class MapperTestGenerator {
         }
 
         if (variant == 3 && !hasAssignedField) {
-            appendFallbackPatchDtoSetterLine(content, entities, dtoFields, primaryKeyFieldNames);
+            appendFallbackPatchDtoSetterLine(
+                    content,
+                    entities,
+                    dtoFields,
+                    primaryKeyFieldNames,
+                    outputDir,
+                    basePackage
+            );
         }
 
         content.append("\n");
@@ -840,7 +766,9 @@ public class MapperTestGenerator {
             StringBuilder content,
             List<Entity> entities,
             List<Field> dtoFields,
-            Set<String> primaryKeyFieldNames
+            Set<String> primaryKeyFieldNames,
+            String outputDir,
+            String basePackage
     ) {
         for (Field field : dtoFields) {
             if (primaryKeyFieldNames.contains(field.getName())) {
@@ -856,7 +784,9 @@ public class MapperTestGenerator {
                         "dto",
                         field,
                         3,
-                        true
+                        true,
+                        outputDir,
+                        basePackage
                 );
                 return;
             }
@@ -971,12 +901,16 @@ public class MapperTestGenerator {
      * @param entities all generated entity metadata
      * @param entityMetadata generated entity metadata
      * @param variant sample variant index
+     * @param outputDir project root output directory
+     * @param basePackage base Java package
      */
     private void appendEntityFixtureSetterLines(
             StringBuilder content,
             List<Entity> entities,
             Entity entityMetadata,
-            int variant
+            int variant,
+            String outputDir,
+            String basePackage
     ) {
         for (Field field : getEntityFields(entityMetadata)) {
             String fieldType = normalizeType(field.getType());
@@ -988,7 +922,9 @@ public class MapperTestGenerator {
                         "entity",
                         field,
                         variant,
-                        false
+                        false,
+                        outputDir,
+                        basePackage
                 );
                 continue;
             }
@@ -1141,6 +1077,8 @@ public class MapperTestGenerator {
      * @param field source field
      * @param variant sample variant index
      * @param dtoMode true when the nested object is a DTO, false for entity mode
+     * @param outputDir project root output directory
+     * @param basePackage base Java package
      */
     private void appendNestedProjectTypeSetterLines(
             StringBuilder content,
@@ -1148,7 +1086,9 @@ public class MapperTestGenerator {
             String targetVariable,
             Field field,
             int variant,
-            boolean dtoMode
+            boolean dtoMode,
+            String outputDir,
+            String basePackage
     ) {
         String fieldType = normalizeType(field.getType());
         String nestedType = extractPrimarySimpleType(fieldType);
@@ -1169,7 +1109,11 @@ public class MapperTestGenerator {
                 .append("();\n");
 
         if (nestedMetadata != null) {
-            for (Field nestedField : getEntityFields(nestedMetadata)) {
+            List<Field> nestedFields = dtoMode
+                    ? loadGeneratedDtoFields(outputDir, basePackage, nestedType)
+                    : getEntityFields(nestedMetadata);
+
+            for (Field nestedField : nestedFields) {
                 if (variant == 3 && dtoMode && shouldReturnNullInPatch(nestedField)) {
                     continue;
                 }

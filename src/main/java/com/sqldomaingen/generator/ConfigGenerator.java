@@ -25,6 +25,7 @@ public class ConfigGenerator {
 
         generateModelMapperConfig(outputDir, basePackage, overwrite);
         generateCorsConfig(outputDir, basePackage, overwrite);
+        generateOpenApiConfig(outputDir, basePackage, overwrite);
     }
 
     /**
@@ -134,6 +135,67 @@ public class ConfigGenerator {
 
         GeneratorSupport.writeFile(file, content, overwrite);
         log.debug("CorsConfig generated: {}", file.toAbsolutePath());
+    }
+
+    /**
+     * Generates the OpenAPI configuration used by Swagger UI for JWT authentication.
+     *
+     * @param outputDir generated project root directory
+     * @param basePackage generated project's base package
+     * @param overwrite overwrite existing file if true
+     */
+    public void generateOpenApiConfig(String outputDir, String basePackage, boolean overwrite) {
+        String[] normalized = validateAndNormalizePaths(outputDir, basePackage);
+
+        String out = normalized[0];
+        String pkg = normalized[1];
+
+        Path configDir = resolveConfigDirectory(out, pkg);
+        String configPackage = resolveConfigPackage(pkg);
+
+        Path file = configDir.resolve("OpenApiConfig.java");
+
+        String content = """
+        package %s;
+
+        import io.swagger.v3.oas.models.Components;
+        import io.swagger.v3.oas.models.OpenAPI;
+        import io.swagger.v3.oas.models.security.SecurityRequirement;
+        import io.swagger.v3.oas.models.security.SecurityScheme;
+        import org.springframework.context.annotation.Bean;
+        import org.springframework.context.annotation.Configuration;
+
+        /**
+         * OpenAPI configuration for JWT Bearer authentication in Swagger UI.
+         */
+        @Configuration
+        public class OpenApiConfig {
+
+            private static final String SECURITY_SCHEME_NAME = "bearerAuth";
+
+            /**
+             * Configures JWT Bearer authentication for the generated OpenAPI documentation.
+             *
+             * @return configured OpenAPI definition
+             */
+            @Bean
+            public OpenAPI openAPI() {
+                SecurityScheme securityScheme = new SecurityScheme()
+                        .type(SecurityScheme.Type.HTTP)
+                        .scheme("bearer")
+                        .bearerFormat("JWT");
+
+                return new OpenAPI()
+                        .components(new Components()
+                                .addSecuritySchemes(SECURITY_SCHEME_NAME, securityScheme))
+                        .addSecurityItem(new SecurityRequirement()
+                                .addList(SECURITY_SCHEME_NAME));
+            }
+        }
+        """.formatted(configPackage);
+
+        GeneratorSupport.writeFile(file, content, overwrite);
+        log.debug("OpenApiConfig generated: {}", file.toAbsolutePath());
     }
 
 

@@ -1,5 +1,6 @@
 package com.sqldomaingen.generator;
 
+import com.sqldomaingen.config.GeneratorConfig;
 import com.sqldomaingen.model.Column;
 import com.sqldomaingen.model.Table;
 import com.sqldomaingen.util.*;
@@ -28,10 +29,12 @@ public class ControllerGenerator {
      * @param basePackage base package for generated classes
      * @param overwrite overwrite existing files when true
      */
-    public void generateControllers(List<Table> tables, String outputDir, String basePackage, boolean overwrite) {
+    public void generateControllers(List<Table> tables, String outputDir, String basePackage, boolean overwrite,
+                                    GeneratorConfig generatorConfig) {
         Objects.requireNonNull(tables, "tables must not be null");
         Objects.requireNonNull(outputDir, "outputDir must not be null");
         Objects.requireNonNull(basePackage, "basePackage must not be null");
+        Objects.requireNonNull(generatorConfig, "generatorConfig must not be null");
 
         Path controllerDir = resolveControllerDirectory(outputDir, basePackage);
         String controllerPackage = resolveControllerPackage(basePackage);
@@ -42,6 +45,12 @@ public class ControllerGenerator {
 
             Path filePath = controllerDir.resolve(entityName + Constants.CONTROLLER_FILE_SUFFIX);
             GeneratorSupport.writeFile(filePath, code, overwrite);
+        }
+
+        GeneratorConfig.Security security = generatorConfig.getSecurity();
+
+        if (security != null && security.isEnabled()) {
+            generateRegistryController(controllerDir, controllerPackage, basePackage, overwrite);
         }
 
         log.info("Controllers generated under: {}", controllerDir.toAbsolutePath());
@@ -111,6 +120,145 @@ public class ControllerGenerator {
 
         sourceBuilder.append("}\n");
         return sourceBuilder.toString();
+    }
+
+    /**
+     * Generates the registry controller used for user registration and authentication.
+     *
+     * @param controllerDir target controller directory
+     * @param controllerPackage generated controller package
+     * @param basePackage generated application base package
+     * @param overwrite overwrite existing file when true
+     */
+    private void generateRegistryController(
+            Path controllerDir,
+            String controllerPackage,
+            String basePackage,
+            boolean overwrite
+    ) {
+        String securityDtoPackage =
+                PackageResolver.resolvePackageName(basePackage, "security.dto");
+
+        String servicePackage =
+                PackageResolver.resolvePackageName(basePackage, Constants.SERVICE_PACKAGE);
+
+        JavaImportCollector importCollector = new JavaImportCollector();
+
+        importCollector.addImport(
+                "import " + securityDtoPackage + ".RegisterRequest;"
+        );
+        importCollector.addImport(
+                "import " + securityDtoPackage + ".LoginRequest;"
+        );
+        importCollector.addImport(
+                "import " + securityDtoPackage + ".LoginResponse;"
+        );
+        importCollector.addImport(
+                "import " + servicePackage + ".AuthService;"
+        );
+
+        GeneratorImportSupport.addControllerFrameworkImports(importCollector);
+
+        StringBuilder sourceBuilder = new StringBuilder();
+
+        sourceBuilder.append("package ")
+                .append(controllerPackage)
+                .append(";\n\n");
+
+        sourceBuilder.append(importCollector.buildImportBlock());
+
+        sourceBuilder.append("/**\n");
+        sourceBuilder.append(" * REST controller for user registration and authentication.\n");
+        sourceBuilder.append(" * Generated automatically by SQLDomainGen.\n");
+        sourceBuilder.append(" */\n");
+
+        sourceBuilder.append("@RestController\n");
+        sourceBuilder.append("@RequiredArgsConstructor\n");
+        sourceBuilder.append("@Tag(name = \"Registry\", description = \"User registration and authentication API\")\n");
+        sourceBuilder.append("@RequestMapping(\"/registry\")\n");
+        sourceBuilder.append("public class RegistryController {\n\n");
+
+        sourceBuilder.append("    private final AuthService authService;\n\n");
+
+        appendRegisterMethod(sourceBuilder, "authService");
+        appendLoginMethod(sourceBuilder, "authService");
+
+        sourceBuilder.append("}\n");
+
+        Path filePath = controllerDir.resolve("RegistryController.java");
+        GeneratorSupport.writeFile(filePath, sourceBuilder.toString(), overwrite);
+
+        log.debug(
+                "Generated RegistryController: {}",
+                filePath.toAbsolutePath()
+        );
+    }
+
+    /**
+     * Appends the user registration endpoint to the registry controller.
+     *
+     * @param stringBuilder target builder
+     * @param serviceName injected authentication service variable name
+     */
+    private void appendRegisterMethod(
+            StringBuilder stringBuilder,
+            String serviceName
+    ) {
+        stringBuilder.append("    /**\n");
+        stringBuilder.append("     * Registers a new application user.\n");
+        stringBuilder.append("     *\n");
+        stringBuilder.append("     * @param request user registration request\n");
+        stringBuilder.append("     * @return a {@link ResponseEntity} with HTTP status 201 (Created)\n");
+        stringBuilder.append("     */\n");
+
+        stringBuilder.append("    @Operation(summary = \"Register user\")\n");
+        stringBuilder.append("    @PostMapping(\"/register\")\n");
+
+        stringBuilder.append("    public ResponseEntity<Void> register(\n");
+        stringBuilder.append("            @Valid @RequestBody RegisterRequest request) {\n");
+
+        stringBuilder.append("        ")
+                .append(serviceName)
+                .append(".register(request);\n\n");
+
+        stringBuilder.append("        return ResponseEntity\n");
+        stringBuilder.append("                .status(HttpStatus.CREATED)\n");
+        stringBuilder.append("                .build();\n");
+
+        stringBuilder.append("    }\n\n");
+    }
+
+    /**
+     * Appends the user login endpoint to the registry controller.
+     *
+     * @param stringBuilder target builder
+     * @param serviceName injected authentication service variable name
+     */
+    private void appendLoginMethod(
+            StringBuilder stringBuilder,
+            String serviceName
+    ) {
+        stringBuilder.append("    /**\n");
+        stringBuilder.append("     * Authenticates an existing application user.\n");
+        stringBuilder.append("     *\n");
+        stringBuilder.append("     * @param request user login request\n");
+        stringBuilder.append("     * @return a {@link ResponseEntity} containing the generated access token\n");
+        stringBuilder.append("     *         and HTTP status 200 (OK)\n");
+        stringBuilder.append("     */\n");
+
+        stringBuilder.append("    @Operation(summary = \"Login user\")\n");
+        stringBuilder.append("    @PostMapping(\"/login\")\n");
+
+        stringBuilder.append("    public ResponseEntity<LoginResponse> login(\n");
+        stringBuilder.append("            @Valid @RequestBody LoginRequest request) {\n");
+
+        stringBuilder.append("        return ResponseEntity\n");
+        stringBuilder.append("                .status(HttpStatus.OK)\n");
+        stringBuilder.append("                .body(")
+                .append(serviceName)
+                .append(".login(request));\n");
+
+        stringBuilder.append("    }\n\n");
     }
 
     /**

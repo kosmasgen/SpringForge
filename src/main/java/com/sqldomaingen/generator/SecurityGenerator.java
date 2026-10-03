@@ -45,6 +45,7 @@ public class SecurityGenerator {
         generatePasswordConfig(securityDir, securityPackage);
         generateSecurityConfig(securityDir, securityPackage);
         generateJwtService(securityDir, securityPackage);
+        generateJwtAuthenticationFilter(securityDir, securityPackage);
         generateCustomUserDetailsService(securityDir, securityPackage, basePackage, security);
 
         log.debug(
@@ -94,36 +95,60 @@ public class SecurityGenerator {
      * @param securityDir target security package directory
      * @param securityPackage generated security package name
      */
-    private void generateSecurityConfig(
-            Path securityDir,
-            String securityPackage
-    ) {
+    private void generateSecurityConfig(Path securityDir, String securityPackage) {
         String content = """
-            package %s;
+    package %s;
 
-            import org.springframework.context.annotation.Bean;
-            import org.springframework.context.annotation.Configuration;
-            import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-            import org.springframework.security.config.http.SessionCreationPolicy;
-            import org.springframework.security.web.SecurityFilterChain;
+    import org.springframework.context.annotation.Bean;
+    import org.springframework.context.annotation.Configuration;
+    import org.springframework.security.authentication.AuthenticationManager;
+    import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+    import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+    import org.springframework.security.config.http.SessionCreationPolicy;
+    import org.springframework.security.web.SecurityFilterChain;
+    import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-            @Configuration
-            public class SecurityConfig {
+    @Configuration
+    public class SecurityConfig {
 
-                @Bean
-                public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-                    http
-                            .csrf(csrf -> csrf.disable())
-                            .sessionManagement(session -> session
-                                    .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                            .authorizeHttpRequests(auth -> auth
-                                    .requestMatchers("/api/auth/**").permitAll()
-                                    .anyRequest().authenticated());
+        private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-                    return http.build();
-                }
-            }
-            """.formatted(securityPackage);
+        public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+            this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        }
+
+        @Bean
+        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+            http
+                    .csrf(csrf -> csrf.disable())
+                    .sessionManagement(session -> session
+                            .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                    .authorizeHttpRequests(auth -> auth
+                            .requestMatchers(
+                                    "/registry/register",
+                                    "/registry/login",
+                                    "/swagger-ui/**",
+                                    "/v3/api-docs/**"
+                            ).permitAll()
+                            .anyRequest().authenticated())
+                    .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+            return http.build();
+        }
+
+        /**
+         * Provides the authentication manager used by the authentication service.
+         *
+         * @param configuration Spring Security authentication configuration
+         * @return configured authentication manager
+         * @throws Exception when the authentication manager cannot be created
+         */
+        @Bean
+        public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
+            return configuration.getAuthenticationManager();
+        }
+    }
+    """.formatted(securityPackage);
 
         Path file = securityDir.resolve("SecurityConfig.java");
 
@@ -273,6 +298,96 @@ public class SecurityGenerator {
         GeneratorSupport.writeFile(file, content);
 
         log.debug("Generated JwtService: {}", file.toAbsolutePath());
+    }
+
+    /**
+     * Generates the JWT authentication filter used to authenticate requests
+     * containing a Bearer access token.
+     *
+     * @param securityDir target security package directory
+     * @param securityPackage generated security package name
+     */
+    private void generateJwtAuthenticationFilter(Path securityDir, String securityPackage) {
+        String content = """
+        package %s;
+
+        import io.jsonwebtoken.JwtException;
+        import jakarta.servlet.FilterChain;
+        import jakarta.servlet.ServletException;
+        import jakarta.servlet.http.HttpServletRequest;
+        import jakarta.servlet.http.HttpServletResponse;
+        import lombok.RequiredArgsConstructor;
+        import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+        import org.springframework.security.core.context.SecurityContextHolder;
+        import org.springframework.security.core.userdetails.UserDetails;
+        import org.springframework.security.core.userdetails.UsernameNotFoundException;
+        import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+        import org.springframework.stereotype.Component;
+        import org.springframework.web.filter.OncePerRequestFilter;
+
+        import java.io.IOException;
+
+        /**
+         * Authenticates requests containing a valid JWT Bearer token.
+         */
+        @Component
+        @RequiredArgsConstructor
+        public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+            private static final String AUTHORIZATION_HEADER = "Authorization";
+            private static final String BEARER_PREFIX = "Bearer ";
+
+            private final JwtService jwtService;
+            private final CustomUserDetailsService customUserDetailsService;
+
+            /**
+             * Extracts and validates the JWT token and initializes the Spring Security context.
+             *
+             * @param request current HTTP request
+             * @param response current HTTP response
+             * @param filterChain current filter chain
+             * @throws ServletException when request filtering fails
+             * @throws IOException when request processing fails
+             */
+            @Override
+            protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+                    throws ServletException, IOException {
+
+                String authorizationHeader = request.getHeader(AUTHORIZATION_HEADER);
+
+                if (authorizationHeader == null || !authorizationHeader.startsWith(BEARER_PREFIX)) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+
+                String token = authorizationHeader.substring(BEARER_PREFIX.length());
+
+                try {
+                    String username = jwtService.extractUsername(token);
+
+                    if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                        UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
+
+                        if (jwtService.isTokenValid(token, userDetails.getUsername())) {
+                            UsernamePasswordAuthenticationToken authentication =
+                                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+
+                            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                            SecurityContextHolder.getContext().setAuthentication(authentication);
+                        }
+                    }
+                } catch (JwtException | IllegalArgumentException | UsernameNotFoundException exception) {
+                    SecurityContextHolder.clearContext();
+                }
+
+                filterChain.doFilter(request, response);
+            }
+        }
+        """.formatted(securityPackage);
+
+        Path file = securityDir.resolve("JwtAuthenticationFilter.java");
+        GeneratorSupport.writeFile(file, content);
+        log.debug("Generated JwtAuthenticationFilter: {}", file.toAbsolutePath());
     }
 
     /**

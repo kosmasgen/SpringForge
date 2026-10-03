@@ -1,5 +1,6 @@
 package com.sqldomaingen.generator;
 
+import com.sqldomaingen.config.GeneratorConfig;
 import com.sqldomaingen.model.Column;
 import com.sqldomaingen.model.Relationship;
 import com.sqldomaingen.model.Table;
@@ -119,6 +120,191 @@ public class ServiceImplGenerator {
         appendServiceImplClassFooter(stringBuilder);
 
         return stringBuilder.toString();
+    }
+
+    /**
+     * Generates the authentication service implementation.
+     *
+     * @param userTable security user table metadata
+     * @param basePackage base Java package
+     * @param security security generator configuration
+     * @return generated AuthServiceImpl source code
+     */
+    public String generateAuthServiceImpl(Table userTable, String basePackage, GeneratorConfig.Security security) {
+        Objects.requireNonNull(userTable, "userTable must not be null");
+        Objects.requireNonNull(basePackage, "basePackage must not be null");
+        Objects.requireNonNull(security, "security must not be null");
+
+        String entityName = NamingConverter.toPascalCase(
+                GeneratorSupport.normalizeTableName(userTable.getName())
+        );
+
+        String repositoryName = entityName + "Repository";
+        String repositoryVariableName = NamingConverter.decapitalizeFirstLetter(repositoryName);
+        String usernameField = NamingConverter.toCamelCase(security.getUsernameField());
+        String passwordField = NamingConverter.toCamelCase(security.getPasswordField());
+        String serviceImplPackage = PackageResolver.resolvePackageName(basePackage, "serviceImpl");
+        String servicePackage = PackageResolver.resolvePackageName(basePackage, "service");
+        String securityDtoPackage = PackageResolver.resolvePackageName(basePackage, "security.dto");
+        String entityPackage = PackageResolver.resolvePackageName(basePackage, "entity");
+        String repositoryPackage = PackageResolver.resolvePackageName(basePackage, "repository");
+        String securityPackage = PackageResolver.resolvePackageName(basePackage, "security");
+
+        StringBuilder stringBuilder = new StringBuilder();
+
+        appendAuthServiceImplPackageAndImports(
+                stringBuilder, serviceImplPackage, servicePackage, securityDtoPackage, entityPackage,
+                repositoryPackage, securityPackage, entityName, repositoryName);
+
+        appendAuthServiceImplClassHeader(stringBuilder);
+        appendAuthServiceImplFields(stringBuilder, repositoryName, repositoryVariableName);
+        appendRegisterAuthMethod(stringBuilder, entityName, repositoryVariableName, usernameField, passwordField);
+        appendLoginAuthMethod(stringBuilder, usernameField);
+        appendServiceImplClassFooter(stringBuilder);
+
+        return stringBuilder.toString();
+    }
+
+    /**
+     * Appends the user login service method.
+     *
+     * @param stringBuilder target source builder
+     * @param usernameField configured authentication username field
+     */
+    private void appendLoginAuthMethod(StringBuilder stringBuilder, String usernameField) {
+        String usernameGetter = "get" + NamingConverter.toPascalCase(usernameField);
+
+        stringBuilder.append("    /**\n");
+        stringBuilder.append("     * Authenticates an existing application user and generates an access token.\n");
+        stringBuilder.append("     *\n");
+        stringBuilder.append("     * @param request user login request\n");
+        stringBuilder.append("     * @return authentication response containing the generated access token\n");
+        stringBuilder.append("     */\n");
+        stringBuilder.append("    @Override\n");
+        stringBuilder.append("    public LoginResponse login(LoginRequest request) {\n");
+        stringBuilder.append("        log.info(\"Authenticating application user.\");\n\n");
+
+        stringBuilder.append("        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.")
+                .append(usernameGetter).append("(), request.getPassword()));\n\n");
+
+        stringBuilder.append("        String token = jwtService.generateToken(request.")
+                .append(usernameGetter).append("());\n\n");
+
+        stringBuilder.append("        log.info(\"Application user authenticated successfully.\");\n\n");
+
+        stringBuilder.append("        return LoginResponse.builder().token(token).build();\n");
+        stringBuilder.append("    }\n\n");
+    }
+
+    /**
+     * Appends the package declaration and imports required by AuthServiceImpl.
+     *
+     * @param stringBuilder target source builder
+     * @param serviceImplPackage service implementation package
+     * @param servicePackage service package
+     * @param securityDtoPackage security DTO package
+     * @param entityPackage entity package
+     * @param repositoryPackage repository package
+     * @param securityPackage security package
+     * @param entityName security user entity name
+     * @param repositoryName security user repository name
+     */
+    private void appendAuthServiceImplPackageAndImports(StringBuilder stringBuilder, String serviceImplPackage, String servicePackage,
+                                                        String securityDtoPackage, String entityPackage, String repositoryPackage,
+                                                        String securityPackage, String entityName, String repositoryName) {
+        stringBuilder.append("package ").append(serviceImplPackage).append(";\n\n");
+
+        LinkedHashSet<String> imports = new LinkedHashSet<>();
+
+        imports.add("import " + securityDtoPackage + ".LoginRequest;");
+        imports.add("import " + securityDtoPackage + ".LoginResponse;");
+        imports.add("import " + securityDtoPackage + ".RegisterRequest;");
+        imports.add("import " + entityPackage + "." + entityName + ";");
+        imports.add("import " + repositoryPackage + "." + repositoryName + ";");
+        imports.add("import " + servicePackage + ".AuthService;");
+        imports.add("import " + securityPackage + ".JwtService;");
+        imports.add("import lombok.RequiredArgsConstructor;");
+        imports.add("import lombok.extern.log4j.Log4j2;");
+        imports.add("import org.springframework.security.authentication.AuthenticationManager;");
+        imports.add("import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;");
+        imports.add("import org.springframework.security.crypto.password.PasswordEncoder;");
+        imports.add("import org.springframework.stereotype.Service;");
+        imports.add("import org.springframework.transaction.annotation.Transactional;");
+
+        for (String importLine : imports) {
+            stringBuilder.append(importLine).append("\n");
+        }
+
+        stringBuilder.append("\n");
+    }
+
+    /**
+     * Appends the AuthServiceImpl class declaration.
+     *
+     * @param stringBuilder target source builder
+     */
+    private void appendAuthServiceImplClassHeader(StringBuilder stringBuilder) {
+        stringBuilder.append("/**\n");
+        stringBuilder.append(" * Service implementation for user registration and authentication.\n");
+        stringBuilder.append(" */\n");
+        stringBuilder.append("@Service\n");
+        stringBuilder.append("@RequiredArgsConstructor\n");
+        stringBuilder.append("@Transactional\n");
+        stringBuilder.append("@Log4j2\n");
+        stringBuilder.append("public class AuthServiceImpl implements AuthService {\n\n");
+    }
+
+    /**
+     * Appends dependencies required by AuthServiceImpl.
+     *
+     * @param stringBuilder target source builder
+     * @param repositoryName security user repository name
+     * @param repositoryVariableName security user repository variable name
+     */
+    private void appendAuthServiceImplFields(StringBuilder stringBuilder, String repositoryName, String repositoryVariableName) {
+        stringBuilder.append("    private final ").append(repositoryName).append(" ").append(repositoryVariableName).append(";\n");
+        stringBuilder.append("    private final PasswordEncoder passwordEncoder;\n");
+        stringBuilder.append("    private final AuthenticationManager authenticationManager;\n");
+        stringBuilder.append("    private final JwtService jwtService;\n\n");
+    }
+
+    /**
+     * Appends the user registration service method.
+     *
+     * @param stringBuilder target source builder
+     * @param entityName security user entity name
+     * @param repositoryVariableName security user repository variable name
+     * @param usernameField configured authentication username field
+     * @param passwordField configured password field
+     */
+    private void appendRegisterAuthMethod(StringBuilder stringBuilder, String entityName, String repositoryVariableName, String usernameField, String passwordField) {
+        String usernameGetter = "get" + NamingConverter.toPascalCase(usernameField);
+
+        stringBuilder.append("    /**\n");
+        stringBuilder.append("     * Registers a new application user.\n");
+        stringBuilder.append("     *\n");
+        stringBuilder.append("     * @param request user registration request\n");
+        stringBuilder.append("     */\n");
+        stringBuilder.append("    @Override\n");
+        stringBuilder.append("    public void register(RegisterRequest request) {\n");
+        stringBuilder.append("        log.info(\"Registering new application user.\");\n\n");
+
+        stringBuilder.append("        if (").append(repositoryVariableName).append(".existsBy")
+                .append(NamingConverter.toPascalCase(usernameField)).append("(request.")
+                .append(usernameGetter).append("())) {\n");
+        stringBuilder.append("            throw new IllegalArgumentException(\"User already exists.\");\n");
+        stringBuilder.append("        }\n\n");
+
+        stringBuilder.append("        ").append(entityName).append(" user = ").append(entityName).append(".builder()\n");
+        stringBuilder.append("                .firstName(request.getFirstName())\n");
+        stringBuilder.append("                .lastName(request.getLastName())\n");
+        stringBuilder.append("                .").append(usernameField).append("(request.").append(usernameGetter).append("())\n");
+        stringBuilder.append("                .").append(passwordField).append("(passwordEncoder.encode(request.getPassword()))\n");
+        stringBuilder.append("                .build();\n\n");
+
+        stringBuilder.append("        ").append(repositoryVariableName).append(".save(user);\n\n");
+        stringBuilder.append("        log.info(\"Application user registered successfully.\");\n");
+        stringBuilder.append("    }\n\n");
     }
 
     /**

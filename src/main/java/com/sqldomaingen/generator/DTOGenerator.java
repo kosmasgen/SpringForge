@@ -1,5 +1,6 @@
 package com.sqldomaingen.generator;
 
+import com.sqldomaingen.config.GeneratorConfig;
 import com.sqldomaingen.model.Entity;
 import com.sqldomaingen.model.Field;
 import com.sqldomaingen.util.*;
@@ -17,6 +18,175 @@ import java.util.Objects;
 public class DTOGenerator {
 
     /**
+     * Generates DTO classes required by the authentication flow.
+     *
+     * <p>
+     * Generated classes:
+     * <ul>
+     *     <li>RegisterRequest</li>
+     *     <li>LoginRequest</li>
+     *     <li>LoginResponse</li>
+     * </ul>
+     *
+     * @param outputDir project root output directory
+     * @param basePackage base Java package
+     * @param security security generator configuration
+     */
+    private void generateSecurityDTOs(String outputDir, String basePackage, GeneratorConfig.Security security) {
+        Objects.requireNonNull(outputDir, "outputDir must not be null");
+        Objects.requireNonNull(basePackage, "basePackage must not be null");
+        Objects.requireNonNull(security, "security must not be null");
+
+        String securityDtoPackage =
+                PackageResolver.resolvePackageName(basePackage, "security.dto");
+
+        Path securityDtoDir = GeneratorSupport.ensureDirectory(
+                PackageResolver.resolvePath(outputDir, basePackage, "security.dto"));
+
+        String registerRequestContent = createRegisterRequestContent(securityDtoPackage, security);
+
+        GeneratorSupport.writeFile(securityDtoDir.resolve("RegisterRequest.java"), registerRequestContent);
+
+        String loginRequestContent = createLoginRequestContent(securityDtoPackage, security);
+
+        GeneratorSupport.writeFile(securityDtoDir.resolve("LoginRequest.java"), loginRequestContent);
+
+        String loginResponseContent = createLoginResponseContent(securityDtoPackage
+        );
+
+        GeneratorSupport.writeFile(securityDtoDir.resolve("LoginResponse.java"), loginResponseContent);
+
+        log.debug(
+                "Security DTO generation complete. Output directory: {}",
+                securityDtoDir.toAbsolutePath()
+        );
+    }
+
+    /**
+     * Creates the RegisterRequest DTO source code.
+     *
+     * @param securityDtoPackage target security DTO package
+     * @param security security generator configuration
+     * @return generated RegisterRequest source code
+     */
+    private String createRegisterRequestContent(String securityDtoPackage, GeneratorConfig.Security security) {
+        Objects.requireNonNull(securityDtoPackage, "securityDtoPackage must not be null");
+        Objects.requireNonNull(security, "security must not be null");
+
+        String usernameField = NamingConverter.toCamelCase(security.getUsernameField());
+        StringBuilder builder = new StringBuilder();
+
+        builder.append("package ").append(securityDtoPackage).append(";\n\n");
+
+        builder.append("import jakarta.validation.constraints.NotBlank;\n");
+        builder.append("import lombok.AllArgsConstructor;\n");
+        builder.append("import lombok.Builder;\n");
+        builder.append("import lombok.Data;\n");
+        builder.append("import lombok.NoArgsConstructor;\n\n");
+
+        builder.append("/**\n");
+        builder.append(" * Request payload used to register a new application user.\n");
+        builder.append(" */\n");
+        builder.append("@Data\n");
+        builder.append("@Builder\n");
+        builder.append("@NoArgsConstructor\n");
+        builder.append("@AllArgsConstructor\n");
+        builder.append("public class RegisterRequest {\n\n");
+
+        builder.append("    @NotBlank\n");
+        builder.append("    private String firstName;\n\n");
+
+        builder.append("    @NotBlank\n");
+        builder.append("    private String lastName;\n\n");
+
+        builder.append("    @NotBlank\n");
+        builder.append("    private String ").append(usernameField).append(";\n\n");
+
+        builder.append("    @NotBlank\n");
+        builder.append("    private String password;\n");
+
+        builder.append("}\n");
+
+        return builder.toString();
+    }
+
+    /**
+     * Creates the LoginRequest DTO source code.
+     *
+     * @param securityDtoPackage target security DTO package
+     * @param security security generator configuration
+     * @return generated LoginRequest source code
+     */
+    private String createLoginRequestContent(String securityDtoPackage, GeneratorConfig.Security security) {
+        Objects.requireNonNull(securityDtoPackage, "securityDtoPackage must not be null");
+        Objects.requireNonNull(security, "security must not be null");
+
+        String usernameField = NamingConverter.toCamelCase(security.getUsernameField());
+        StringBuilder builder = new StringBuilder();
+
+        builder.append("package ").append(securityDtoPackage).append(";\n\n");
+
+        builder.append("import jakarta.validation.constraints.NotBlank;\n");
+        builder.append("import lombok.AllArgsConstructor;\n");
+        builder.append("import lombok.Builder;\n");
+        builder.append("import lombok.Data;\n");
+        builder.append("import lombok.NoArgsConstructor;\n\n");
+
+        builder.append("/**\n");
+        builder.append(" * Request payload used to authenticate an application user.\n");
+        builder.append(" */\n");
+        builder.append("@Data\n");
+        builder.append("@Builder\n");
+        builder.append("@NoArgsConstructor\n");
+        builder.append("@AllArgsConstructor\n");
+        builder.append("public class LoginRequest {\n\n");
+
+        builder.append("    @NotBlank\n");
+        builder.append("    private String ").append(usernameField).append(";\n\n");
+
+        builder.append("    @NotBlank\n");
+        builder.append("    private String password;\n");
+
+        builder.append("}\n");
+
+        return builder.toString();
+    }
+
+    /**
+     * Creates the LoginResponse DTO source code.
+     *
+     * @param securityDtoPackage target security DTO package
+     * @return generated LoginResponse source code
+     */
+    private String createLoginResponseContent(String securityDtoPackage) {
+        Objects.requireNonNull(securityDtoPackage, "securityDtoPackage must not be null");
+
+        StringBuilder builder = new StringBuilder();
+
+        builder.append("package ").append(securityDtoPackage).append(";\n\n");
+
+        builder.append("import lombok.AllArgsConstructor;\n");
+        builder.append("import lombok.Builder;\n");
+        builder.append("import lombok.Data;\n");
+        builder.append("import lombok.NoArgsConstructor;\n\n");
+
+        builder.append("/**\n");
+        builder.append(" * Response payload returned after successful authentication.\n");
+        builder.append(" */\n");
+        builder.append("@Data\n");
+        builder.append("@Builder\n");
+        builder.append("@NoArgsConstructor\n");
+        builder.append("@AllArgsConstructor\n");
+        builder.append("public class LoginResponse {\n\n");
+
+        builder.append("    private String token;\n");
+
+        builder.append("}\n");
+
+        return builder.toString();
+    }
+
+    /**
      * Generates DTO classes under:
      * {outputDir}/src/main/java/{basePackagePath}/dto
      *
@@ -24,10 +194,11 @@ public class DTOGenerator {
      * @param outputDir project root output directory
      * @param basePackage base Java package
      */
-    public void generateDTOs(List<Entity> entities, String outputDir, String basePackage) {
+    public void generateDTOs(List<Entity> entities, String outputDir, String basePackage, GeneratorConfig generatorConfig) {
         Objects.requireNonNull(entities, "entities must not be null");
         Objects.requireNonNull(outputDir, "outputDir must not be null");
         Objects.requireNonNull(basePackage, "basePackage must not be null");
+        Objects.requireNonNull(generatorConfig, "generatorConfig must not be null");
 
         String dtoPackage = PackageResolver.resolvePackageName(basePackage, Constants.DTO_PACKAGE);
         Path dtoDir = GeneratorSupport.ensureDirectory(
@@ -42,6 +213,12 @@ public class DTOGenerator {
             String dtoContent = createDtoContent(entity, dtoPackage);
             Path outputPath = dtoDir.resolve(entity.getName() + Constants.DTO_FILE_SUFFIX);
             GeneratorSupport.writeFile(outputPath, dtoContent);
+        }
+
+        GeneratorConfig.Security security = generatorConfig.getSecurity();
+
+        if (security != null && security.isEnabled()) {
+            generateSecurityDTOs(outputDir, basePackage, security);
         }
 
         log.debug("DTO generation complete. Output directory: {}", dtoDir.toAbsolutePath());
