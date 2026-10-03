@@ -1,5 +1,6 @@
 package com.sqldomaingen.generator;
 
+import com.sqldomaingen.config.GeneratorConfig;
 import com.sqldomaingen.model.Column;
 import com.sqldomaingen.model.Table;
 import com.sqldomaingen.model.UniqueConstraint;
@@ -27,11 +28,13 @@ public class RepositoryGenerator {
             String outputDir,
             String basePackage,
             boolean overwrite,
-            Set<String> lookupTables
+            Set<String> lookupTables,
+            GeneratorConfig generatorConfig
     ) {
         Objects.requireNonNull(tables, "tables must not be null");
         Objects.requireNonNull(outputDir, "outputDir must not be null");
         Objects.requireNonNull(basePackage, "basePackage must not be null");
+        Objects.requireNonNull(generatorConfig, "generatorConfig must not be null");
 
         Path repositoriesDir = GeneratorSupport.ensureDirectory(
                 PackageResolver.resolvePath(outputDir, basePackage, "repository")
@@ -41,7 +44,7 @@ public class RepositoryGenerator {
             String entityName = NamingConverter.toPascalCase(
                     GeneratorSupport.normalizeTableName(table.getName())
             );
-            String repositoryCode = generateRepositoryForTable(table, basePackage, lookupTables);
+            String repositoryCode = generateRepositoryForTable(table, basePackage, lookupTables, generatorConfig);
             Path filePath = repositoriesDir.resolve(entityName + "Repository.java");
             GeneratorSupport.writeFile(filePath, repositoryCode, overwrite);
         }
@@ -59,11 +62,13 @@ public class RepositoryGenerator {
      * @param lookupTables configured lookup table names
      * @return generated repository source code
      */
-    public String generateRepositoryForTable(Table table, String basePackage, Set<String> lookupTables) {
+    public String generateRepositoryForTable(Table table, String basePackage, Set<String> lookupTables,GeneratorConfig generatorConfig) {
         Objects.requireNonNull(table, "table must not be null");
         Objects.requireNonNull(basePackage, "basePackage must not be null");
+        Objects.requireNonNull(generatorConfig, "generatorConfig must not be null");
 
         boolean lookupTable = isLookupTable(table, lookupTables);
+        boolean securityUserTable = isSecurityUserTable(table, generatorConfig);
 
         String entityName = NamingConverter.toPascalCase(
                 GeneratorSupport.normalizeTableName(table.getName())
@@ -73,7 +78,7 @@ public class RepositoryGenerator {
         String entityPackage = PackageResolver.resolvePackageName(basePackage, "entity");
 
         TypeRef primaryKeyTypeRef = resolvePrimaryKeyTypeRef(table, entityName, entityPackage);
-        Set<String> importLines = collectRepositoryImports(entityPackage, entityName, primaryKeyTypeRef, table, lookupTable);
+        Set<String> importLines = collectRepositoryImports(entityPackage, entityName, primaryKeyTypeRef, table, lookupTable,securityUserTable);
 
         StringBuilder builder = new StringBuilder();
 
@@ -85,6 +90,10 @@ public class RepositoryGenerator {
         if (!lookupTable) {
             appendExistsByMethodsForUniqueColumns(builder, table);
             appendExistsByMethodsForCompositeUniqueConstraints(builder, table);
+
+            if (securityUserTable) {
+                appendSecurityUserLookupMethod(builder, table, entityName, generatorConfig);
+            }
         }
 
         builder.append("}\n");
@@ -197,6 +206,61 @@ public class RepositoryGenerator {
     }
 
     /**
+     * Appends the repository lookup method used to load the configured
+     * security user by its authentication field.
+     *
+     * @param builder target source builder
+     * @param table security user table metadata
+     * @param entityName generated entity name
+     * @param generatorConfig generator configuration
+     */
+    private void appendSecurityUserLookupMethod(
+            StringBuilder builder,
+            Table table,
+            String entityName,
+            GeneratorConfig generatorConfig
+    ) {
+        String usernameField = generatorConfig.getSecurity().getUsernameField();
+
+        if (usernameField == null || usernameField.isBlank()) {
+            return;
+        }
+
+        Column usernameColumn = findColumnByName(table, usernameField);
+
+        if (usernameColumn == null
+                || isUnsupportedForDerivedQuery(usernameColumn.getJavaType())) {
+            return;
+        }
+
+        String parameterName = toParameterName(usernameColumn.getName());
+        String propertyPath = resolvePropertyPath(table, usernameColumn.getName());
+        String parameterType =
+                JavaTypeSupport.resolveSimpleType(usernameColumn.getJavaType());
+
+        builder.append("\n    /**\n");
+        builder.append("     * Finds a ")
+                .append(NamingConverter.toLogLabel(entityName))
+                .append(" by its configured authentication field.\n");
+        builder.append("     *\n");
+        builder.append("     * @param ")
+                .append(parameterName)
+                .append(" authentication field value\n");
+        builder.append("     * @return matching entity when found\n");
+        builder.append("     */\n");
+
+        builder.append("    Optional<")
+                .append(entityName)
+                .append("> findBy")
+                .append(propertyPath)
+                .append("(")
+                .append(parameterType)
+                .append(" ")
+                .append(parameterName)
+                .append(");\n");
+    }
+
+    /**
      * Appends the package declaration.
      *
      * @param builder target source builder
@@ -256,7 +320,8 @@ public class RepositoryGenerator {
             String entityName,
             TypeRef primaryKeyTypeRef,
             Table table,
-            boolean lookupTable
+            boolean lookupTable,
+            boolean securityUserTable
     ) {
         Set<String> importLines = new LinkedHashSet<>();
 
@@ -270,6 +335,10 @@ public class RepositoryGenerator {
 
         if (!lookupTable) {
             addUniqueMethodImports(importLines, table);
+        }
+
+        if (securityUserTable) {
+            importLines.add("import java.util.Optional;");
         }
 
         return importLines;
@@ -294,6 +363,37 @@ public class RepositoryGenerator {
                 .anyMatch(lookupTable -> normalizedTableName.equalsIgnoreCase(
                         GeneratorSupport.normalizeTableName(lookupTable)
                 ));
+    }
+
+    /**
+     * Returns whether the given table is configured as the security user table.
+     *
+     * @param table table metadata
+     * @param generatorConfig generator configuration
+     * @return true when the table is the configured security user table
+     */
+    private boolean isSecurityUserTable(
+            Table table,
+            GeneratorConfig generatorConfig
+    ) {
+        if (table == null
+                || generatorConfig == null
+                || generatorConfig.getSecurity() == null
+                || !generatorConfig.getSecurity().isEnabled()
+                || generatorConfig.getSecurity().getUserTable() == null
+                || generatorConfig.getSecurity().getUserTable().isBlank()) {
+            return false;
+        }
+
+        String normalizedTableName =
+                GeneratorSupport.normalizeTableName(table.getName());
+
+        String normalizedSecurityUserTable =
+                GeneratorSupport.normalizeTableName(
+                        generatorConfig.getSecurity().getUserTable()
+                );
+
+        return normalizedTableName.equalsIgnoreCase(normalizedSecurityUserTable);
     }
 
     /**

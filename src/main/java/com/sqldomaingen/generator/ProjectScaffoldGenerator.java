@@ -99,8 +99,13 @@ public class ProjectScaffoldGenerator {
     private void writePom(Path projectRoot, String groupId, String artifactId, boolean overwrite) {
         Path pom = projectRoot.resolve("pom.xml");
 
-        String safeGroupId = (groupId == null || groupId.isBlank()) ? "com.generated" : groupId.trim();
-        String safeArtifactId = (artifactId == null || artifactId.isBlank()) ? "generated-app" : artifactId.trim();
+        String safeGroupId = (groupId == null || groupId.isBlank())
+                ? "com.generated"
+                : groupId.trim();
+
+        String safeArtifactId = (artifactId == null || artifactId.isBlank())
+                ? "generated-app"
+                : artifactId.trim();
 
         String content = """
 <?xml version="1.0" encoding="UTF-8"?>
@@ -129,6 +134,7 @@ public class ProjectScaffoldGenerator {
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <springdoc.version>%s</springdoc.version>
         <modelmapper.version>%s</modelmapper.version>
+        <jjwt.version>0.12.6</jjwt.version>
         <lombok.version>1.18.36</lombok.version>
         <jacoco.version>0.8.12</jacoco.version>
         <jacoco.minimum.line.coverage>0.70</jacoco.minimum.line.coverage>
@@ -153,6 +159,29 @@ public class ProjectScaffoldGenerator {
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <!-- JWT API -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>${jjwt.version}</version>
+        </dependency>
+
+        <!-- JWT implementation -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- JWT Jackson integration -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope>
         </dependency>
 
         <dependency>
@@ -484,6 +513,7 @@ server.port=8081
 ############################
 # JWT
 ############################
+security.jwt.secret=${JWT_SECRET}
 security.jwt.expiration-minutes=%d
 
 ############################

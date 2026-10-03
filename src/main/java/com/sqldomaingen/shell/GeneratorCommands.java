@@ -120,7 +120,7 @@ public class GeneratorCommands {
                     : Set.copyOf(generatorConfig.getLookupTables());
 
             new RepositoryGenerator().generateRepositories(
-                    javaGenerationTables, outputDir, packageName, overwrite, lookupTables
+                    javaGenerationTables, outputDir, packageName, overwrite, lookupTables, generatorConfig
             );
 
             new ServiceGenerator().generateAllServices(businessGenerationTables, outputDir, packageName);
