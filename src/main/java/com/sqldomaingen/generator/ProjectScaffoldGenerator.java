@@ -107,204 +107,202 @@ public class ProjectScaffoldGenerator {
                 ? "generated-app"
                 : artifactId.trim();
 
-        String content = """
-<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+        StringBuilder builder = new StringBuilder();
 
-    <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>%s</version>
-        <relativePath/>
-    </parent>
+        builder.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+        builder.append("<project xmlns=\"http://maven.apache.org/POM/4.0.0\"\n");
+        builder.append("         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n");
+        builder.append("         xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd\">\n");
+        builder.append("    <modelVersion>4.0.0</modelVersion>\n\n");
 
-    <groupId>%s</groupId>
-    <artifactId>%s</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
-    <name>%s</name>
-    <description>Generated Spring Boot project</description>
+        builder.append("    <parent>\n");
+        builder.append("        <groupId>org.springframework.boot</groupId>\n");
+        builder.append("        <artifactId>spring-boot-starter-parent</artifactId>\n");
+        builder.append("        <version>").append(SPRING_BOOT_VERSION).append("</version>\n");
+        builder.append("        <relativePath/>\n");
+        builder.append("    </parent>\n\n");
 
-    <properties>
-        <java.version>21</java.version>
-        <maven.compiler.release>21</maven.compiler.release>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <springdoc.version>%s</springdoc.version>
-        <modelmapper.version>%s</modelmapper.version>
-        <jjwt.version>0.12.6</jjwt.version>
-        <lombok.version>1.18.36</lombok.version>
-        <jacoco.version>0.8.12</jacoco.version>
-        <jacoco.minimum.line.coverage>0.70</jacoco.minimum.line.coverage>
-    </properties>
+        builder.append("    <groupId>").append(safeGroupId).append("</groupId>\n");
+        builder.append("    <artifactId>").append(safeArtifactId).append("</artifactId>\n");
+        builder.append("    <version>0.0.1-SNAPSHOT</version>\n");
+        builder.append("    <name>").append(safeArtifactId).append("</name>\n");
+        builder.append("    <description>Generated Spring Boot project</description>\n\n");
 
-    <dependencies>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
+        builder.append("    <properties>\n");
+        builder.append("        <java.version>21</java.version>\n");
+        builder.append("        <maven.compiler.release>21</maven.compiler.release>\n");
+        builder.append("        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>\n");
+        builder.append("        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>\n");
+        builder.append("        <springdoc.version>").append(SPRINGDOC_VERSION).append("</springdoc.version>\n");
+        builder.append("        <modelmapper.version>").append(MODELMAPPER_VERSION).append("</modelmapper.version>\n");
+        builder.append("        <jjwt.version>0.12.6</jjwt.version>\n");
+        builder.append("        <lombok.version>1.18.36</lombok.version>\n");
+        builder.append("        <jacoco.version>0.8.12</jacoco.version>\n");
+        builder.append("        <jacoco.minimum.line.coverage>0.70</jacoco.minimum.line.coverage>\n");
+        builder.append("    </properties>\n\n");
 
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
-        </dependency>
+        builder.append("    <dependencies>\n");
 
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation</artifactId>
-        </dependency>
+        builder.append("        <dependency>\n");
+        builder.append("            <groupId>org.springframework.boot</groupId>\n");
+        builder.append("            <artifactId>spring-boot-starter-web</artifactId>\n");
+        builder.append("        </dependency>\n\n");
 
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-security</artifactId>
-        </dependency>
+        builder.append("        <dependency>\n");
+        builder.append("            <groupId>org.springframework.boot</groupId>\n");
+        builder.append("            <artifactId>spring-boot-starter-data-jpa</artifactId>\n");
+        builder.append("        </dependency>\n\n");
 
-        <!-- JWT API -->
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-api</artifactId>
-            <version>${jjwt.version}</version>
-        </dependency>
+        builder.append("        <dependency>\n");
+        builder.append("            <groupId>org.springframework.boot</groupId>\n");
+        builder.append("            <artifactId>spring-boot-starter-validation</artifactId>\n");
+        builder.append("        </dependency>\n\n");
 
-        <!-- JWT implementation -->
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-impl</artifactId>
-            <version>${jjwt.version}</version>
-            <scope>runtime</scope>
-        </dependency>
+        builder.append("        <dependency>\n");
+        builder.append("            <groupId>org.springframework.boot</groupId>\n");
+        builder.append("            <artifactId>spring-boot-starter-security</artifactId>\n");
+        builder.append("        </dependency>\n\n");
 
-        <!-- JWT Jackson integration -->
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-jackson</artifactId>
-            <version>${jjwt.version}</version>
-            <scope>runtime</scope>
-        </dependency>
+        builder.append("        <!-- JWT API -->\n");
+        builder.append("        <dependency>\n");
+        builder.append("            <groupId>io.jsonwebtoken</groupId>\n");
+        builder.append("            <artifactId>jjwt-api</artifactId>\n");
+        builder.append("            <version>${jjwt.version}</version>\n");
+        builder.append("        </dependency>\n\n");
 
-        <dependency>
-            <groupId>org.springdoc</groupId>
-            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-            <version>${springdoc.version}</version>
-        </dependency>
+        builder.append("        <!-- JWT implementation -->\n");
+        builder.append("        <dependency>\n");
+        builder.append("            <groupId>io.jsonwebtoken</groupId>\n");
+        builder.append("            <artifactId>jjwt-impl</artifactId>\n");
+        builder.append("            <version>${jjwt.version}</version>\n");
+        builder.append("            <scope>runtime</scope>\n");
+        builder.append("        </dependency>\n\n");
 
-        <dependency>
-            <groupId>org.modelmapper</groupId>
-            <artifactId>modelmapper</artifactId>
-            <version>${modelmapper.version}</version>
-        </dependency>
+        builder.append("        <!-- JWT Jackson integration -->\n");
+        builder.append("        <dependency>\n");
+        builder.append("            <groupId>io.jsonwebtoken</groupId>\n");
+        builder.append("            <artifactId>jjwt-jackson</artifactId>\n");
+        builder.append("            <version>${jjwt.version}</version>\n");
+        builder.append("            <scope>runtime</scope>\n");
+        builder.append("        </dependency>\n\n");
 
-        <dependency>
-            <groupId>org.hibernate.orm</groupId>
-            <artifactId>hibernate-envers</artifactId>
-        </dependency>
+        builder.append("        <dependency>\n");
+        builder.append("            <groupId>org.springdoc</groupId>\n");
+        builder.append("            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>\n");
+        builder.append("            <version>${springdoc.version}</version>\n");
+        builder.append("        </dependency>\n\n");
 
-        <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
-            <scope>runtime</scope>
-        </dependency>
+        builder.append("        <dependency>\n");
+        builder.append("            <groupId>org.modelmapper</groupId>\n");
+        builder.append("            <artifactId>modelmapper</artifactId>\n");
+        builder.append("            <version>${modelmapper.version}</version>\n");
+        builder.append("        </dependency>\n\n");
 
-        <dependency>
-            <groupId>org.liquibase</groupId>
-            <artifactId>liquibase-core</artifactId>
-        </dependency>
+        builder.append("        <dependency>\n");
+        builder.append("            <groupId>org.hibernate.orm</groupId>\n");
+        builder.append("            <artifactId>hibernate-envers</artifactId>\n");
+        builder.append("        </dependency>\n\n");
 
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>${lombok.version}</version>
-            <scope>provided</scope>
-        </dependency>
+        builder.append("        <dependency>\n");
+        builder.append("            <groupId>org.postgresql</groupId>\n");
+        builder.append("            <artifactId>postgresql</artifactId>\n");
+        builder.append("            <scope>runtime</scope>\n");
+        builder.append("        </dependency>\n\n");
 
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
+        builder.append("        <dependency>\n");
+        builder.append("            <groupId>org.liquibase</groupId>\n");
+        builder.append("            <artifactId>liquibase-core</artifactId>\n");
+        builder.append("        </dependency>\n\n");
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <release>${maven.compiler.release}</release>
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                            <version>${lombok.version}</version>
-                        </path>
-                    </annotationProcessorPaths>
-                </configuration>
-            </plugin>
+        builder.append("        <dependency>\n");
+        builder.append("            <groupId>org.projectlombok</groupId>\n");
+        builder.append("            <artifactId>lombok</artifactId>\n");
+        builder.append("            <version>${lombok.version}</version>\n");
+        builder.append("            <scope>provided</scope>\n");
+        builder.append("        </dependency>\n\n");
 
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-            </plugin>
+        builder.append("        <dependency>\n");
+        builder.append("            <groupId>org.springframework.boot</groupId>\n");
+        builder.append("            <artifactId>spring-boot-starter-test</artifactId>\n");
+        builder.append("            <scope>test</scope>\n");
+        builder.append("        </dependency>\n");
 
-            <plugin>
-                <groupId>org.jacoco</groupId>
-                <artifactId>jacoco-maven-plugin</artifactId>
-                <version>${jacoco.version}</version>
-                <executions>
-                    <execution>
-                        <id>prepare-agent</id>
-                        <goals>
-                            <goal>prepare-agent</goal>
-                        </goals>
-                    </execution>
+        builder.append("    </dependencies>\n\n");
 
-                    <execution>
-                        <id>report</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>report</goal>
-                        </goals>
-                    </execution>
+        builder.append("    <build>\n");
+        builder.append("        <plugins>\n");
 
-                    <execution>
-                        <id>check</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>check</goal>
-                        </goals>
-                        <configuration>
-                            <rules>
-                                <rule>
-                                    <element>BUNDLE</element>
-                                    <limits>
-                                        <limit>
-                                            <counter>LINE</counter>
-                                            <value>COVEREDRATIO</value>
-                                            <minimum>${jacoco.minimum.line.coverage}</minimum>
-                                        </limit>
-                                    </limits>
-                                </rule>
-                            </rules>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
+        builder.append("            <plugin>\n");
+        builder.append("                <groupId>org.apache.maven.plugins</groupId>\n");
+        builder.append("                <artifactId>maven-compiler-plugin</artifactId>\n");
+        builder.append("                <configuration>\n");
+        builder.append("                    <release>${maven.compiler.release}</release>\n");
+        builder.append("                    <annotationProcessorPaths>\n");
+        builder.append("                        <path>\n");
+        builder.append("                            <groupId>org.projectlombok</groupId>\n");
+        builder.append("                            <artifactId>lombok</artifactId>\n");
+        builder.append("                            <version>${lombok.version}</version>\n");
+        builder.append("                        </path>\n");
+        builder.append("                    </annotationProcessorPaths>\n");
+        builder.append("                </configuration>\n");
+        builder.append("            </plugin>\n\n");
 
-</project>
-""".formatted(
-                SPRING_BOOT_VERSION,
-                safeGroupId,
-                safeArtifactId,
-                safeArtifactId,
-                SPRINGDOC_VERSION,
-                MODELMAPPER_VERSION
-        );
+        builder.append("            <plugin>\n");
+        builder.append("                <groupId>org.springframework.boot</groupId>\n");
+        builder.append("                <artifactId>spring-boot-maven-plugin</artifactId>\n");
+        builder.append("            </plugin>\n\n");
 
-        GeneratorSupport.writeFile(pom, content, overwrite);
+        builder.append("            <plugin>\n");
+        builder.append("                <groupId>org.jacoco</groupId>\n");
+        builder.append("                <artifactId>jacoco-maven-plugin</artifactId>\n");
+        builder.append("                <version>${jacoco.version}</version>\n");
+        builder.append("                <executions>\n");
+
+        builder.append("                    <execution>\n");
+        builder.append("                        <id>prepare-agent</id>\n");
+        builder.append("                        <goals>\n");
+        builder.append("                            <goal>prepare-agent</goal>\n");
+        builder.append("                        </goals>\n");
+        builder.append("                    </execution>\n\n");
+
+        builder.append("                    <execution>\n");
+        builder.append("                        <id>report</id>\n");
+        builder.append("                        <phase>verify</phase>\n");
+        builder.append("                        <goals>\n");
+        builder.append("                            <goal>report</goal>\n");
+        builder.append("                        </goals>\n");
+        builder.append("                    </execution>\n\n");
+
+        builder.append("                    <execution>\n");
+        builder.append("                        <id>check</id>\n");
+        builder.append("                        <phase>verify</phase>\n");
+        builder.append("                        <goals>\n");
+        builder.append("                            <goal>check</goal>\n");
+        builder.append("                        </goals>\n");
+        builder.append("                        <configuration>\n");
+        builder.append("                            <rules>\n");
+        builder.append("                                <rule>\n");
+        builder.append("                                    <element>BUNDLE</element>\n");
+        builder.append("                                    <limits>\n");
+        builder.append("                                        <limit>\n");
+        builder.append("                                            <counter>LINE</counter>\n");
+        builder.append("                                            <value>COVEREDRATIO</value>\n");
+        builder.append("                                            <minimum>${jacoco.minimum.line.coverage}</minimum>\n");
+        builder.append("                                        </limit>\n");
+        builder.append("                                    </limits>\n");
+        builder.append("                                </rule>\n");
+        builder.append("                            </rules>\n");
+        builder.append("                        </configuration>\n");
+        builder.append("                    </execution>\n");
+
+        builder.append("                </executions>\n");
+        builder.append("            </plugin>\n");
+
+        builder.append("        </plugins>\n");
+        builder.append("    </build>\n\n");
+        builder.append("</project>\n");
+
+        GeneratorSupport.writeFile(pom, builder.toString(), overwrite);
     }
 
     /**
@@ -315,52 +313,41 @@ public class ProjectScaffoldGenerator {
      * @param overwrite whether existing files should be overwritten
      */
     private void createMessageResolver(Path projectRoot, String basePackage, boolean overwrite) {
-        Path utilDir = PackageResolver.resolvePath(
-                projectRoot.toString(),
-                basePackage,
-                "util"
-        );
-
+        Path utilDir = PackageResolver.resolvePath(projectRoot.toString(), basePackage, "util");
         GeneratorSupport.ensureDirectory(utilDir);
 
         Path file = utilDir.resolve("MessageResolver.java");
-
         String utilPackage = PackageResolver.resolvePackageName(basePackage, "util");
 
-        String content = """
-package %s;
+        StringBuilder builder = new StringBuilder();
 
-import lombok.RequiredArgsConstructor;
-import org.springframework.context.MessageSource;
-import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.stereotype.Component;
+        builder.append("package ").append(utilPackage).append(";\n\n");
+        builder.append("import lombok.RequiredArgsConstructor;\n");
+        builder.append("import org.springframework.context.MessageSource;\n");
+        builder.append("import org.springframework.context.i18n.LocaleContextHolder;\n");
+        builder.append("import org.springframework.stereotype.Component;\n\n");
+        builder.append("import java.util.Locale;\n\n");
+        builder.append("/**\n");
+        builder.append(" * Resolves internationalized application messages.\n");
+        builder.append(" */\n");
+        builder.append("@Component\n");
+        builder.append("@RequiredArgsConstructor\n");
+        builder.append("public class MessageResolver {\n\n");
+        builder.append("    private final MessageSource messageSource;\n\n");
+        builder.append("    /**\n");
+        builder.append("     * Resolves a message by key using the current request locale.\n");
+        builder.append("     *\n");
+        builder.append("     * @param key message key\n");
+        builder.append("     * @param arguments message arguments\n");
+        builder.append("     * @return resolved message\n");
+        builder.append("     */\n");
+        builder.append("    public String resolve(String key, Object... arguments) {\n");
+        builder.append("        Locale locale = LocaleContextHolder.getLocale();\n");
+        builder.append("        return messageSource.getMessage(key, arguments, key, locale);\n");
+        builder.append("    }\n");
+        builder.append("}\n");
 
-import java.util.Locale;
-
-/**
- * Resolves internationalized application messages.
- */
-@Component
-@RequiredArgsConstructor
-public class MessageResolver {
-
-    private final MessageSource messageSource;
-
-    /**
-     * Resolves a message by key using the current request locale.
-     *
-     * @param key message key
-     * @param arguments message arguments
-     * @return resolved message
-     */
-    public String resolve(String key, Object... arguments) {
-        Locale locale = LocaleContextHolder.getLocale();
-        return messageSource.getMessage(key, arguments, key, locale);
-    }
-}
-""".formatted(utilPackage);
-
-        GeneratorSupport.writeFile(file, content, overwrite);
+        GeneratorSupport.writeFile(file, builder.toString(), overwrite);
     }
 
 
@@ -378,25 +365,22 @@ public class MessageResolver {
         String applicationClassName = resolveApplicationClassName(basePackage);
         Path appFile = baseJavaDir.resolve(applicationClassName + ".java");
 
-        String content = """
-        package %s;
+        StringBuilder builder = new StringBuilder();
 
-        import org.springframework.boot.SpringApplication;
-        import org.springframework.boot.autoconfigure.SpringBootApplication;
+        builder.append("package ").append(basePackage).append(";\n\n");
+        builder.append("import org.springframework.boot.SpringApplication;\n");
+        builder.append("import org.springframework.boot.autoconfigure.SpringBootApplication;\n\n");
+        builder.append("/**\n");
+        builder.append(" * Spring Boot entry point for the generated project.\n");
+        builder.append(" */\n");
+        builder.append("@SpringBootApplication\n");
+        builder.append("public class ").append(applicationClassName).append(" {\n\n");
+        builder.append("    public static void main(String[] args) {\n");
+        builder.append("        SpringApplication.run(").append(applicationClassName).append(".class, args);\n");
+        builder.append("    }\n");
+        builder.append("}\n");
 
-        /**
-         * Spring Boot entry point for the generated project.
-         */
-        @SpringBootApplication
-        public class %s {
-
-            public static void main(String[] args) {
-                SpringApplication.run(%s.class, args);
-            }
-        }
-        """.formatted(basePackage, applicationClassName, applicationClassName);
-
-        GeneratorSupport.writeFile(appFile, content, overwrite);
+        GeneratorSupport.writeFile(appFile, builder.toString(), overwrite);
     }
 
 
@@ -444,12 +428,12 @@ public class MessageResolver {
 
     /**
      * Creates the application.properties file for the generated project.
-
-     * @param generatorConfig generator configuration used to create application properties
+     *
      * @param root project root directory
      * @param applicationName Spring application name
      * @param defaultSchemaName default database schema name
      * @param basePackage generated project base package
+     * @param generatorConfig generator configuration used to create application properties
      * @param overwrite whether existing files should be overwritten
      */
     private void createApplicationProperties(
@@ -477,64 +461,64 @@ public class MessageResolver {
                 .getJwt()
                 .getExpirationMinutes();
 
-        String props = """
-spring.application.name=%s
+        StringBuilder builder = new StringBuilder();
 
-############################
-# PostgreSQL
-############################
-spring.datasource.url=jdbc:postgresql://localhost:5432/%s
-spring.datasource.username=postgres
-spring.datasource.password=postgres
+        builder.append("spring.application.name=").append(name).append("\n\n");
 
-############################
-# Liquibase
-############################
-spring.liquibase.enabled=true
-spring.liquibase.change-log=classpath:db/migration/changelog-master.xml
-spring.liquibase.liquibase-schema=public
+        builder.append("############################\n");
+        builder.append("# PostgreSQL\n");
+        builder.append("############################\n");
+        builder.append("spring.datasource.url=jdbc:postgresql://localhost:5432/").append(resolvedSchemaName).append("\n");
+        builder.append("spring.datasource.username=postgres\n");
+        builder.append("spring.datasource.password=postgres\n\n");
 
-############################
-# JPA
-############################
-spring.jpa.hibernate.ddl-auto=validate
-spring.jpa.open-in-view=false
-spring.jpa.properties.hibernate.default_schema=%s
-spring.jpa.properties.org.hibernate.envers.default_schema=audit
+        builder.append("############################\n");
+        builder.append("# Liquibase\n");
+        builder.append("############################\n");
+        builder.append("spring.liquibase.enabled=true\n");
+        builder.append("spring.liquibase.change-log=classpath:db/migration/changelog-master.xml\n");
+        builder.append("spring.liquibase.liquibase-schema=public\n\n");
 
-############################
-# MVC error handling
-############################
-spring.mvc.throw-exception-if-no-handler-found=true
-spring.web.resources.add-mappings=false
+        builder.append("############################\n");
+        builder.append("# JPA\n");
+        builder.append("############################\n");
+        builder.append("spring.jpa.hibernate.ddl-auto=validate\n");
+        builder.append("spring.jpa.open-in-view=false\n");
+        builder.append("spring.jpa.properties.hibernate.default_schema=").append(resolvedSchemaName).append("\n");
+        builder.append("spring.jpa.properties.org.hibernate.envers.default_schema=audit\n\n");
 
-server.port=8081
+        builder.append("############################\n");
+        builder.append("# MVC error handling\n");
+        builder.append("############################\n");
+        builder.append("spring.mvc.throw-exception-if-no-handler-found=true\n");
+        builder.append("spring.web.resources.add-mappings=false\n\n");
 
-############################
-# JWT
-############################
-security.jwt.secret=${JWT_SECRET}
-security.jwt.expiration-minutes=%d
+        builder.append("server.port=8081\n\n");
 
-############################
-# Swagger
-############################
-springdoc.default-produces-media-type=application/json
-springdoc.api-docs.enabled=true
-springdoc.swagger-ui.enabled=true
-springdoc.swagger-ui.tagsSorter=alpha
-springdoc.swagger-ui.operationsSorter=alpha
-springdoc.writer-with-order-by-keys=true
+        builder.append("############################\n");
+        builder.append("# JWT\n");
+        builder.append("############################\n");
+        builder.append("security.jwt.secret=${JWT_SECRET}\n");
+        builder.append("security.jwt.expiration-minutes=").append(jwtExpirationMinutes).append("\n\n");
 
-############################
-# Logging
-############################
-logging.level.root=INFO
-logging.level.%s=INFO
-""".formatted(name, resolvedSchemaName, resolvedSchemaName,jwtExpirationMinutes, resolvedBasePackage);
+        builder.append("############################\n");
+        builder.append("# Swagger\n");
+        builder.append("############################\n");
+        builder.append("springdoc.default-produces-media-type=application/json\n");
+        builder.append("springdoc.api-docs.enabled=true\n");
+        builder.append("springdoc.swagger-ui.enabled=true\n");
+        builder.append("springdoc.swagger-ui.tagsSorter=alpha\n");
+        builder.append("springdoc.swagger-ui.operationsSorter=alpha\n");
+        builder.append("springdoc.writer-with-order-by-keys=true\n\n");
+
+        builder.append("############################\n");
+        builder.append("# Logging\n");
+        builder.append("############################\n");
+        builder.append("logging.level.root=INFO\n");
+        builder.append("logging.level.").append(resolvedBasePackage).append("=INFO\n");
 
         Path file = root.resolve("src/main/resources/application.properties");
-        GeneratorSupport.writeFile(file, props, overwrite);
+        GeneratorSupport.writeFile(file, builder.toString(), overwrite);
     }
 
     /**
@@ -544,53 +528,59 @@ logging.level.%s=INFO
      * @param overwrite whether existing files should be overwritten
      */
     private void createMessageProperties(Path root, boolean overwrite) {
-        String messages = """
-# Generic entity messages
-entity.notFoundById={0} not found with id: {1}
-entity.notFoundByCompositeId={0} not found with composite id: {1}
-entity.alreadyExistsById={0} already exists with id: {1}
-entity.uniqueConstraintViolation={0} with {1} already exists
-entity.alreadyExistsByCompositeId={0} already exists with composite id: {1}
+        StringBuilder messages = new StringBuilder();
 
-# Generic validation messages
-validation.badRequest=Bad request
-validation.required=Field is required
-validation.invalidValue=Invalid value
+        messages.append("# Generic entity messages\n");
+        messages.append("entity.notFoundById={0} not found with id: {1}\n");
+        messages.append("entity.notFoundByCompositeId={0} not found with composite id: {1}\n");
+        messages.append("entity.alreadyExistsById={0} already exists with id: {1}\n");
+        messages.append("entity.uniqueConstraintViolation={0} with {1} already exists\n");
+        messages.append("entity.alreadyExistsByCompositeId={0} already exists with composite id: {1}\n\n");
 
-# Error messages
-error.unexpected=Unexpected error
-error.endpointNotFound=Endpoint not found: {0}
-error.invalidRequestBody=Invalid request body
-error.validationFailed=Validation failed
-error.invalid=Invalid
-""";
+        messages.append("# Generic validation messages\n");
+        messages.append("validation.badRequest=Bad request\n");
+        messages.append("validation.required=Field is required\n");
+        messages.append("validation.invalidValue=Invalid value\n\n");
 
-        String greekMessages = """
-# Generic entity messages
-entity.notFoundById=Δεν βρέθηκε {0} με id: {1}
-entity.notFoundByCompositeId=Δεν βρέθηκε {0} με σύνθετο id: {1}
-entity.alreadyExistsById=Το {0} υπάρχει ήδη με id: {1}
-entity.uniqueConstraintViolation=Το {0} με {1} υπάρχει ήδη
-entity.alreadyExistsByCompositeId=Το {0} υπάρχει ήδη με σύνθετο id: {1}
+        messages.append("# Error messages\n");
+        messages.append("error.unexpected=Unexpected error\n");
+        messages.append("error.endpointNotFound=Endpoint not found: {0}\n");
+        messages.append("error.invalidRequestBody=Invalid request body\n");
+        messages.append("error.validationFailed=Validation failed\n");
+        messages.append("error.invalid=Invalid\n");
+        messages.append("error.usernameAlreadyExists=Username {0} already exists\n");
+        messages.append("error.emailAlreadyExists=Email {0} already exists\n");
+        messages.append("error.invalidCredentials=Invalid username or password\n");
 
-# Generic validation messages
-validation.badRequest=Μη έγκυρο αίτημα
-validation.required=Το πεδίο είναι υποχρεωτικό
-validation.invalidValue=Μη έγκυρη τιμή
+        StringBuilder greekMessages = new StringBuilder();
 
-# Error messages
-error.unexpected=Μη αναμενόμενο σφάλμα
-error.endpointNotFound=Το endpoint δεν βρέθηκε: {0}
-error.invalidRequestBody=Μη έγκυρο σώμα αιτήματος
-error.validationFailed=Η επικύρωση απέτυχε
-error.invalid=Μη έγκυρο
-""";
+        greekMessages.append("# Generic entity messages\n");
+        greekMessages.append("entity.notFoundById=Δεν βρέθηκε {0} με id: {1}\n");
+        greekMessages.append("entity.notFoundByCompositeId=Δεν βρέθηκε {0} με σύνθετο id: {1}\n");
+        greekMessages.append("entity.alreadyExistsById=Το {0} υπάρχει ήδη με id: {1}\n");
+        greekMessages.append("entity.uniqueConstraintViolation=Το {0} με {1} υπάρχει ήδη\n");
+        greekMessages.append("entity.alreadyExistsByCompositeId=Το {0} υπάρχει ήδη με σύνθετο id: {1}\n\n");
+
+        greekMessages.append("# Generic validation messages\n");
+        greekMessages.append("validation.badRequest=Μη έγκυρο αίτημα\n");
+        greekMessages.append("validation.required=Το πεδίο είναι υποχρεωτικό\n");
+        greekMessages.append("validation.invalidValue=Μη έγκυρη τιμή\n\n");
+
+        greekMessages.append("# Error messages\n");
+        greekMessages.append("error.unexpected=Μη αναμενόμενο σφάλμα\n");
+        greekMessages.append("error.endpointNotFound=Το endpoint δεν βρέθηκε: {0}\n");
+        greekMessages.append("error.invalidRequestBody=Μη έγκυρο σώμα αιτήματος\n");
+        greekMessages.append("error.validationFailed=Η επικύρωση απέτυχε\n");
+        greekMessages.append("error.invalid=Μη έγκυρο\n");
+        greekMessages.append("error.usernameAlreadyExists=Το όνομα χρήστη {0} υπάρχει ήδη\n");
+        greekMessages.append("error.emailAlreadyExists=Το email {0} υπάρχει ήδη\n");
+        greekMessages.append("error.invalidCredentials=Μη έγκυρο όνομα χρήστη ή κωδικός πρόσβασης\n");
 
         Path messagesFile = root.resolve("src/main/resources/messages.properties");
         Path greekMessagesFile = root.resolve("src/main/resources/messages_el.properties");
 
-        GeneratorSupport.writeFile(messagesFile, messages, overwrite);
-        GeneratorSupport.writeFile(greekMessagesFile, greekMessages, overwrite);
+        GeneratorSupport.writeFile(messagesFile, messages.toString(), overwrite);
+        GeneratorSupport.writeFile(greekMessagesFile, greekMessages.toString(), overwrite);
     }
 
 
@@ -706,16 +696,15 @@ error.invalid=Μη έγκυρο
     private void writeGitignore(Path projectRoot, boolean overwrite) {
         Path gitignore = projectRoot.resolve(".gitignore");
 
-        String content = """
-target/
-*.class
-*.jar
-*.log
+        StringBuilder builder = new StringBuilder();
 
-.idea/
-*.iml
-""";
+        builder.append("target/\n");
+        builder.append("*.class\n");
+        builder.append("*.jar\n");
+        builder.append("*.log\n\n");
+        builder.append(".idea/\n");
+        builder.append("*.iml\n");
 
-        GeneratorSupport.writeFile(gitignore, content, overwrite);
+        GeneratorSupport.writeFile(gitignore, builder.toString(), overwrite);
     }
 }

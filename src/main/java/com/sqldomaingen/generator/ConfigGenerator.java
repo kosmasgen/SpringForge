@@ -139,6 +139,7 @@ public class ConfigGenerator {
         appendSecurityConfigPackageAndImports(builder, configPackage, securityPackage);
         appendSecurityConfigClassDeclaration(builder);
         appendSecurityConfigFields(builder);
+        appendAuthenticationManagerBean(builder);
         appendSecurityFilterChainBean(builder);
         builder.append("}\n");
 
@@ -153,20 +154,37 @@ public class ConfigGenerator {
      * @param configPackage target configuration package
      * @param securityPackage target security package
      */
-    private void appendSecurityConfigPackageAndImports(
-            StringBuilder builder,
-            String configPackage,
-            String securityPackage
-    ) {
+    private void appendSecurityConfigPackageAndImports(StringBuilder builder, String configPackage, String securityPackage) {
         builder.append("package ").append(configPackage).append(";\n\n");
         builder.append("import ").append(securityPackage).append(".JwtAuthenticationFilter;\n");
         builder.append("import lombok.RequiredArgsConstructor;\n");
         builder.append("import org.springframework.context.annotation.Bean;\n");
         builder.append("import org.springframework.context.annotation.Configuration;\n");
+        builder.append("import org.springframework.security.authentication.AuthenticationManager;\n");
+        builder.append("import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;\n");
         builder.append("import org.springframework.security.config.annotation.web.builders.HttpSecurity;\n");
         builder.append("import org.springframework.security.config.http.SessionCreationPolicy;\n");
         builder.append("import org.springframework.security.web.SecurityFilterChain;\n");
         builder.append("import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;\n\n");
+    }
+
+    /**
+     * Appends the AuthenticationManager bean used by the authentication service.
+     *
+     * @param builder target source builder
+     */
+    private void appendAuthenticationManagerBean(StringBuilder builder) {
+        builder.append("    /**\n");
+        builder.append("     * Creates the authentication manager used for username and password authentication.\n");
+        builder.append("     *\n");
+        builder.append("     * @param authenticationConfiguration Spring Security authentication configuration\n");
+        builder.append("     * @return configured authentication manager\n");
+        builder.append("     * @throws Exception when the authentication manager cannot be created\n");
+        builder.append("     */\n");
+        builder.append("    @Bean\n");
+        builder.append("    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {\n");
+        builder.append("        return authenticationConfiguration.getAuthenticationManager();\n");
+        builder.append("    }\n\n");
     }
 
     /**

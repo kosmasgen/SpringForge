@@ -93,7 +93,7 @@ public class DTOGenerator {
         String usernameField = NamingConverter.toCamelCase(security.getUsernameField());
         StringBuilder builder = new StringBuilder();
 
-        appendAuthenticationDtoPackageAndImports(builder, dtoPackage, true);
+        appendAuthenticationDtoPackageAndImports(builder, dtoPackage, true, false);
         appendRegisterRequestClassDeclaration(builder);
         appendRegisterRequestFields(builder, usernameField);
 
@@ -113,7 +113,7 @@ public class DTOGenerator {
 
         StringBuilder builder = new StringBuilder();
 
-        appendAuthenticationDtoPackageAndImports(builder, dtoPackage, true);
+        appendAuthenticationDtoPackageAndImports(builder, dtoPackage, true, true);
         appendLoginRequestClassDeclaration(builder);
         appendLoginRequestFields(builder);
 
@@ -133,7 +133,7 @@ public class DTOGenerator {
 
         StringBuilder builder = new StringBuilder();
 
-        appendAuthenticationDtoPackageAndImports(builder, dtoPackage, false);
+        appendAuthenticationDtoPackageAndImports(builder, dtoPackage, false, false);
         appendLoginResponseClassDeclaration(builder);
         appendLoginResponseFields(builder);
 
@@ -148,13 +148,14 @@ public class DTOGenerator {
      * @param builder target source builder
      * @param dtoPackage target DTO package
      * @param validationRequired true when validation imports are required
+     * @param propertyOrderRequired true when JsonPropertyOrder is required
      */
-    private void appendAuthenticationDtoPackageAndImports(
-            StringBuilder builder,
-            String dtoPackage,
-            boolean validationRequired
-    ) {
+    private void appendAuthenticationDtoPackageAndImports(StringBuilder builder, String dtoPackage, boolean validationRequired, boolean propertyOrderRequired) {
         builder.append("package ").append(dtoPackage).append(";\n\n");
+
+        if (propertyOrderRequired) {
+            builder.append("import com.fasterxml.jackson.annotation.JsonPropertyOrder;\n");
+        }
 
         if (validationRequired) {
             builder.append("import jakarta.validation.constraints.NotBlank;\n");
@@ -187,9 +188,12 @@ public class DTOGenerator {
      * Appends the fields required by the generated RegisterRequest DTO.
      *
      * @param builder target source builder
-     * @param usernameField configured authentication field name
+     * @param usernameField configured authentication username field name
      */
     private void appendRegisterRequestFields(StringBuilder builder, String usernameField) {
+        builder.append("    @NotBlank\n");
+        builder.append("    private String ").append(usernameField).append(";\n\n");
+
         builder.append("    @NotBlank\n");
         builder.append("    private String firstName;\n\n");
 
@@ -197,7 +201,7 @@ public class DTOGenerator {
         builder.append("    private String lastName;\n\n");
 
         builder.append("    @NotBlank\n");
-        builder.append("    private String ").append(usernameField).append(";\n\n");
+        builder.append("    private String email;\n\n");
 
         builder.append("    @NotBlank\n");
         builder.append("    private String password;\n");
@@ -216,6 +220,7 @@ public class DTOGenerator {
         builder.append("@Builder\n");
         builder.append("@NoArgsConstructor\n");
         builder.append("@AllArgsConstructor\n");
+        builder.append("@JsonPropertyOrder({\"username\", \"password\"})\n");
         builder.append("public class LoginRequest {\n\n");
     }
 

@@ -50,7 +50,7 @@ public class ControllerGenerator {
         GeneratorConfig.Security security = generatorConfig.getSecurity();
 
         if (security != null && security.isEnabled()) {
-            generateRegistryController(controllerDir, controllerPackage, basePackage, overwrite);
+            generateAuthController(controllerDir, controllerPackage, basePackage, overwrite);
         }
 
         log.info("Controllers generated under: {}", controllerDir.toAbsolutePath());
@@ -123,61 +123,39 @@ public class ControllerGenerator {
     }
 
     /**
-     * Generates the registry controller used for user registration and authentication.
+     * Generates the authentication controller used for user registration and login.
      *
      * @param controllerDir target controller directory
      * @param controllerPackage generated controller package
      * @param basePackage generated application base package
      * @param overwrite overwrite existing file when true
      */
-    private void generateRegistryController(
-            Path controllerDir,
-            String controllerPackage,
-            String basePackage,
-            boolean overwrite
-    ) {
-        String securityDtoPackage =
-                PackageResolver.resolvePackageName(basePackage, "security.dto");
-
-        String servicePackage =
-                PackageResolver.resolvePackageName(basePackage, Constants.SERVICE_PACKAGE);
+    private void generateAuthController(Path controllerDir, String controllerPackage, String basePackage, boolean overwrite) {
+        String dtoPackage = PackageResolver.resolvePackageName(basePackage, Constants.DTO_PACKAGE);
+        String servicePackage = PackageResolver.resolvePackageName(basePackage, Constants.SERVICE_PACKAGE);
 
         JavaImportCollector importCollector = new JavaImportCollector();
 
-        importCollector.addImport(
-                "import " + securityDtoPackage + ".RegisterRequest;"
-        );
-        importCollector.addImport(
-                "import " + securityDtoPackage + ".LoginRequest;"
-        );
-        importCollector.addImport(
-                "import " + securityDtoPackage + ".LoginResponse;"
-        );
-        importCollector.addImport(
-                "import " + servicePackage + ".AuthService;"
-        );
+        importCollector.addImport("import " + dtoPackage + ".RegisterRequest;");
+        importCollector.addImport("import " + dtoPackage + ".LoginRequest;");
+        importCollector.addImport("import " + dtoPackage + ".LoginResponse;");
+        importCollector.addImport("import " + servicePackage + ".AuthService;");
 
-        GeneratorImportSupport.addControllerFrameworkImports(importCollector);
+        GeneratorImportSupport.addControllerFrameworkImports(importCollector, false);
 
         StringBuilder sourceBuilder = new StringBuilder();
 
-        sourceBuilder.append("package ")
-                .append(controllerPackage)
-                .append(";\n\n");
-
+        sourceBuilder.append("package ").append(controllerPackage).append(";\n\n");
         sourceBuilder.append(importCollector.buildImportBlock());
-
         sourceBuilder.append("/**\n");
         sourceBuilder.append(" * REST controller for user registration and authentication.\n");
         sourceBuilder.append(" * Generated automatically by SQLDomainGen.\n");
         sourceBuilder.append(" */\n");
-
         sourceBuilder.append("@RestController\n");
         sourceBuilder.append("@RequiredArgsConstructor\n");
-        sourceBuilder.append("@Tag(name = \"Registry\", description = \"User registration and authentication API\")\n");
-        sourceBuilder.append("@RequestMapping(\"/registry\")\n");
-        sourceBuilder.append("public class RegistryController {\n\n");
-
+        sourceBuilder.append("@Tag(name = \"Authentication\", description = \"User registration and authentication API\")\n");
+        sourceBuilder.append("@RequestMapping(\"/api/auth\")\n");
+        sourceBuilder.append("public class AuthController {\n\n");
         sourceBuilder.append("    private final AuthService authService;\n\n");
 
         appendRegisterMethod(sourceBuilder, "authService");
@@ -185,17 +163,14 @@ public class ControllerGenerator {
 
         sourceBuilder.append("}\n");
 
-        Path filePath = controllerDir.resolve("RegistryController.java");
+        Path filePath = controllerDir.resolve("AuthController.java");
         GeneratorSupport.writeFile(filePath, sourceBuilder.toString(), overwrite);
 
-        log.debug(
-                "Generated RegistryController: {}",
-                filePath.toAbsolutePath()
-        );
+        log.debug("Generated AuthController: {}", filePath.toAbsolutePath());
     }
 
     /**
-     * Appends the user registration endpoint to the registry controller.
+     * Appends the user registration endpoint to the authentication controller.
      *
      * @param stringBuilder target builder
      * @param serviceName injected authentication service variable name
@@ -229,7 +204,7 @@ public class ControllerGenerator {
     }
 
     /**
-     * Appends the user login endpoint to the registry controller.
+     * Appends the user login endpoint to the authentication controller.
      *
      * @param stringBuilder target builder
      * @param serviceName injected authentication service variable name
@@ -1014,7 +989,7 @@ public class ControllerGenerator {
     }
 
     /**
-     * Builds imports required by a generated controller.
+     * Builds imports required by a generated CRUD controller.
      *
      * @param dtoPackage DTO package name
      * @param dtoName DTO simple class name
@@ -1023,19 +998,13 @@ public class ControllerGenerator {
      * @param primaryKeyColumns primary key columns
      * @return populated import collector
      */
-    private JavaImportCollector buildControllerImports(
-            String dtoPackage,
-            String dtoName,
-            String servicePackage,
-            String serviceName,
-            List<Column> primaryKeyColumns
-    ) {
+    private JavaImportCollector buildControllerImports(String dtoPackage, String dtoName, String servicePackage, String serviceName, List<Column> primaryKeyColumns) {
         JavaImportCollector importCollector = new JavaImportCollector();
 
         importCollector.addImport("import " + dtoPackage + "." + dtoName + ";");
         importCollector.addImport("import " + servicePackage + "." + serviceName + ";");
 
-        GeneratorImportSupport.addControllerFrameworkImports(importCollector);
+        GeneratorImportSupport.addControllerFrameworkImports(importCollector, true);
 
         primaryKeyColumns.forEach(column ->
                 importCollector.addImportForType(detectJavaTypeForPkColumn(column))

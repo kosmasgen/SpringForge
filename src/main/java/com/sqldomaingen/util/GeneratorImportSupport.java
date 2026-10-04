@@ -155,12 +155,13 @@ public final class GeneratorImportSupport {
      *     <li>Spring Web annotations and response types</li>
      *     <li>Jakarta validation annotations</li>
      *     <li>Lombok constructor support</li>
-     *     <li>Java collection types used by controllers</li>
+     *     <li>Java collection types when required</li>
      * </ul>
      *
      * @param importCollector target import collector
+     * @param includeListImport true when the generated controller requires {@link java.util.List}
      */
-    public static void addControllerFrameworkImports(JavaImportCollector importCollector) {
+    public static void addControllerFrameworkImports(JavaImportCollector importCollector, boolean includeListImport) {
         Objects.requireNonNull(importCollector, "importCollector must not be null");
 
         importCollector.addImport("import io.swagger.v3.oas.annotations.Operation;");
@@ -170,7 +171,10 @@ public final class GeneratorImportSupport {
         importCollector.addImport("import org.springframework.http.HttpStatus;");
         importCollector.addImport("import org.springframework.http.ResponseEntity;");
         importCollector.addImport("import org.springframework.web.bind.annotation.*;");
-        importCollector.addImport("import java.util.List;");
+
+        if (includeListImport) {
+            importCollector.addImport("import java.util.List;");
+        }
     }
 
     /**

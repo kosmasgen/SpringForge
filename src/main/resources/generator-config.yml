@@ -11,7 +11,7 @@ lookupTables:
 security:
   enabled: true
   userTable: users
-  usernameField: email
+  usernameField: username
   passwordField: password_hash
 
   # JWT authentication configuration.

@@ -135,32 +135,28 @@ public class ServiceImplGenerator {
         Objects.requireNonNull(basePackage, "basePackage must not be null");
         Objects.requireNonNull(security, "security must not be null");
 
-        String entityName = NamingConverter.toPascalCase(
-                GeneratorSupport.normalizeTableName(userTable.getName())
-        );
-
+        String entityName = NamingConverter.toPascalCase(GeneratorSupport.normalizeTableName(userTable.getName()));
         String repositoryName = entityName + "Repository";
         String repositoryVariableName = NamingConverter.decapitalizeFirstLetter(repositoryName);
         String usernameField = NamingConverter.toCamelCase(security.getUsernameField());
         String passwordField = NamingConverter.toCamelCase(security.getPasswordField());
+
         String serviceImplPackage = PackageResolver.resolvePackageName(basePackage, "serviceImpl");
         String servicePackage = PackageResolver.resolvePackageName(basePackage, "service");
-        String securityDtoPackage = PackageResolver.resolvePackageName(basePackage, "security.dto");
+        String dtoPackage = PackageResolver.resolvePackageName(basePackage, "dto");
         String entityPackage = PackageResolver.resolvePackageName(basePackage, "entity");
         String repositoryPackage = PackageResolver.resolvePackageName(basePackage, "repository");
-        String securityPackage = PackageResolver.resolvePackageName(basePackage, "security");
+        String exceptionPackage = PackageResolver.resolvePackageName(basePackage, "exception");
+        String utilPackage = PackageResolver.resolvePackageName(basePackage, "util");
 
         StringBuilder stringBuilder = new StringBuilder();
 
-        appendAuthServiceImplPackageAndImports(
-                stringBuilder, serviceImplPackage, servicePackage, securityDtoPackage, entityPackage,
-                repositoryPackage, securityPackage, entityName, repositoryName);
-
+        appendAuthServiceImplPackageAndImports(stringBuilder, serviceImplPackage, servicePackage, dtoPackage, entityPackage, repositoryPackage, exceptionPackage, utilPackage, entityName, repositoryName);
         appendAuthServiceImplClassHeader(stringBuilder);
         appendAuthServiceImplFields(stringBuilder, repositoryName, repositoryVariableName);
         appendRegisterAuthMethod(stringBuilder, entityName, repositoryVariableName, usernameField, passwordField);
-        appendLoginAuthMethod(stringBuilder, usernameField);
-        appendServiceImplClassFooter(stringBuilder);
+        appendLoginAuthMethod(stringBuilder);
+        stringBuilder.append("}\n");
 
         return stringBuilder.toString();
     }
@@ -170,11 +166,8 @@ public class ServiceImplGenerator {
      * Appends the user login service method.
      *
      * @param stringBuilder target source builder
-     * @param usernameField configured authentication username field
      */
-    private void appendLoginAuthMethod(StringBuilder stringBuilder, String usernameField) {
-        String usernameGetter = "get" + NamingConverter.toPascalCase(usernameField);
-
+    private void appendLoginAuthMethod(StringBuilder stringBuilder) {
         stringBuilder.append("    /**\n");
         stringBuilder.append("     * Authenticates an existing application user and generates an access token.\n");
         stringBuilder.append("     *\n");
@@ -184,15 +177,9 @@ public class ServiceImplGenerator {
         stringBuilder.append("    @Override\n");
         stringBuilder.append("    public LoginResponse login(LoginRequest request) {\n");
         stringBuilder.append("        log.info(\"Authenticating application user.\");\n\n");
-
-        stringBuilder.append("        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.")
-                .append(usernameGetter).append("(), request.getPassword()));\n\n");
-
-        stringBuilder.append("        String token = jwtService.generateToken(request.")
-                .append(usernameGetter).append("());\n\n");
-
+        stringBuilder.append("        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));\n\n");
+        stringBuilder.append("        String token = jwtService.generateToken(request.getUsername());\n\n");
         stringBuilder.append("        log.info(\"Application user authenticated successfully.\");\n\n");
-
         stringBuilder.append("        return LoginResponse.builder().token(token).build();\n");
         stringBuilder.append("    }\n\n");
     }
@@ -203,27 +190,30 @@ public class ServiceImplGenerator {
      * @param stringBuilder target source builder
      * @param serviceImplPackage service implementation package
      * @param servicePackage service package
-     * @param securityDtoPackage security DTO package
+     * @param dtoPackage DTO package
      * @param entityPackage entity package
      * @param repositoryPackage repository package
-     * @param securityPackage security package
+     * @param exceptionPackage exception package
+     * @param utilPackage utility package
      * @param entityName security user entity name
      * @param repositoryName security user repository name
      */
-    private void appendAuthServiceImplPackageAndImports(StringBuilder stringBuilder, String serviceImplPackage, String servicePackage,
-                                                        String securityDtoPackage, String entityPackage, String repositoryPackage,
-                                                        String securityPackage, String entityName, String repositoryName) {
+    private void appendAuthServiceImplPackageAndImports(StringBuilder stringBuilder, String serviceImplPackage, String servicePackage, String dtoPackage, String entityPackage, String repositoryPackage, String exceptionPackage, String utilPackage, String entityName, String repositoryName) {
         stringBuilder.append("package ").append(serviceImplPackage).append(";\n\n");
 
         LinkedHashSet<String> imports = new LinkedHashSet<>();
 
-        imports.add("import " + securityDtoPackage + ".LoginRequest;");
-        imports.add("import " + securityDtoPackage + ".LoginResponse;");
-        imports.add("import " + securityDtoPackage + ".RegisterRequest;");
+        imports.add("import " + dtoPackage + ".LoginRequest;");
+        imports.add("import " + dtoPackage + ".LoginResponse;");
+        imports.add("import " + dtoPackage + ".RegisterRequest;");
         imports.add("import " + entityPackage + "." + entityName + ";");
+        imports.add("import " + exceptionPackage + ".ErrorCodes;");
+        imports.add("import " + exceptionPackage + ".ErrorMessages;");
+        imports.add("import " + exceptionPackage + ".GeneratedRuntimeException;");
         imports.add("import " + repositoryPackage + "." + repositoryName + ";");
         imports.add("import " + servicePackage + ".AuthService;");
-        imports.add("import " + securityPackage + ".JwtService;");
+        imports.add("import " + servicePackage + ".JwtService;");
+        imports.add("import " + utilPackage + ".MessageResolver;");
         imports.add("import lombok.RequiredArgsConstructor;");
         imports.add("import lombok.extern.log4j.Log4j2;");
         imports.add("import org.springframework.security.authentication.AuthenticationManager;");
@@ -266,11 +256,17 @@ public class ServiceImplGenerator {
         stringBuilder.append("    private final ").append(repositoryName).append(" ").append(repositoryVariableName).append(";\n");
         stringBuilder.append("    private final PasswordEncoder passwordEncoder;\n");
         stringBuilder.append("    private final AuthenticationManager authenticationManager;\n");
-        stringBuilder.append("    private final JwtService jwtService;\n\n");
+        stringBuilder.append("    private final JwtService jwtService;\n");
+        stringBuilder.append("    private final MessageResolver messageResolver;\n\n");
     }
 
     /**
      * Appends the user registration service method.
+     *
+     * <p>
+     * The generated registration flow validates username and email uniqueness,
+     * encodes the plain-text password, and persists the new application user.
+     * </p>
      *
      * @param stringBuilder target source builder
      * @param entityName security user entity name
@@ -279,7 +275,8 @@ public class ServiceImplGenerator {
      * @param passwordField configured password field
      */
     private void appendRegisterAuthMethod(StringBuilder stringBuilder, String entityName, String repositoryVariableName, String usernameField, String passwordField) {
-        String usernameGetter = "get" + NamingConverter.toPascalCase(usernameField);
+        String usernameFieldSuffix = NamingConverter.toPascalCase(usernameField);
+        String registerUsernameGetter = "get" + usernameFieldSuffix;
 
         stringBuilder.append("    /**\n");
         stringBuilder.append("     * Registers a new application user.\n");
@@ -290,16 +287,27 @@ public class ServiceImplGenerator {
         stringBuilder.append("    public void register(RegisterRequest request) {\n");
         stringBuilder.append("        log.info(\"Registering new application user.\");\n\n");
 
-        stringBuilder.append("        if (").append(repositoryVariableName).append(".existsBy")
-                .append(NamingConverter.toPascalCase(usernameField)).append("(request.")
-                .append(usernameGetter).append("())) {\n");
-        stringBuilder.append("            throw new IllegalArgumentException(\"User already exists.\");\n");
+        stringBuilder.append("        if (").append(repositoryVariableName).append(".existsBy").append(usernameFieldSuffix)
+                .append("(request.").append(registerUsernameGetter).append("())) {\n");
+        stringBuilder.append("            throw GeneratedRuntimeException.builder()\n");
+        stringBuilder.append("                    .code(ErrorCodes.USERNAME_ALREADY_EXISTS)\n");
+        stringBuilder.append("                    .message(messageResolver.resolve(ErrorMessages.ERROR_USERNAME_ALREADY_EXISTS, request.")
+                .append(registerUsernameGetter).append("()))\n");
+        stringBuilder.append("                    .build();\n");
+        stringBuilder.append("        }\n\n");
+
+        stringBuilder.append("        if (").append(repositoryVariableName).append(".existsByEmail(request.getEmail())) {\n");
+        stringBuilder.append("            throw GeneratedRuntimeException.builder()\n");
+        stringBuilder.append("                    .code(ErrorCodes.EMAIL_ALREADY_EXISTS)\n");
+        stringBuilder.append("                    .message(messageResolver.resolve(ErrorMessages.ERROR_EMAIL_ALREADY_EXISTS, request.getEmail()))\n");
+        stringBuilder.append("                    .build();\n");
         stringBuilder.append("        }\n\n");
 
         stringBuilder.append("        ").append(entityName).append(" user = ").append(entityName).append(".builder()\n");
+        stringBuilder.append("                .").append(usernameField).append("(request.").append(registerUsernameGetter).append("())\n");
         stringBuilder.append("                .firstName(request.getFirstName())\n");
         stringBuilder.append("                .lastName(request.getLastName())\n");
-        stringBuilder.append("                .").append(usernameField).append("(request.").append(usernameGetter).append("())\n");
+        stringBuilder.append("                .email(request.getEmail())\n");
         stringBuilder.append("                .").append(passwordField).append("(passwordEncoder.encode(request.getPassword()))\n");
         stringBuilder.append("                .build();\n\n");
 
