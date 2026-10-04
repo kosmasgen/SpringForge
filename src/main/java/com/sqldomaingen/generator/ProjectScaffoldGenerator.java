@@ -541,6 +541,7 @@ public class ProjectScaffoldGenerator {
         messages.append("validation.badRequest=Bad request\n");
         messages.append("validation.required=Field is required\n");
         messages.append("validation.invalidValue=Invalid value\n\n");
+        messages.append("validation.email.invalid=Invalid email address\n\n");
 
         messages.append("# Error messages\n");
         messages.append("error.unexpected=Unexpected error\n");
@@ -565,6 +566,7 @@ public class ProjectScaffoldGenerator {
         greekMessages.append("validation.badRequest=Μη έγκυρο αίτημα\n");
         greekMessages.append("validation.required=Το πεδίο είναι υποχρεωτικό\n");
         greekMessages.append("validation.invalidValue=Μη έγκυρη τιμή\n\n");
+        greekMessages.append("validation.email.invalid=Μη έγκυρη διεύθυνση email\n\n");
 
         greekMessages.append("# Error messages\n");
         greekMessages.append("error.unexpected=Μη αναμενόμενο σφάλμα\n");

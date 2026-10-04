@@ -545,7 +545,7 @@ public class ExceptionGenerator {
     }
 
     /**
-     * Builds the validation error response helper method.
+     * Builds a standardized validation error response.
      *
      * @return generated method source content
      */
@@ -560,12 +560,8 @@ public class ExceptionGenerator {
         builder.append(" * @param request current HTTP request\n");
         builder.append(" * @return standardized validation error response\n");
         builder.append(" */\n");
-        builder.append("private ResponseEntity<ErrorResponse> validationError(\n");
-        builder.append("        String message,\n");
-        builder.append("        Exception exception,\n");
-        builder.append("        HttpServletRequest request\n");
-        builder.append(") {\n");
-        builder.append("    return build(ErrorCodes.VALIDATION_ERROR, HttpStatus.UNPROCESSABLE_ENTITY, message, exception, request);\n");
+        builder.append("private ResponseEntity<ErrorResponse> validationError(String message, Exception exception, HttpServletRequest request) {\n");
+        builder.append("    return build(ErrorCodes.VALIDATION_ERROR, HttpStatus.BAD_REQUEST, message, exception, request);\n");
         builder.append("}\n\n");
 
         return builder.toString();
@@ -701,9 +697,8 @@ public class ExceptionGenerator {
         builder.append("    }\n\n");
         builder.append("    return switch (errorCode) {\n");
         builder.append("        case ErrorCodes.NOT_FOUND -> HttpStatus.NOT_FOUND;\n");
-        builder.append("        case ErrorCodes.BAD_REQUEST, ErrorCodes.REQUEST_ERROR, ErrorCodes.EMAIL_ALREADY_EXISTS -> HttpStatus.BAD_REQUEST;\n");
+        builder.append("        case ErrorCodes.BAD_REQUEST, ErrorCodes.REQUEST_ERROR, ErrorCodes.VALIDATION_ERROR, ErrorCodes.USERNAME_ALREADY_EXISTS, ErrorCodes.EMAIL_ALREADY_EXISTS -> HttpStatus.BAD_REQUEST;\n");
         builder.append("        case ErrorCodes.UNAUTHORIZED -> HttpStatus.UNAUTHORIZED;\n");
-        builder.append("        case ErrorCodes.VALIDATION_ERROR -> HttpStatus.UNPROCESSABLE_ENTITY;\n");
         builder.append("        default -> HttpStatus.INTERNAL_SERVER_ERROR;\n");
         builder.append("    };\n");
         builder.append("}\n\n");
