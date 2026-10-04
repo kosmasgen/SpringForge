@@ -9,15 +9,21 @@ import org.springframework.stereotype.Component;
 import java.nio.file.Path;
 import java.util.Objects;
 
+/**
+ * Generates security infrastructure classes.
+ */
 @Log4j2
 @Component
 public class SecurityGenerator {
 
-    public void generate(
-            String outputDir,
-            String basePackage,
-            GeneratorConfig generatorConfig
-    ) {
+    /**
+     * Generates the JWT authentication filter when security and JWT are enabled.
+     *
+     * @param outputDir base output directory
+     * @param basePackage base Java package
+     * @param generatorConfig generator configuration
+     */
+    public void generate(String outputDir, String basePackage, GeneratorConfig generatorConfig) {
         Objects.requireNonNull(outputDir, "outputDir must not be null");
         Objects.requireNonNull(basePackage, "basePackage must not be null");
         Objects.requireNonNull(generatorConfig, "generatorConfig must not be null");
@@ -29,482 +35,157 @@ public class SecurityGenerator {
             return;
         }
 
-        String securityPackage = PackageResolver.resolvePackageName(
-                basePackage,
-                "security"
-        );
+        if (security.getJwt() == null || !security.getJwt().isEnabled()) {
+            log.debug("JWT generation is disabled.");
+            return;
+        }
+
+        String securityPackage = PackageResolver.resolvePackageName(basePackage, "security");
+        String servicePackage = PackageResolver.resolvePackageName(basePackage, "service");
 
         Path securityDir = GeneratorSupport.ensureDirectory(
-                PackageResolver.resolvePath(
-                        outputDir,
-                        basePackage,
-                        "security"
-                )
+                PackageResolver.resolvePath(outputDir, basePackage, "security")
         );
 
-        generatePasswordConfig(securityDir, securityPackage);
-        generateSecurityConfig(securityDir, securityPackage);
-        generateJwtService(securityDir, securityPackage);
-        generateJwtAuthenticationFilter(securityDir, securityPackage);
-        generateCustomUserDetailsService(securityDir, securityPackage, basePackage, security);
+        generateJwtAuthenticationFilter(securityDir, securityPackage, servicePackage);
 
-        log.debug(
-                "Security generation completed under: {}",
-                securityDir.toAbsolutePath()
-        );
+        log.debug("Security generated under: {}", securityDir.toAbsolutePath());
     }
 
     /**
-     * Generates the password encoder configuration used by Spring Security.
+     * Generates the JWT authentication filter.
      *
      * @param securityDir target security package directory
      * @param securityPackage generated security package name
+     * @param servicePackage generated service package name
      */
-    private void generatePasswordConfig(
-            Path securityDir,
-            String securityPackage
-    ) {
-        String content = """
-                package %s;
+    private void generateJwtAuthenticationFilter(Path securityDir, String securityPackage, String servicePackage) {
+        StringBuilder stringBuilder = new StringBuilder();
 
-                import org.springframework.context.annotation.Bean;
-                import org.springframework.context.annotation.Configuration;
-                import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-                import org.springframework.security.crypto.password.PasswordEncoder;
+        appendJwtFilterPackageAndImports(stringBuilder, securityPackage, servicePackage);
+        appendJwtFilterClassDeclaration(stringBuilder);
+        appendJwtFilterFields(stringBuilder);
+        appendJwtFilterDoFilterInternal(stringBuilder);
 
-                @Configuration
-                public class PasswordConfig {
-
-                    @Bean
-                    public PasswordEncoder passwordEncoder() {
-                        return new BCryptPasswordEncoder();
-                    }
-                }
-                """.formatted(securityPackage);
-
-        Path file = securityDir.resolve("PasswordConfig.java");
-
-        GeneratorSupport.writeFile(file, content);
-
-        log.debug("Generated PasswordConfig: {}", file.toAbsolutePath());
-    }
-
-    /**
-     * Generates the main Spring Security filter chain configuration.
-     *
-     * @param securityDir target security package directory
-     * @param securityPackage generated security package name
-     */
-    private void generateSecurityConfig(Path securityDir, String securityPackage) {
-        String content = """
-    package %s;
-
-    import org.springframework.context.annotation.Bean;
-    import org.springframework.context.annotation.Configuration;
-    import org.springframework.security.authentication.AuthenticationManager;
-    import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-    import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-    import org.springframework.security.config.http.SessionCreationPolicy;
-    import org.springframework.security.web.SecurityFilterChain;
-    import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-
-    @Configuration
-    public class SecurityConfig {
-
-        private final JwtAuthenticationFilter jwtAuthenticationFilter;
-
-        public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
-            this.jwtAuthenticationFilter = jwtAuthenticationFilter;
-        }
-
-        @Bean
-        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-            http
-                    .csrf(csrf -> csrf.disable())
-                    .sessionManagement(session -> session
-                            .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                    .authorizeHttpRequests(auth -> auth
-                            .requestMatchers(
-                                    "/registry/register",
-                                    "/registry/login",
-                                    "/swagger-ui/**",
-                                    "/v3/api-docs/**"
-                            ).permitAll()
-                            .anyRequest().authenticated())
-                    .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
-            return http.build();
-        }
-
-        /**
-         * Provides the authentication manager used by the authentication service.
-         *
-         * @param configuration Spring Security authentication configuration
-         * @return configured authentication manager
-         * @throws Exception when the authentication manager cannot be created
-         */
-        @Bean
-        public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
-            return configuration.getAuthenticationManager();
-        }
-    }
-    
-    """.formatted(securityPackage);
-
-        Path file = securityDir.resolve("SecurityConfig.java");
-
-        GeneratorSupport.writeFile(file, content);
-
-        log.debug("Generated SecurityConfig: {}", file.toAbsolutePath());
-    }
-
-    /**
-     * Generates the JWT service responsible for creating, parsing and validating
-     * JSON Web Tokens used by the generated application.
-     *
-     * @param securityDir target security package directory
-     * @param securityPackage generated security package name
-     */
-    private void generateJwtService(
-            Path securityDir,
-            String securityPackage
-    ) {
-        String content = """
-            package %s;
-
-            import io.jsonwebtoken.Claims;
-            import io.jsonwebtoken.Jwts;
-            import io.jsonwebtoken.io.Decoders;
-            import io.jsonwebtoken.security.Keys;
-            import org.springframework.beans.factory.annotation.Value;
-            import org.springframework.stereotype.Service;
-
-            import javax.crypto.SecretKey;
-            import java.util.Date;
-            import java.util.function.Function;
-
-            /**
-             * Provides JWT creation, parsing and validation operations.
-             */
-            @Service
-            public class JwtService {
-
-                private final SecretKey signingKey;
-                private final long expirationMinutes;
-
-                /**
-                 * Creates the JWT service using the configured secret and token lifetime.
-                 *
-                 * @param secret Base64 encoded JWT signing secret
-                 * @param expirationMinutes access token lifetime in minutes
-                 */
-                public JwtService(
-                        @Value("${security.jwt.secret}") String secret,
-                        @Value("${security.jwt.expiration-minutes}") long expirationMinutes
-                ) {
-                    this.signingKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
-                    this.expirationMinutes = expirationMinutes;
-                }
-
-                /**
-                 * Generates an access token for the supplied username.
-                 *
-                 * @param username authenticated username
-                 * @return generated JWT access token
-                 */
-                public String generateToken(String username) {
-                    Date issuedAt = new Date();
-                    Date expiration = new Date(
-                            issuedAt.getTime() + expirationMinutes * 60_000L
-                    );
-
-                    return Jwts.builder()
-                            .subject(username)
-                            .issuedAt(issuedAt)
-                            .expiration(expiration)
-                            .signWith(signingKey)
-                            .compact();
-                }
-
-                /**
-                 * Extracts the username stored in the token subject.
-                 *
-                 * @param token JWT access token
-                 * @return token subject
-                 */
-                public String extractUsername(String token) {
-                    return extractClaim(token, Claims::getSubject);
-                }
-
-                /**
-                 * Determines whether a token belongs to the supplied username
-                 * and has not expired.
-                 *
-                 * @param token JWT access token
-                 * @param username expected username
-                 * @return true when the token is valid
-                 */
-                public boolean isTokenValid(String token, String username) {
-                    String tokenUsername = extractUsername(token);
-
-                    return tokenUsername.equals(username)
-                            && !isTokenExpired(token);
-                }
-
-                /**
-                 * Extracts a claim from the supplied token.
-                 *
-                 * @param token JWT access token
-                 * @param claimsResolver claim extraction function
-                 * @param <T> extracted claim type
-                 * @return extracted claim value
-                 */
-                private <T> T extractClaim(
-                        String token,
-                        Function<Claims, T> claimsResolver
-                ) {
-                    Claims claims = extractAllClaims(token);
-                    return claimsResolver.apply(claims);
-                }
-
-                /**
-                 * Parses and verifies all claims contained in the supplied token.
-                 *
-                 * @param token JWT access token
-                 * @return verified token claims
-                 */
-                private Claims extractAllClaims(String token) {
-                    return Jwts.parser()
-                            .verifyWith(signingKey)
-                            .build()
-                            .parseSignedClaims(token)
-                            .getPayload();
-                }
-
-                /**
-                 * Determines whether the supplied token has expired.
-                 *
-                 * @param token JWT access token
-                 * @return true when the token expiration is before the current time
-                 */
-                private boolean isTokenExpired(String token) {
-                    Date expiration = extractClaim(token, Claims::getExpiration);
-                    return expiration.before(new Date());
-                }
-            }
-            """.formatted(securityPackage);
-
-        Path file = securityDir.resolve("JwtService.java");
-
-        GeneratorSupport.writeFile(file, content);
-
-        log.debug("Generated JwtService: {}", file.toAbsolutePath());
-    }
-
-    /**
-     * Generates the JWT authentication filter used to authenticate requests
-     * containing a Bearer access token.
-     *
-     * @param securityDir target security package directory
-     * @param securityPackage generated security package name
-     */
-    private void generateJwtAuthenticationFilter(Path securityDir, String securityPackage) {
-        String content = """
-        package %s;
-
-        import io.jsonwebtoken.JwtException;
-        import jakarta.servlet.FilterChain;
-        import jakarta.servlet.ServletException;
-        import jakarta.servlet.http.HttpServletRequest;
-        import jakarta.servlet.http.HttpServletResponse;
-        import lombok.RequiredArgsConstructor;
-        import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-        import org.springframework.security.core.context.SecurityContextHolder;
-        import org.springframework.security.core.userdetails.UserDetails;
-        import org.springframework.security.core.userdetails.UsernameNotFoundException;
-        import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
-        import org.springframework.stereotype.Component;
-        import org.springframework.web.filter.OncePerRequestFilter;
-
-        import java.io.IOException;
-
-        /**
-         * Authenticates requests containing a valid JWT Bearer token.
-         */
-        @Component
-        @RequiredArgsConstructor
-        public class JwtAuthenticationFilter extends OncePerRequestFilter {
-
-            private static final String AUTHORIZATION_HEADER = "Authorization";
-            private static final String BEARER_PREFIX = "Bearer ";
-
-            private final JwtService jwtService;
-            private final CustomUserDetailsService customUserDetailsService;
-
-            /**
-             * Extracts and validates the JWT token and initializes the Spring Security context.
-             *
-             * @param request current HTTP request
-             * @param response current HTTP response
-             * @param filterChain current filter chain
-             * @throws ServletException when request filtering fails
-             * @throws IOException when request processing fails
-             */
-            @Override
-            protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-                    throws ServletException, IOException {
-
-                String authorizationHeader = request.getHeader(AUTHORIZATION_HEADER);
-
-                if (authorizationHeader == null || !authorizationHeader.startsWith(BEARER_PREFIX)) {
-                    filterChain.doFilter(request, response);
-                    return;
-                }
-
-                String token = authorizationHeader.substring(BEARER_PREFIX.length());
-
-                try {
-                    String username = jwtService.extractUsername(token);
-
-                    if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                        UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
-
-                        if (jwtService.isTokenValid(token, userDetails.getUsername())) {
-                            UsernamePasswordAuthenticationToken authentication =
-                                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-
-                            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                            SecurityContextHolder.getContext().setAuthentication(authentication);
-                        }
-                    }
-                } catch (JwtException | IllegalArgumentException | UsernameNotFoundException exception) {
-                    SecurityContextHolder.clearContext();
-                }
-
-                filterChain.doFilter(request, response);
-            }
-        }
-        """.formatted(securityPackage);
+        stringBuilder.append("}\n");
 
         Path file = securityDir.resolve("JwtAuthenticationFilter.java");
-        GeneratorSupport.writeFile(file, content);
+        GeneratorSupport.writeFile(file, stringBuilder.toString());
+
         log.debug("Generated JwtAuthenticationFilter: {}", file.toAbsolutePath());
     }
 
     /**
-     * Generates the Spring Security UserDetailsService implementation used
-     * to load authentication users from the configured security user table.
+     * Appends the package declaration and imports required by the JWT filter.
      *
-     * @param securityDir target security package directory
+     * @param stringBuilder target source builder
      * @param securityPackage generated security package name
-     * @param basePackage generated application base package
-     * @param security security generator configuration
+     * @param servicePackage generated service package name
      */
-    private void generateCustomUserDetailsService(
-            Path securityDir,
+    private void appendJwtFilterPackageAndImports(
+            StringBuilder stringBuilder,
             String securityPackage,
-            String basePackage,
-            GeneratorConfig.Security security
+            String servicePackage
     ) {
-        String normalizedUserTable =
-                GeneratorSupport.normalizeTableName(security.getUserTable());
+        stringBuilder.append("package ").append(securityPackage).append(";\n\n");
 
-        String entityName =
-                com.sqldomaingen.util.NamingConverter.toPascalCase(normalizedUserTable);
+        stringBuilder.append("import ").append(servicePackage).append(".CustomUserDetailsService;\n");
+        stringBuilder.append("import ").append(servicePackage).append(".JwtService;\n");
+        stringBuilder.append("import io.jsonwebtoken.JwtException;\n");
+        stringBuilder.append("import jakarta.servlet.FilterChain;\n");
+        stringBuilder.append("import jakarta.servlet.ServletException;\n");
+        stringBuilder.append("import jakarta.servlet.http.HttpServletRequest;\n");
+        stringBuilder.append("import jakarta.servlet.http.HttpServletResponse;\n");
+        stringBuilder.append("import lombok.RequiredArgsConstructor;\n");
+        stringBuilder.append("import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;\n");
+        stringBuilder.append("import org.springframework.security.core.context.SecurityContextHolder;\n");
+        stringBuilder.append("import org.springframework.security.core.userdetails.UserDetails;\n");
+        stringBuilder.append("import org.springframework.security.core.userdetails.UsernameNotFoundException;\n");
+        stringBuilder.append("import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;\n");
+        stringBuilder.append("import org.springframework.stereotype.Component;\n");
+        stringBuilder.append("import org.springframework.web.filter.OncePerRequestFilter;\n");
+        stringBuilder.append("\n");
+        stringBuilder.append("import java.io.IOException;\n");
+        stringBuilder.append("\n");
+    }
 
-        String repositoryName = entityName + "Repository";
+    /**
+     * Appends the JWT filter class declaration.
+     *
+     * @param stringBuilder target source builder
+     */
+    private void appendJwtFilterClassDeclaration(StringBuilder stringBuilder) {
+        stringBuilder.append("/**\n");
+        stringBuilder.append(" * Authenticates requests containing a valid JWT Bearer token.\n");
+        stringBuilder.append(" */\n");
+        stringBuilder.append("@Component\n");
+        stringBuilder.append("@RequiredArgsConstructor\n");
+        stringBuilder.append("public class JwtAuthenticationFilter extends OncePerRequestFilter {\n");
+        stringBuilder.append("\n");
+    }
 
-        String entityPackage =
-                PackageResolver.resolvePackageName(basePackage, "entity");
+    /**
+     * Appends the constants and dependencies used by the JWT filter.
+     *
+     * @param stringBuilder target source builder
+     */
+    private void appendJwtFilterFields(StringBuilder stringBuilder) {
+        stringBuilder.append("    private static final String AUTHORIZATION_HEADER = \"Authorization\";\n");
+        stringBuilder.append("    private static final String BEARER_PREFIX = \"Bearer \";\n");
+        stringBuilder.append("\n");
+        stringBuilder.append("    private final JwtService jwtService;\n");
+        stringBuilder.append("    private final CustomUserDetailsService customUserDetailsService;\n");
+        stringBuilder.append("\n");
+    }
 
-        String repositoryPackage =
-                PackageResolver.resolvePackageName(basePackage, "repository");
-
-        String usernameField =
-                com.sqldomaingen.util.NamingConverter.toCamelCase(
-                        security.getUsernameField()
-                );
-
-        String passwordField =
-                com.sqldomaingen.util.NamingConverter.toCamelCase(
-                        security.getPasswordField()
-                );
-
-        String usernameMethodSuffix =
-                com.sqldomaingen.util.NamingConverter.toPascalCase(usernameField);
-
-        String passwordMethodSuffix =
-                com.sqldomaingen.util.NamingConverter.toPascalCase(passwordField);
-
-        String repositoryVariable =
-                com.sqldomaingen.util.NamingConverter.decapitalizeFirstLetter(repositoryName);
-
-        String content = """
-            package %s;
-
-            import %s.%s;
-            import %s.%s;
-            import lombok.RequiredArgsConstructor;
-            import org.springframework.security.core.userdetails.User;
-            import org.springframework.security.core.userdetails.UserDetails;
-            import org.springframework.security.core.userdetails.UserDetailsService;
-            import org.springframework.security.core.userdetails.UsernameNotFoundException;
-            import org.springframework.stereotype.Service;
-
-            /**
-             * Loads authentication users from the configured security user repository.
-             */
-            @Service
-            @RequiredArgsConstructor
-            public class CustomUserDetailsService implements UserDetailsService {
-
-                private final %s %s;
-
-                /**
-                 * Loads a user by the configured authentication field.
-                 *
-                 * @param username authentication field value
-                 * @return Spring Security user details
-                 * @throws UsernameNotFoundException when no matching user exists
-                 */
-                @Override
-                public UserDetails loadUserByUsername(String username)
-                        throws UsernameNotFoundException {
-
-                    %s user = %s.findBy%s(username)
-                            .orElseThrow(() -> new UsernameNotFoundException(
-                                    "User not found with %s: " + username
-                            ));
-
-                    return User.withUsername(user.get%s())
-                            .password(user.get%s())
-                            .authorities("USER")
-                            .build();
-                }
-            }
-            """.formatted(
-                securityPackage,
-                entityPackage,
-                entityName,
-                repositoryPackage,
-                repositoryName,
-                repositoryName,
-                repositoryVariable,
-                entityName,
-                repositoryVariable,
-                usernameMethodSuffix,
-                usernameField,
-                usernameMethodSuffix,
-                passwordMethodSuffix
-        );
-
-        Path file = securityDir.resolve("CustomUserDetailsService.java");
-
-        GeneratorSupport.writeFile(file, content);
-
-        log.debug(
-                "Generated CustomUserDetailsService: {}",
-                file.toAbsolutePath()
-        );
+    /**
+     * Appends the request filtering and JWT authentication logic.
+     *
+     * @param stringBuilder target source builder
+     */
+    private void appendJwtFilterDoFilterInternal(StringBuilder stringBuilder) {
+        stringBuilder.append("    /**\n");
+        stringBuilder.append("     * Extracts and validates the JWT token and initializes the Spring Security context.\n");
+        stringBuilder.append("     *\n");
+        stringBuilder.append("     * @param request current HTTP request\n");
+        stringBuilder.append("     * @param response current HTTP response\n");
+        stringBuilder.append("     * @param filterChain current filter chain\n");
+        stringBuilder.append("     * @throws ServletException when request filtering fails\n");
+        stringBuilder.append("     * @throws IOException when request processing fails\n");
+        stringBuilder.append("     */\n");
+        stringBuilder.append("    @Override\n");
+        stringBuilder.append("    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)\n");
+        stringBuilder.append("            throws ServletException, IOException {\n");
+        stringBuilder.append("\n");
+        stringBuilder.append("        String authorizationHeader = request.getHeader(AUTHORIZATION_HEADER);\n");
+        stringBuilder.append("\n");
+        stringBuilder.append("        if (authorizationHeader == null || !authorizationHeader.startsWith(BEARER_PREFIX)) {\n");
+        stringBuilder.append("            filterChain.doFilter(request, response);\n");
+        stringBuilder.append("            return;\n");
+        stringBuilder.append("        }\n");
+        stringBuilder.append("\n");
+        stringBuilder.append("        String token = authorizationHeader.substring(BEARER_PREFIX.length());\n");
+        stringBuilder.append("\n");
+        stringBuilder.append("        try {\n");
+        stringBuilder.append("            String username = jwtService.extractUsername(token);\n");
+        stringBuilder.append("\n");
+        stringBuilder.append("            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {\n");
+        stringBuilder.append("                UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);\n");
+        stringBuilder.append("\n");
+        stringBuilder.append("                if (jwtService.isTokenValid(token, userDetails.getUsername())) {\n");
+        stringBuilder.append("                    UsernamePasswordAuthenticationToken authentication =\n");
+        stringBuilder.append("                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());\n");
+        stringBuilder.append("\n");
+        stringBuilder.append("                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));\n");
+        stringBuilder.append("                    SecurityContextHolder.getContext().setAuthentication(authentication);\n");
+        stringBuilder.append("                }\n");
+        stringBuilder.append("            }\n");
+        stringBuilder.append("        } catch (JwtException | IllegalArgumentException | UsernameNotFoundException exception) {\n");
+        stringBuilder.append("            SecurityContextHolder.clearContext();\n");
+        stringBuilder.append("        }\n");
+        stringBuilder.append("\n");
+        stringBuilder.append("        filterChain.doFilter(request, response);\n");
+        stringBuilder.append("    }\n");
+        stringBuilder.append("\n");
     }
 }

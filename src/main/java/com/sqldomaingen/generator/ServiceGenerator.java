@@ -65,7 +65,13 @@ public class ServiceGenerator {
 
         if (security != null && security.isEnabled()) {
             generateAuthService(serviceDir, basePackage, security);
+            generateCustomUserDetailsService(serviceDir, basePackage, security);
             generateAuthServiceImpl(tables, serviceImplDir, basePackage, security);
+
+            // Generate JWT-specific services only when JWT authentication is enabled.
+            if (security.getJwt() != null && security.getJwt().isEnabled()) {
+                generateJwtService(serviceDir, basePackage);
+            }
         }
 
         log.debug("Services generated under: {}", serviceDir.getParent().toAbsolutePath());
@@ -83,16 +89,17 @@ public class ServiceGenerator {
         Objects.requireNonNull(basePackage, "basePackage must not be null");
         Objects.requireNonNull(security, "security must not be null");
 
+        // Resolve packages used by the generated authentication service.
         String servicePackage = PackageResolver.resolvePackageName(basePackage, "service");
-        String securityDtoPackage = PackageResolver.resolvePackageName(basePackage, "security.dto");
+        String dtoPackage = PackageResolver.resolvePackageName(basePackage, Constants.DTO_PACKAGE);
 
         StringBuilder stringBuilder = new StringBuilder();
 
         stringBuilder.append("package ").append(servicePackage).append(";\n\n");
 
-        stringBuilder.append("import ").append(securityDtoPackage).append(".LoginRequest;\n");
-        stringBuilder.append("import ").append(securityDtoPackage).append(".LoginResponse;\n");
-        stringBuilder.append("import ").append(securityDtoPackage).append(".RegisterRequest;\n\n");
+        stringBuilder.append("import ").append(dtoPackage).append(".LoginRequest;\n");
+        stringBuilder.append("import ").append(dtoPackage).append(".LoginResponse;\n");
+        stringBuilder.append("import ").append(dtoPackage).append(".RegisterRequest;\n\n");
 
         stringBuilder.append("/**\n");
         stringBuilder.append(" * Service contract for user registration and authentication.\n");
@@ -130,6 +137,313 @@ public class ServiceGenerator {
 
         String authServiceImplCode = serviceImplGenerator.generateAuthServiceImpl(userTable, basePackage, security);
         GeneratorSupport.writeFile(serviceImplDir.resolve("AuthServiceImpl.java"), authServiceImplCode);
+    }
+
+    /**
+     * Generates the JWT service used to create, parse and validate access tokens.
+     *
+     * @param serviceDir target service directory
+     * @param basePackage base Java package
+     */
+    private void generateJwtService(Path serviceDir, String basePackage) {
+        Objects.requireNonNull(serviceDir, "serviceDir must not be null");
+        Objects.requireNonNull(basePackage, "basePackage must not be null");
+
+        String servicePackage = PackageResolver.resolvePackageName(basePackage, "service");
+        StringBuilder stringBuilder = new StringBuilder();
+
+        appendJwtServicePackageAndImports(stringBuilder, servicePackage);
+        appendJwtServiceClassDeclaration(stringBuilder);
+        appendJwtServiceFields(stringBuilder);
+        appendJwtServiceConstructor(stringBuilder);
+        appendGenerateTokenMethod(stringBuilder);
+        appendExtractUsernameMethod(stringBuilder);
+        appendIsTokenValidMethod(stringBuilder);
+        appendExtractClaimMethod(stringBuilder);
+        appendExtractAllClaimsMethod(stringBuilder);
+        appendIsTokenExpiredMethod(stringBuilder);
+
+        stringBuilder.append("}\n");
+
+        GeneratorSupport.writeFile(serviceDir.resolve("JwtService.java"), stringBuilder.toString());
+    }
+
+    private void appendJwtServicePackageAndImports(StringBuilder stringBuilder, String servicePackage) {
+        stringBuilder.append("package ").append(servicePackage).append(";\n\n");
+
+        stringBuilder.append("import io.jsonwebtoken.Claims;\n");
+        stringBuilder.append("import io.jsonwebtoken.Jwts;\n");
+        stringBuilder.append("import io.jsonwebtoken.io.Decoders;\n");
+        stringBuilder.append("import io.jsonwebtoken.security.Keys;\n");
+        stringBuilder.append("import org.springframework.beans.factory.annotation.Value;\n");
+        stringBuilder.append("import org.springframework.stereotype.Service;\n\n");
+
+        stringBuilder.append("import javax.crypto.SecretKey;\n");
+        stringBuilder.append("import java.util.Date;\n");
+        stringBuilder.append("import java.util.function.Function;\n\n");
+    }
+
+    private void appendJwtServiceClassDeclaration(StringBuilder stringBuilder) {
+        stringBuilder.append("/**\n");
+        stringBuilder.append(" * Provides JWT creation, parsing and validation operations.\n");
+        stringBuilder.append(" */\n");
+        stringBuilder.append("@Service\n");
+        stringBuilder.append("public class JwtService {\n\n");
+    }
+
+    private void appendJwtServiceFields(StringBuilder stringBuilder) {
+        stringBuilder.append("    private final SecretKey signingKey;\n");
+        stringBuilder.append("    private final long expirationMinutes;\n\n");
+    }
+
+    private void appendJwtServiceConstructor(StringBuilder stringBuilder) {
+        stringBuilder.append("    /**\n");
+        stringBuilder.append("     * Creates the JWT service using the configured signing secret\n");
+        stringBuilder.append("     * and access token lifetime.\n");
+        stringBuilder.append("     *\n");
+        stringBuilder.append("     * @param secret Base64 encoded JWT signing secret\n");
+        stringBuilder.append("     * @param expirationMinutes access token lifetime in minutes\n");
+        stringBuilder.append("     */\n");
+        stringBuilder.append("    public JwtService(\n");
+        stringBuilder.append("            @Value(\"${security.jwt.secret}\") String secret,\n");
+        stringBuilder.append("            @Value(\"${security.jwt.expiration-minutes}\") long expirationMinutes\n");
+        stringBuilder.append("    ) {\n");
+        stringBuilder.append("        this.signingKey = Keys.hmacShaKeyFor(\n");
+        stringBuilder.append("                Decoders.BASE64.decode(secret)\n");
+        stringBuilder.append("        );\n");
+        stringBuilder.append("        this.expirationMinutes = expirationMinutes;\n");
+        stringBuilder.append("    }\n\n");
+    }
+
+    private void appendGenerateTokenMethod(StringBuilder stringBuilder) {
+        stringBuilder.append("    /**\n");
+        stringBuilder.append("     * Generates an access token for the supplied username.\n");
+        stringBuilder.append("     *\n");
+        stringBuilder.append("     * @param username authenticated username\n");
+        stringBuilder.append("     * @return generated JWT access token\n");
+        stringBuilder.append("     */\n");
+        stringBuilder.append("    public String generateToken(String username) {\n");
+        stringBuilder.append("        Date issuedAt = new Date();\n\n");
+        stringBuilder.append("        Date expiration = new Date(\n");
+        stringBuilder.append("                issuedAt.getTime() + expirationMinutes * 60_000L\n");
+        stringBuilder.append("        );\n\n");
+        stringBuilder.append("        return Jwts.builder()\n");
+        stringBuilder.append("                .subject(username)\n");
+        stringBuilder.append("                .issuedAt(issuedAt)\n");
+        stringBuilder.append("                .expiration(expiration)\n");
+        stringBuilder.append("                .signWith(signingKey)\n");
+        stringBuilder.append("                .compact();\n");
+        stringBuilder.append("    }\n\n");
+    }
+
+    private void appendExtractUsernameMethod(StringBuilder stringBuilder) {
+        stringBuilder.append("    /**\n");
+        stringBuilder.append("     * Extracts the username stored in the token subject.\n");
+        stringBuilder.append("     *\n");
+        stringBuilder.append("     * @param token JWT access token\n");
+        stringBuilder.append("     * @return token subject\n");
+        stringBuilder.append("     */\n");
+        stringBuilder.append("    public String extractUsername(String token) {\n");
+        stringBuilder.append("        return extractClaim(\n");
+        stringBuilder.append("                token,\n");
+        stringBuilder.append("                Claims::getSubject\n");
+        stringBuilder.append("        );\n");
+        stringBuilder.append("    }\n\n");
+    }
+
+    private void appendIsTokenValidMethod(StringBuilder stringBuilder) {
+        stringBuilder.append("    /**\n");
+        stringBuilder.append("     * Determines whether the supplied token belongs to the expected\n");
+        stringBuilder.append("     * username and has not expired.\n");
+        stringBuilder.append("     *\n");
+        stringBuilder.append("     * @param token JWT access token\n");
+        stringBuilder.append("     * @param username expected username\n");
+        stringBuilder.append("     * @return true when the token is valid\n");
+        stringBuilder.append("     */\n");
+        stringBuilder.append("    public boolean isTokenValid(\n");
+        stringBuilder.append("            String token,\n");
+        stringBuilder.append("            String username\n");
+        stringBuilder.append("    ) {\n");
+        stringBuilder.append("        String tokenUsername = extractUsername(token);\n\n");
+        stringBuilder.append("        return tokenUsername.equals(username)\n");
+        stringBuilder.append("                && !isTokenExpired(token);\n");
+        stringBuilder.append("    }\n\n");
+    }
+
+    private void appendExtractClaimMethod(StringBuilder stringBuilder) {
+        stringBuilder.append("    /**\n");
+        stringBuilder.append("     * Extracts a specific claim from the supplied token.\n");
+        stringBuilder.append("     *\n");
+        stringBuilder.append("     * @param token JWT access token\n");
+        stringBuilder.append("     * @param claimsResolver claim extraction function\n");
+        stringBuilder.append("     * @param <T> extracted claim type\n");
+        stringBuilder.append("     * @return extracted claim value\n");
+        stringBuilder.append("     */\n");
+        stringBuilder.append("    private <T> T extractClaim(\n");
+        stringBuilder.append("            String token,\n");
+        stringBuilder.append("            Function<Claims, T> claimsResolver\n");
+        stringBuilder.append("    ) {\n");
+        stringBuilder.append("        Claims claims = extractAllClaims(token);\n\n");
+        stringBuilder.append("        return claimsResolver.apply(claims);\n");
+        stringBuilder.append("    }\n\n");
+    }
+
+    private void appendExtractAllClaimsMethod(StringBuilder stringBuilder) {
+        stringBuilder.append("    /**\n");
+        stringBuilder.append("     * Parses and verifies all claims contained in the supplied token.\n");
+        stringBuilder.append("     *\n");
+        stringBuilder.append("     * @param token JWT access token\n");
+        stringBuilder.append("     * @return verified token claims\n");
+        stringBuilder.append("     */\n");
+        stringBuilder.append("    private Claims extractAllClaims(String token) {\n");
+        stringBuilder.append("        return Jwts.parser()\n");
+        stringBuilder.append("                .verifyWith(signingKey)\n");
+        stringBuilder.append("                .build()\n");
+        stringBuilder.append("                .parseSignedClaims(token)\n");
+        stringBuilder.append("                .getPayload();\n");
+        stringBuilder.append("    }\n\n");
+    }
+
+    private void appendIsTokenExpiredMethod(StringBuilder stringBuilder) {
+        stringBuilder.append("    /**\n");
+        stringBuilder.append("     * Determines whether the supplied token has expired.\n");
+        stringBuilder.append("     *\n");
+        stringBuilder.append("     * @param token JWT access token\n");
+        stringBuilder.append("     * @return true when the token has expired\n");
+        stringBuilder.append("     */\n");
+        stringBuilder.append("    private boolean isTokenExpired(String token) {\n");
+        stringBuilder.append("        Date expiration = extractClaim(\n");
+        stringBuilder.append("                token,\n");
+        stringBuilder.append("                Claims::getExpiration\n");
+        stringBuilder.append("        );\n\n");
+        stringBuilder.append("        return expiration.before(new Date());\n");
+        stringBuilder.append("    }\n");
+    }
+
+    /**
+     * Generates the Spring Security UserDetailsService implementation used
+     * to load authentication users from the configured user table.
+     *
+     * @param serviceDir target service directory
+     * @param basePackage base Java package
+     * @param security security generator configuration
+     */
+    private void generateCustomUserDetailsService(Path serviceDir, String basePackage, GeneratorConfig.Security security) {
+        Objects.requireNonNull(serviceDir, "serviceDir must not be null");
+        Objects.requireNonNull(basePackage, "basePackage must not be null");
+        Objects.requireNonNull(security, "security must not be null");
+
+        String servicePackage = PackageResolver.resolvePackageName(basePackage, "service");
+        String entityPackage = PackageResolver.resolvePackageName(basePackage, "entity");
+        String repositoryPackage = PackageResolver.resolvePackageName(basePackage, "repository");
+
+        String normalizedUserTable = GeneratorSupport.normalizeTableName(security.getUserTable());
+        String entityName = NamingConverter.toPascalCase(normalizedUserTable);
+        String repositoryName = entityName + "Repository";
+        String repositoryVariableName = NamingConverter.decapitalizeFirstLetter(repositoryName);
+
+        String usernameField = NamingConverter.toCamelCase(security.getUsernameField());
+        String passwordField = NamingConverter.toCamelCase(security.getPasswordField());
+        String usernameMethodSuffix = NamingConverter.toPascalCase(usernameField);
+        String passwordMethodSuffix = NamingConverter.toPascalCase(passwordField);
+
+        StringBuilder stringBuilder = new StringBuilder();
+
+        appendCustomUserDetailsPackageAndImports(
+                stringBuilder, servicePackage, entityPackage, repositoryPackage, entityName, repositoryName
+        );
+        appendCustomUserDetailsClassDeclaration(stringBuilder);
+        appendCustomUserDetailsFields(stringBuilder, repositoryName, repositoryVariableName);
+        appendLoadUserByUsernameMethod(
+                stringBuilder, entityName, repositoryVariableName,
+                usernameMethodSuffix, usernameField, passwordMethodSuffix
+        );
+
+        stringBuilder.append("}\n");
+
+        GeneratorSupport.writeFile(serviceDir.resolve("CustomUserDetailsService.java"), stringBuilder.toString());
+    }
+
+    private void appendCustomUserDetailsPackageAndImports(
+            StringBuilder stringBuilder,
+            String servicePackage,
+            String entityPackage,
+            String repositoryPackage,
+            String entityName,
+            String repositoryName
+    ) {
+        stringBuilder.append("package ").append(servicePackage).append(";\n\n");
+
+        stringBuilder.append("import ").append(entityPackage).append(".").append(entityName).append(";\n");
+        stringBuilder.append("import ").append(repositoryPackage).append(".").append(repositoryName).append(";\n");
+        stringBuilder.append("import lombok.RequiredArgsConstructor;\n");
+        stringBuilder.append("import org.springframework.security.core.userdetails.User;\n");
+        stringBuilder.append("import org.springframework.security.core.userdetails.UserDetails;\n");
+        stringBuilder.append("import org.springframework.security.core.userdetails.UserDetailsService;\n");
+        stringBuilder.append("import org.springframework.security.core.userdetails.UsernameNotFoundException;\n");
+        stringBuilder.append("import org.springframework.stereotype.Service;\n\n");
+    }
+
+    private void appendCustomUserDetailsClassDeclaration(StringBuilder stringBuilder) {
+        stringBuilder.append("/**\n");
+        stringBuilder.append(" * Loads authentication users from the configured user repository.\n");
+        stringBuilder.append(" */\n");
+        stringBuilder.append("@Service\n");
+        stringBuilder.append("@RequiredArgsConstructor\n");
+        stringBuilder.append("public class CustomUserDetailsService implements UserDetailsService {\n\n");
+    }
+
+    private void appendCustomUserDetailsFields(
+            StringBuilder stringBuilder,
+            String repositoryName,
+            String repositoryVariableName
+    ) {
+        stringBuilder.append("    private final ")
+                .append(repositoryName)
+                .append(" ")
+                .append(repositoryVariableName)
+                .append(";\n\n");
+    }
+
+    private void appendLoadUserByUsernameMethod(
+            StringBuilder stringBuilder,
+            String entityName,
+            String repositoryVariableName,
+            String usernameMethodSuffix,
+            String usernameField,
+            String passwordMethodSuffix
+    ) {
+        stringBuilder.append("    /**\n");
+        stringBuilder.append("     * Loads a user using the configured authentication field.\n");
+        stringBuilder.append("     *\n");
+        stringBuilder.append("     * @param username authentication field value\n");
+        stringBuilder.append("     * @return Spring Security user details\n");
+        stringBuilder.append("     * @throws UsernameNotFoundException when no matching user exists\n");
+        stringBuilder.append("     */\n");
+        stringBuilder.append("    @Override\n");
+        stringBuilder.append("    public UserDetails loadUserByUsername(String username)\n");
+        stringBuilder.append("            throws UsernameNotFoundException {\n\n");
+
+        stringBuilder.append("        ").append(entityName).append(" user = ")
+                .append(repositoryVariableName)
+                .append(".findBy")
+                .append(usernameMethodSuffix)
+                .append("(username)\n");
+        stringBuilder.append("                .orElseThrow(() -> new UsernameNotFoundException(\n");
+        stringBuilder.append("                        \"User not found with ")
+                .append(usernameField)
+                .append(": \" + username\n");
+        stringBuilder.append("                ));\n\n");
+
+        stringBuilder.append("        return User.withUsername(\n");
+        stringBuilder.append("                        user.get").append(usernameMethodSuffix).append("()\n");
+        stringBuilder.append("                )\n");
+        stringBuilder.append("                .password(\n");
+        stringBuilder.append("                        user.get").append(passwordMethodSuffix).append("()\n");
+        stringBuilder.append("                )\n");
+        stringBuilder.append("                .authorities(\"USER\")\n");
+        stringBuilder.append("                .build();\n");
+        stringBuilder.append("    }\n");
     }
 
     /**

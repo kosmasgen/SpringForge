@@ -92,15 +92,9 @@ public class GeneratorCommands {
 
             String defaultSchemaName = resolveDefaultSchemaName(parsedTables);
 
-            new ProjectScaffoldGenerator().generateScaffold(
-                    outputDir,
-                    packageName,
-                    defaultSchemaName,
-                    generatorConfig,
-                    overwrite
-            );
+            new ProjectScaffoldGenerator().generateScaffold(outputDir, packageName, defaultSchemaName, generatorConfig, overwrite);
 
-            new ConfigGenerator().generateConfigs(outputDir, packageName, overwrite);
+            new ConfigGenerator().generateConfigs(outputDir, packageName, generatorConfig, overwrite);
             new SecurityGenerator().generate(outputDir, packageName, generatorConfig);
             new ExceptionGenerator().generateExceptionHandling(outputDir, packageName, overwrite);
 

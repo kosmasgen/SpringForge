@@ -32,58 +32,147 @@ public class DTOGenerator {
      * @param basePackage base Java package
      * @param security security generator configuration
      */
-    private void generateSecurityDTOs(String outputDir, String basePackage, GeneratorConfig.Security security) {
+    private void generateSecurityDTOs(
+            String outputDir,
+            String basePackage,
+            GeneratorConfig.Security security
+    ) {
         Objects.requireNonNull(outputDir, "outputDir must not be null");
         Objects.requireNonNull(basePackage, "basePackage must not be null");
         Objects.requireNonNull(security, "security must not be null");
 
-        String securityDtoPackage =
-                PackageResolver.resolvePackageName(basePackage, "security.dto");
+        // Resolve the standard DTO package used by the generated application.
+        String dtoPackage = PackageResolver.resolvePackageName(basePackage, Constants.DTO_PACKAGE);
 
-        Path securityDtoDir = GeneratorSupport.ensureDirectory(
-                PackageResolver.resolvePath(outputDir, basePackage, "security.dto"));
-
-        String registerRequestContent = createRegisterRequestContent(securityDtoPackage, security);
-
-        GeneratorSupport.writeFile(securityDtoDir.resolve("RegisterRequest.java"), registerRequestContent);
-
-        String loginRequestContent = createLoginRequestContent(securityDtoPackage, security);
-
-        GeneratorSupport.writeFile(securityDtoDir.resolve("LoginRequest.java"), loginRequestContent);
-
-        String loginResponseContent = createLoginResponseContent(securityDtoPackage
+        // Use the same DTO directory as the entity DTO classes.
+        Path dtoDir = GeneratorSupport.ensureDirectory(
+                PackageResolver.resolvePath(outputDir, basePackage, Constants.DTO_PACKAGE)
         );
 
-        GeneratorSupport.writeFile(securityDtoDir.resolve("LoginResponse.java"), loginResponseContent);
+        String registerRequestContent =
+                createRegisterRequestContent(dtoPackage, security);
+
+        GeneratorSupport.writeFile(
+                dtoDir.resolve("RegisterRequest.java"),
+                registerRequestContent
+        );
+
+        String loginRequestContent =
+                createLoginRequestContent(dtoPackage);
+
+        GeneratorSupport.writeFile(
+                dtoDir.resolve("LoginRequest.java"),
+                loginRequestContent
+        );
+
+        String loginResponseContent =
+                createLoginResponseContent(dtoPackage);
+
+        GeneratorSupport.writeFile(
+                dtoDir.resolve("LoginResponse.java"),
+                loginResponseContent
+        );
 
         log.debug(
-                "Security DTO generation complete. Output directory: {}",
-                securityDtoDir.toAbsolutePath()
+                "Authentication DTO generation complete. Output directory: {}",
+                dtoDir.toAbsolutePath()
         );
     }
 
     /**
      * Creates the RegisterRequest DTO source code.
      *
-     * @param securityDtoPackage target security DTO package
+     * @param dtoPackage target DTO package
      * @param security security generator configuration
      * @return generated RegisterRequest source code
      */
-    private String createRegisterRequestContent(String securityDtoPackage, GeneratorConfig.Security security) {
-        Objects.requireNonNull(securityDtoPackage, "securityDtoPackage must not be null");
+    private String createRegisterRequestContent(String dtoPackage, GeneratorConfig.Security security) {
+        Objects.requireNonNull(dtoPackage, "dtoPackage must not be null");
         Objects.requireNonNull(security, "security must not be null");
 
         String usernameField = NamingConverter.toCamelCase(security.getUsernameField());
         StringBuilder builder = new StringBuilder();
 
-        builder.append("package ").append(securityDtoPackage).append(";\n\n");
+        appendAuthenticationDtoPackageAndImports(builder, dtoPackage, true);
+        appendRegisterRequestClassDeclaration(builder);
+        appendRegisterRequestFields(builder, usernameField);
 
-        builder.append("import jakarta.validation.constraints.NotBlank;\n");
+        builder.append("}\n");
+
+        return builder.toString();
+    }
+
+    /**
+     * Creates the LoginRequest DTO source code.
+     *
+     * @param dtoPackage target DTO package
+     * @return generated LoginRequest source code
+     */
+    private String createLoginRequestContent(String dtoPackage) {
+        Objects.requireNonNull(dtoPackage, "dtoPackage must not be null");
+
+        StringBuilder builder = new StringBuilder();
+
+        appendAuthenticationDtoPackageAndImports(builder, dtoPackage, true);
+        appendLoginRequestClassDeclaration(builder);
+        appendLoginRequestFields(builder);
+
+        builder.append("}\n");
+
+        return builder.toString();
+    }
+
+    /**
+     * Creates the LoginResponse DTO source code.
+     *
+     * @param dtoPackage target DTO package
+     * @return generated LoginResponse source code
+     */
+    private String createLoginResponseContent(String dtoPackage) {
+        Objects.requireNonNull(dtoPackage, "dtoPackage must not be null");
+
+        StringBuilder builder = new StringBuilder();
+
+        appendAuthenticationDtoPackageAndImports(builder, dtoPackage, false);
+        appendLoginResponseClassDeclaration(builder);
+        appendLoginResponseFields(builder);
+
+        builder.append("}\n");
+
+        return builder.toString();
+    }
+
+    /**
+     * Appends the package declaration and imports required by an authentication DTO.
+     *
+     * @param builder target source builder
+     * @param dtoPackage target DTO package
+     * @param validationRequired true when validation imports are required
+     */
+    private void appendAuthenticationDtoPackageAndImports(
+            StringBuilder builder,
+            String dtoPackage,
+            boolean validationRequired
+    ) {
+        builder.append("package ").append(dtoPackage).append(";\n\n");
+
+        if (validationRequired) {
+            builder.append("import jakarta.validation.constraints.NotBlank;\n");
+        }
+
         builder.append("import lombok.AllArgsConstructor;\n");
         builder.append("import lombok.Builder;\n");
         builder.append("import lombok.Data;\n");
         builder.append("import lombok.NoArgsConstructor;\n\n");
+    }
 
+
+    /**
+     * Appends the RegisterRequest class declaration and Lombok annotations.
+     *
+     * @param builder target source builder
+     */
+    private void appendRegisterRequestClassDeclaration(StringBuilder builder) {
         builder.append("/**\n");
         builder.append(" * Request payload used to register a new application user.\n");
         builder.append(" */\n");
@@ -92,7 +181,15 @@ public class DTOGenerator {
         builder.append("@NoArgsConstructor\n");
         builder.append("@AllArgsConstructor\n");
         builder.append("public class RegisterRequest {\n\n");
+    }
 
+    /**
+     * Appends the fields required by the generated RegisterRequest DTO.
+     *
+     * @param builder target source builder
+     * @param usernameField configured authentication field name
+     */
+    private void appendRegisterRequestFields(StringBuilder builder, String usernameField) {
         builder.append("    @NotBlank\n");
         builder.append("    private String firstName;\n\n");
 
@@ -104,34 +201,14 @@ public class DTOGenerator {
 
         builder.append("    @NotBlank\n");
         builder.append("    private String password;\n");
-
-        builder.append("}\n");
-
-        return builder.toString();
     }
 
     /**
-     * Creates the LoginRequest DTO source code.
+     * Appends the LoginRequest class declaration and Lombok annotations.
      *
-     * @param securityDtoPackage target security DTO package
-     * @param security security generator configuration
-     * @return generated LoginRequest source code
+     * @param builder target source builder
      */
-    private String createLoginRequestContent(String securityDtoPackage, GeneratorConfig.Security security) {
-        Objects.requireNonNull(securityDtoPackage, "securityDtoPackage must not be null");
-        Objects.requireNonNull(security, "security must not be null");
-
-        String usernameField = NamingConverter.toCamelCase(security.getUsernameField());
-        StringBuilder builder = new StringBuilder();
-
-        builder.append("package ").append(securityDtoPackage).append(";\n\n");
-
-        builder.append("import jakarta.validation.constraints.NotBlank;\n");
-        builder.append("import lombok.AllArgsConstructor;\n");
-        builder.append("import lombok.Builder;\n");
-        builder.append("import lombok.Data;\n");
-        builder.append("import lombok.NoArgsConstructor;\n\n");
-
+    private void appendLoginRequestClassDeclaration(StringBuilder builder) {
         builder.append("/**\n");
         builder.append(" * Request payload used to authenticate an application user.\n");
         builder.append(" */\n");
@@ -140,36 +217,27 @@ public class DTOGenerator {
         builder.append("@NoArgsConstructor\n");
         builder.append("@AllArgsConstructor\n");
         builder.append("public class LoginRequest {\n\n");
-
-        builder.append("    @NotBlank\n");
-        builder.append("    private String ").append(usernameField).append(";\n\n");
-
-        builder.append("    @NotBlank\n");
-        builder.append("    private String password;\n");
-
-        builder.append("}\n");
-
-        return builder.toString();
     }
 
     /**
-     * Creates the LoginResponse DTO source code.
+     * Appends the fields required by the generated LoginRequest DTO.
      *
-     * @param securityDtoPackage target security DTO package
-     * @return generated LoginResponse source code
+     * @param builder target source builder
      */
-    private String createLoginResponseContent(String securityDtoPackage) {
-        Objects.requireNonNull(securityDtoPackage, "securityDtoPackage must not be null");
+    private void appendLoginRequestFields(StringBuilder builder) {
+        builder.append("    @NotBlank\n");
+        builder.append("    private String username;\n\n");
 
-        StringBuilder builder = new StringBuilder();
+        builder.append("    @NotBlank\n");
+        builder.append("    private String password;\n");
+    }
 
-        builder.append("package ").append(securityDtoPackage).append(";\n\n");
-
-        builder.append("import lombok.AllArgsConstructor;\n");
-        builder.append("import lombok.Builder;\n");
-        builder.append("import lombok.Data;\n");
-        builder.append("import lombok.NoArgsConstructor;\n\n");
-
+    /**
+     * Appends the LoginResponse class declaration and Lombok annotations.
+     *
+     * @param builder target source builder
+     */
+    private void appendLoginResponseClassDeclaration(StringBuilder builder) {
         builder.append("/**\n");
         builder.append(" * Response payload returned after successful authentication.\n");
         builder.append(" */\n");
@@ -178,14 +246,16 @@ public class DTOGenerator {
         builder.append("@NoArgsConstructor\n");
         builder.append("@AllArgsConstructor\n");
         builder.append("public class LoginResponse {\n\n");
-
-        builder.append("    private String token;\n");
-
-        builder.append("}\n");
-
-        return builder.toString();
     }
 
+    /**
+     * Appends the fields required by the generated LoginResponse DTO.
+     *
+     * @param builder target source builder
+     */
+    private void appendLoginResponseFields(StringBuilder builder) {
+        builder.append("    private String token;\n");
+    }
 
     /**
      * Generates DTO classes under:
@@ -592,8 +662,8 @@ public class DTOGenerator {
     }
 
     /**
-     * Resolves DTO field name.
-     * Keeps original field names for full DTO mode.
+     * Resolves the DTO field name.
+     * Keeps the original entity field name for full DTO mode.
      *
      * @param field source field
      * @return DTO field name
@@ -603,13 +673,7 @@ public class DTOGenerator {
             return null;
         }
 
-        String fieldName = GeneratorSupport.trimToEmpty(field.getName());
-
-        if ("passwordHash".equals(fieldName)) {
-            return "password";
-        }
-
-        return fieldName;
+        return GeneratorSupport.trimToEmpty(field.getName());
     }
 
     /**

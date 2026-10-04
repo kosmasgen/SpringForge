@@ -91,8 +91,7 @@ public final class GeneratorConfigLoader {
                 }
 
                 /*
-                 * Configure the access token lifetime in minutes.
-                 * The default value remains 60 when the property is not provided.
+                 * Configure the access token lifetime in minutes when explicitly provided.
                  */
                 Object expirationMinutes = jwtMap.get("expirationMinutes");
                 if (expirationMinutes instanceof Number expirationMinutesValue) {
