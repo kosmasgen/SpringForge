@@ -721,7 +721,7 @@ public class ProjectScaffoldGenerator {
     }
 
     /**
-     * Creates the message bundle files for the generated project.
+     * Creates the English and Greek message bundle files for the generated project.
      *
      * @param root project root directory
      * @param overwrite whether existing files should be overwritten
@@ -739,7 +739,7 @@ public class ProjectScaffoldGenerator {
         messages.append("# Generic validation messages\n");
         messages.append("validation.badRequest=Bad request\n");
         messages.append("validation.required=Field is required\n");
-        messages.append("validation.invalidValue=Invalid value\n\n");
+        messages.append("validation.invalidValue=Invalid value\n");
         messages.append("validation.email.invalid=Invalid email address\n\n");
 
         messages.append("# Error messages\n");
@@ -751,6 +751,8 @@ public class ProjectScaffoldGenerator {
         messages.append("error.usernameAlreadyExists=Username {0} already exists\n");
         messages.append("error.emailAlreadyExists=Email {0} already exists\n");
         messages.append("error.invalidCredentials=Invalid username or password\n");
+        messages.append("error.unauthorized=User is not authenticated\n");
+        messages.append("error.forbidden=You do not have permission to access this resource\n");
 
         StringBuilder greekMessages = new StringBuilder();
 
@@ -764,7 +766,7 @@ public class ProjectScaffoldGenerator {
         greekMessages.append("# Generic validation messages\n");
         greekMessages.append("validation.badRequest=Μη έγκυρο αίτημα\n");
         greekMessages.append("validation.required=Το πεδίο είναι υποχρεωτικό\n");
-        greekMessages.append("validation.invalidValue=Μη έγκυρη τιμή\n\n");
+        greekMessages.append("validation.invalidValue=Μη έγκυρη τιμή\n");
         greekMessages.append("validation.email.invalid=Μη έγκυρη διεύθυνση email\n\n");
 
         greekMessages.append("# Error messages\n");
@@ -776,6 +778,8 @@ public class ProjectScaffoldGenerator {
         greekMessages.append("error.usernameAlreadyExists=Το όνομα χρήστη {0} υπάρχει ήδη\n");
         greekMessages.append("error.emailAlreadyExists=Το email {0} υπάρχει ήδη\n");
         greekMessages.append("error.invalidCredentials=Μη έγκυρο όνομα χρήστη ή κωδικός πρόσβασης\n");
+        greekMessages.append("error.unauthorized=Ο χρήστης δεν είναι αυθεντικοποιημένος\n");
+        greekMessages.append("error.forbidden=Δεν έχετε δικαίωμα πρόσβασης σε αυτόν τον πόρο\n");
 
         Path messagesFile = root.resolve("src/main/resources/messages.properties");
         Path greekMessagesFile = root.resolve("src/main/resources/messages_el.properties");

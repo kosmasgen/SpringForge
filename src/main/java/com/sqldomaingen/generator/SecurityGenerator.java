@@ -17,7 +17,15 @@ import java.util.Objects;
 public class SecurityGenerator {
 
     /**
-     * Generates the JWT authentication filter when security and JWT are enabled.
+     * Generates the JWT authentication infrastructure when security and JWT are enabled.
+     *
+     * <p>
+     * Generated classes:
+     * <ul>
+     *     <li>JwtAuthenticationFilter</li>
+     *     <li>RestAuthenticationEntryPoint</li>
+     *     <li>RestAccessDeniedHandler</li>
+     * </ul>
      *
      * @param outputDir base output directory
      * @param basePackage base Java package
@@ -47,9 +55,132 @@ public class SecurityGenerator {
                 PackageResolver.resolvePath(outputDir, basePackage, "security")
         );
 
+        // Generate the JWT authentication filter.
         generateJwtAuthenticationFilter(securityDir, securityPackage, servicePackage);
 
+        // Generate the handler used for unauthenticated requests.
+        generateRestAuthenticationEntryPoint(securityDir, securityPackage, basePackage);
+
+        // Generate the handler used for authenticated requests without sufficient permissions.
+        generateRestAccessDeniedHandler(securityDir, securityPackage, basePackage);
+
         log.debug("Security generated under: {}", securityDir.toAbsolutePath());
+    }
+
+    /**
+     * Generates the REST authentication entry point used for unauthenticated requests.
+     *
+     * @param securityDir target security package directory
+     * @param securityPackage generated security package name
+     * @param basePackage generated application base package
+     */
+    private void generateRestAuthenticationEntryPoint(Path securityDir, String securityPackage, String basePackage) {
+        String utilPackage = PackageResolver.resolvePackageName(basePackage, "util");
+        String exceptionPackage = PackageResolver.resolvePackageName(basePackage, "exception");
+        StringBuilder builder = new StringBuilder();
+
+        builder.append("package ").append(securityPackage).append(";\n\n");
+        builder.append("import ").append(exceptionPackage).append(".ErrorMessages;\n");
+        builder.append("import ").append(utilPackage).append(".MessageResolver;\n");
+        builder.append("import jakarta.servlet.http.HttpServletRequest;\n");
+        builder.append("import jakarta.servlet.http.HttpServletResponse;\n");
+        builder.append("import lombok.RequiredArgsConstructor;\n");
+        builder.append("import org.springframework.http.MediaType;\n");
+        builder.append("import org.springframework.security.core.AuthenticationException;\n");
+        builder.append("import org.springframework.security.web.AuthenticationEntryPoint;\n");
+        builder.append("import org.springframework.stereotype.Component;\n\n");
+        builder.append("import java.io.IOException;\n\n");
+
+        builder.append("/**\n");
+        builder.append(" * Returns a localized JSON response when authentication is required.\n");
+        builder.append(" */\n");
+        builder.append("@Component\n");
+        builder.append("@RequiredArgsConstructor\n");
+        builder.append("public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {\n\n");
+
+        builder.append("    private final MessageResolver messageResolver;\n\n");
+
+        builder.append("    /**\n");
+        builder.append("     * Handles requests that require authentication.\n");
+        builder.append("     *\n");
+        builder.append("     * @param request current HTTP request\n");
+        builder.append("     * @param response current HTTP response\n");
+        builder.append("     * @param authException authentication exception\n");
+        builder.append("     * @throws IOException when the response cannot be written\n");
+        builder.append("     */\n");
+        builder.append("    @Override\n");
+        builder.append("    public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException {\n");
+        builder.append("        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);\n");
+        builder.append("        response.setContentType(MediaType.APPLICATION_JSON_VALUE);\n");
+        builder.append("        response.setCharacterEncoding(\"UTF-8\");\n");
+        builder.append("        String message = messageResolver.resolve(ErrorMessages.ERROR_UNAUTHORIZED);\n");
+        builder.append("        response.getWriter().write(\"{\\\"message\\\":\\\"\" + message + \"\\\"}\");\n");
+        builder.append("    }\n");
+
+        builder.append("}\n");
+
+        Path file = securityDir.resolve("RestAuthenticationEntryPoint.java");
+        GeneratorSupport.writeFile(file, builder.toString());
+
+        log.debug("Generated RestAuthenticationEntryPoint: {}", file.toAbsolutePath());
+    }
+
+    /**
+     * Generates the REST access denied handler used for forbidden requests.
+     *
+     * @param securityDir target security package directory
+     * @param securityPackage generated security package name
+     * @param basePackage generated application base package
+     */
+    private void generateRestAccessDeniedHandler(Path securityDir, String securityPackage, String basePackage) {
+        String utilPackage = PackageResolver.resolvePackageName(basePackage, "util");
+        String exceptionPackage = PackageResolver.resolvePackageName(basePackage, "exception");
+        StringBuilder builder = new StringBuilder();
+
+        builder.append("package ").append(securityPackage).append(";\n\n");
+        builder.append("import ").append(exceptionPackage).append(".ErrorMessages;\n");
+        builder.append("import ").append(utilPackage).append(".MessageResolver;\n");
+        builder.append("import jakarta.servlet.http.HttpServletRequest;\n");
+        builder.append("import jakarta.servlet.http.HttpServletResponse;\n");
+        builder.append("import lombok.RequiredArgsConstructor;\n");
+        builder.append("import org.springframework.http.MediaType;\n");
+        builder.append("import org.springframework.security.access.AccessDeniedException;\n");
+        builder.append("import org.springframework.security.web.access.AccessDeniedHandler;\n");
+        builder.append("import org.springframework.stereotype.Component;\n\n");
+        builder.append("import java.io.IOException;\n\n");
+
+        builder.append("/**\n");
+        builder.append(" * Returns a localized JSON response when access to a resource is forbidden.\n");
+        builder.append(" */\n");
+        builder.append("@Component\n");
+        builder.append("@RequiredArgsConstructor\n");
+        builder.append("public class RestAccessDeniedHandler implements AccessDeniedHandler {\n\n");
+
+        builder.append("    private final MessageResolver messageResolver;\n\n");
+
+        builder.append("    /**\n");
+        builder.append("     * Handles authenticated requests without sufficient permissions.\n");
+        builder.append("     *\n");
+        builder.append("     * @param request current HTTP request\n");
+        builder.append("     * @param response current HTTP response\n");
+        builder.append("     * @param accessDeniedException access denied exception\n");
+        builder.append("     * @throws IOException when the response cannot be written\n");
+        builder.append("     */\n");
+        builder.append("    @Override\n");
+        builder.append("    public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException) throws IOException {\n");
+        builder.append("        response.setStatus(HttpServletResponse.SC_FORBIDDEN);\n");
+        builder.append("        response.setContentType(MediaType.APPLICATION_JSON_VALUE);\n");
+        builder.append("        response.setCharacterEncoding(\"UTF-8\");\n");
+        builder.append("        String message = messageResolver.resolve(ErrorMessages.ERROR_FORBIDDEN);\n");
+        builder.append("        response.getWriter().write(\"{\\\"message\\\":\\\"\" + message + \"\\\"}\");\n");
+        builder.append("    }\n");
+
+        builder.append("}\n");
+
+        Path file = securityDir.resolve("RestAccessDeniedHandler.java");
+        GeneratorSupport.writeFile(file, builder.toString());
+
+        log.debug("Generated RestAccessDeniedHandler: {}", file.toAbsolutePath());
     }
 
     /**

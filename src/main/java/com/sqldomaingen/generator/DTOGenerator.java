@@ -93,7 +93,7 @@ public class DTOGenerator {
         String usernameField = NamingConverter.toCamelCase(security.getUsernameField());
         StringBuilder builder = new StringBuilder();
 
-        appendAuthenticationDtoPackageAndImports(builder, dtoPackage, true, true, false);
+        appendAuthenticationDtoPackageAndImports(builder, dtoPackage, true, true);
         appendRegisterRequestClassDeclaration(builder);
         appendRegisterRequestFields(builder, usernameField);
 
@@ -113,7 +113,7 @@ public class DTOGenerator {
 
         StringBuilder builder = new StringBuilder();
 
-        appendAuthenticationDtoPackageAndImports(builder, dtoPackage, true, false, true);
+        appendAuthenticationDtoPackageAndImports(builder, dtoPackage, true, false);
         appendLoginRequestClassDeclaration(builder);
         appendLoginRequestFields(builder);
 
@@ -133,7 +133,7 @@ public class DTOGenerator {
 
         StringBuilder builder = new StringBuilder();
 
-        appendAuthenticationDtoPackageAndImports(builder, dtoPackage, false, false, false);
+        appendAuthenticationDtoPackageAndImports(builder, dtoPackage, true, true);
         appendLoginResponseClassDeclaration(builder);
         appendLoginResponseFields(builder);
 
@@ -149,14 +149,11 @@ public class DTOGenerator {
      * @param dtoPackage target DTO package
      * @param validationRequired true when validation imports are required
      * @param emailValidationRequired true when email validation import is required
-     * @param propertyOrderRequired true when JsonPropertyOrder is required
      */
-    private void appendAuthenticationDtoPackageAndImports(StringBuilder builder, String dtoPackage, boolean validationRequired, boolean emailValidationRequired, boolean propertyOrderRequired) {
+    private void appendAuthenticationDtoPackageAndImports(StringBuilder builder, String dtoPackage,
+                                                          boolean validationRequired,
+                                                          boolean emailValidationRequired) {
         builder.append("package ").append(dtoPackage).append(";\n\n");
-
-        if (propertyOrderRequired) {
-            builder.append("import com.fasterxml.jackson.annotation.JsonPropertyOrder;\n");
-        }
 
         if (emailValidationRequired) {
             builder.append("import jakarta.validation.constraints.Email;\n");
@@ -226,7 +223,6 @@ public class DTOGenerator {
         builder.append("@Builder\n");
         builder.append("@NoArgsConstructor\n");
         builder.append("@AllArgsConstructor\n");
-        builder.append("@JsonPropertyOrder({\"username\", \"password\"})\n");
         builder.append("public class LoginRequest {\n\n");
     }
 

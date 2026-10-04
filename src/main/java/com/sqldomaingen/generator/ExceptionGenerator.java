@@ -263,19 +263,24 @@ public class ExceptionGenerator {
         builder.append(" * Centralized message keys for exception handling.\n");
         builder.append(" */\n");
         builder.append("public final class ErrorMessages {\n\n");
+
         builder.append("    public static final String ENTITY_NOT_FOUND_BY_ID = \"entity.notFoundById\";\n");
         builder.append("    public static final String ENTITY_NOT_FOUND_BY_COMPOSITE_ID = \"entity.notFoundByCompositeId\";\n");
         builder.append("    public static final String ENTITY_ALREADY_EXISTS_BY_ID = \"entity.alreadyExistsById\";\n");
         builder.append("    public static final String ENTITY_ALREADY_EXISTS_BY_COMPOSITE_ID = \"entity.alreadyExistsByCompositeId\";\n");
         builder.append("    public static final String ENTITY_UNIQUE_CONSTRAINT_VIOLATION = \"entity.uniqueConstraintViolation\";\n\n");
+
         builder.append("    public static final String ERROR_UNEXPECTED = \"error.unexpected\";\n");
         builder.append("    public static final String ERROR_ENDPOINT_NOT_FOUND = \"error.endpointNotFound\";\n");
         builder.append("    public static final String ERROR_INVALID_REQUEST_BODY = \"error.invalidRequestBody\";\n");
         builder.append("    public static final String ERROR_VALIDATION_FAILED = \"error.validationFailed\";\n");
         builder.append("    public static final String ERROR_INVALID = \"error.invalid\";\n");
         builder.append("    public static final String ERROR_INVALID_CREDENTIALS = \"error.invalidCredentials\";\n");
+        builder.append("    public static final String ERROR_UNAUTHORIZED = \"error.unauthorized\";\n");
+        builder.append("    public static final String ERROR_FORBIDDEN = \"error.forbidden\";\n");
         builder.append("    public static final String ERROR_USERNAME_ALREADY_EXISTS = \"error.usernameAlreadyExists\";\n");
         builder.append("    public static final String ERROR_EMAIL_ALREADY_EXISTS = \"error.emailAlreadyExists\";\n\n");
+
         builder.append("    /**\n");
         builder.append("     * Prevents instantiation.\n");
         builder.append("     */\n");

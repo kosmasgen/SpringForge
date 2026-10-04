@@ -157,6 +157,8 @@ public class ConfigGenerator {
     private void appendSecurityConfigPackageAndImports(StringBuilder builder, String configPackage, String securityPackage) {
         builder.append("package ").append(configPackage).append(";\n\n");
         builder.append("import ").append(securityPackage).append(".JwtAuthenticationFilter;\n");
+        builder.append("import ").append(securityPackage).append(".RestAuthenticationEntryPoint;\n");
+        builder.append("import ").append(securityPackage).append(".RestAccessDeniedHandler;\n");
         builder.append("import lombok.RequiredArgsConstructor;\n");
         builder.append("import org.springframework.context.annotation.Bean;\n");
         builder.append("import org.springframework.context.annotation.Configuration;\n");
@@ -207,7 +209,9 @@ public class ConfigGenerator {
      * @param builder target source builder
      */
     private void appendSecurityConfigFields(StringBuilder builder) {
-        builder.append("    private final JwtAuthenticationFilter jwtAuthenticationFilter;\n\n");
+        builder.append("    private final JwtAuthenticationFilter jwtAuthenticationFilter;\n");
+        builder.append("    private final RestAuthenticationEntryPoint authenticationEntryPoint;\n");
+        builder.append("    private final RestAccessDeniedHandler accessDeniedHandler;\n\n");
     }
 
     /**
@@ -217,7 +221,7 @@ public class ConfigGenerator {
      */
     private void appendSecurityFilterChainBean(StringBuilder builder) {
         builder.append("    /**\n");
-        builder.append("     * Configures HTTP security and JWT authentication.\n");
+        builder.append("     * Configures HTTP security, JWT authentication, and REST security error handling.\n");
         builder.append("     *\n");
         builder.append("     * @param http Spring Security HTTP configuration\n");
         builder.append("     * @return configured security filter chain\n");
@@ -229,8 +233,12 @@ public class ConfigGenerator {
         builder.append("                .csrf(csrf -> csrf.disable())\n");
         builder.append("                .authorizeHttpRequests(auth -> auth\n");
         builder.append("                        .requestMatchers(\"/api/auth/**\").permitAll()\n");
-        builder.append("                        .requestMatchers(\"/swagger-ui/**\", \"/v3/api-docs/**\", \"/swagger-language.js\").permitAll()\n");;
+        builder.append("                        .requestMatchers(\"/swagger-ui/**\", \"/v3/api-docs/**\", \"/swagger-language.js\").permitAll()\n");
         builder.append("                        .anyRequest().authenticated()\n");
+        builder.append("                )\n");
+        builder.append("                .exceptionHandling(exceptions -> exceptions\n");
+        builder.append("                        .authenticationEntryPoint(authenticationEntryPoint)\n");
+        builder.append("                        .accessDeniedHandler(accessDeniedHandler)\n");
         builder.append("                )\n");
         builder.append("                .sessionManagement(session -> session\n");
         builder.append("                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)\n");
