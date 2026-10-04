@@ -229,7 +229,7 @@ public class ConfigGenerator {
         builder.append("                .csrf(csrf -> csrf.disable())\n");
         builder.append("                .authorizeHttpRequests(auth -> auth\n");
         builder.append("                        .requestMatchers(\"/api/auth/**\").permitAll()\n");
-        builder.append("                        .requestMatchers(\"/swagger-ui/**\", \"/v3/api-docs/**\").permitAll()\n");
+        builder.append("                        .requestMatchers(\"/swagger-ui/**\", \"/v3/api-docs/**\", \"/swagger-language.js\").permitAll()\n");;
         builder.append("                        .anyRequest().authenticated()\n");
         builder.append("                )\n");
         builder.append("                .sessionManagement(session -> session\n");
@@ -417,6 +417,7 @@ public class ConfigGenerator {
         appendOpenApiPackageAndImports(builder, configPackage);
         appendOpenApiClassDeclaration(builder);
         appendOpenApiBean(builder);
+        appendSwaggerUiTransformerBean(builder);
         builder.append("}\n");
 
         GeneratorSupport.writeFile(file, builder.toString(), overwrite);
@@ -431,12 +432,50 @@ public class ConfigGenerator {
      */
     private void appendOpenApiPackageAndImports(StringBuilder builder, String configPackage) {
         builder.append("package ").append(configPackage).append(";\n\n");
+
         builder.append("import io.swagger.v3.oas.models.Components;\n");
         builder.append("import io.swagger.v3.oas.models.OpenAPI;\n");
         builder.append("import io.swagger.v3.oas.models.security.SecurityRequirement;\n");
         builder.append("import io.swagger.v3.oas.models.security.SecurityScheme;\n");
+        builder.append("import org.springdoc.core.properties.SwaggerUiConfigProperties;\n");
+        builder.append("import org.springdoc.core.properties.SwaggerUiOAuthProperties;\n");
+        builder.append("import org.springdoc.core.providers.ObjectMapperProvider;\n");
+        builder.append("import org.springdoc.webmvc.ui.SwaggerIndexTransformer;\n");
+        builder.append("import org.springdoc.webmvc.ui.SwaggerWelcomeCommon;\n");
         builder.append("import org.springframework.context.annotation.Bean;\n");
         builder.append("import org.springframework.context.annotation.Configuration;\n\n");
+    }
+
+    /**
+     * Appends the Swagger UI transformer bean used to inject the global
+     * language selector script into the Swagger UI page.
+     *
+     * @param builder target source builder
+     */
+    private void appendSwaggerUiTransformerBean(StringBuilder builder) {
+        builder.append("\n");
+        builder.append("    /**\n");
+        builder.append("     * Creates the Swagger UI transformer used to load the global language selector.\n");
+        builder.append("     *\n");
+        builder.append("     * @param swaggerUiConfig Swagger UI configuration\n");
+        builder.append("     * @param swaggerUiOAuthProperties Swagger OAuth configuration\n");
+        builder.append("     * @param swaggerWelcomeCommon Springdoc Swagger welcome configuration\n");
+        builder.append("     * @param objectMapperProvider Springdoc object mapper provider\n");
+        builder.append("     * @return configured Swagger UI index transformer\n");
+        builder.append("     */\n");
+        builder.append("    @Bean\n");
+        builder.append("    public SwaggerIndexTransformer swaggerIndexTransformer(\n");
+        builder.append("            SwaggerUiConfigProperties swaggerUiConfig,\n");
+        builder.append("            SwaggerUiOAuthProperties swaggerUiOAuthProperties,\n");
+        builder.append("            SwaggerWelcomeCommon swaggerWelcomeCommon,\n");
+        builder.append("            ObjectMapperProvider objectMapperProvider) {\n");
+        builder.append("        return new SwaggerUiTransformer(\n");
+        builder.append("                swaggerUiConfig,\n");
+        builder.append("                swaggerUiOAuthProperties,\n");
+        builder.append("                swaggerWelcomeCommon,\n");
+        builder.append("                objectMapperProvider\n");
+        builder.append("        );\n");
+        builder.append("    }\n");
     }
 
     /**

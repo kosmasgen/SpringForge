@@ -58,8 +58,9 @@ public class ProjectScaffoldGenerator {
         createApplicationProperties(projectRoot, artifactId, defaultSchemaName, pkg, generatorConfig, overwrite);
         createMessageProperties(projectRoot, overwrite);
         createMessageResolver(projectRoot, pkg, overwrite);
+        createSwaggerLanguageScript(projectRoot, overwrite);
+        createSwaggerUiTransformer(projectRoot, pkg, overwrite);
         writeGitignore(projectRoot, overwrite);
-
         GeneratorSupport.ensureDirectory(resolveBaseJavaDir(projectRoot, pkg, true));
 
         copyMavenWrapper(projectRoot);
@@ -350,6 +351,199 @@ public class ProjectScaffoldGenerator {
         GeneratorSupport.writeFile(file, builder.toString(), overwrite);
     }
 
+    /**
+     * Creates the JavaScript customization used by Swagger UI for global language selection.
+     * <p>
+     * The generated script adds one global language selector next to the
+     * Swagger authorization controls and applies the selected language to
+     * every Swagger API request.
+     *
+     * @param projectRoot generated project root directory
+     * @param overwrite whether existing files should be overwritten
+     */
+    private void createSwaggerLanguageScript(Path projectRoot, boolean overwrite) {
+        Path staticDir = projectRoot.resolve(Path.of("src", "main", "resources", "static"));
+        GeneratorSupport.ensureDirectory(staticDir);
+
+        Path file = staticDir.resolve("swagger-language.js");
+
+        StringBuilder builder = new StringBuilder();
+
+        builder.append("(() => {\n");
+        builder.append("    const STORAGE_KEY = 'swagger-language';\n");
+        builder.append("    const DEFAULT_LANGUAGE = 'en';\n");
+        builder.append("    let interceptorInstalled = false;\n\n");
+
+        builder.append("    function getLanguage() {\n");
+        builder.append("        return localStorage.getItem(STORAGE_KEY) || DEFAULT_LANGUAGE;\n");
+        builder.append("    }\n\n");
+
+        builder.append("    function installRequestInterceptor() {\n");
+        builder.append("        if (interceptorInstalled || !window.ui || !window.ui.getConfigs) {\n");
+        builder.append("            return;\n");
+        builder.append("        }\n\n");
+
+        builder.append("        const config = window.ui.getConfigs();\n");
+        builder.append("        const existingInterceptor = config.requestInterceptor;\n\n");
+
+        builder.append("        config.requestInterceptor = request => {\n");
+        builder.append("            request.headers = request.headers || {};\n");
+        builder.append("            request.headers['Accept-Language'] = getLanguage();\n\n");
+
+        builder.append("            if (existingInterceptor) {\n");
+        builder.append("                return existingInterceptor(request);\n");
+        builder.append("            }\n\n");
+
+        builder.append("            return request;\n");
+        builder.append("        };\n\n");
+
+        builder.append("        interceptorInstalled = true;\n");
+        builder.append("    }\n\n");
+
+        builder.append("    function createLanguageSelector() {\n");
+        builder.append("        if (document.getElementById('swagger-language-selector')) {\n");
+        builder.append("            return;\n");
+        builder.append("        }\n\n");
+
+        builder.append("        const authWrapper = document.querySelector('.swagger-ui .scheme-container .auth-wrapper');\n");
+        builder.append("        if (!authWrapper) {\n");
+        builder.append("            return;\n");
+        builder.append("        }\n\n");
+
+        builder.append("        const container = document.createElement('div');\n");
+        builder.append("        container.id = 'swagger-language-selector';\n");
+        builder.append("        container.style.display = 'flex';\n");
+        builder.append("        container.style.alignItems = 'center';\n");
+        builder.append("        container.style.gap = '8px';\n");
+        builder.append("        container.style.marginRight = '16px';\n\n");
+
+        builder.append("        const label = document.createElement('label');\n");
+        builder.append("        label.textContent = 'Language:';\n");
+        builder.append("        label.setAttribute('for', 'swagger-language');\n\n");
+
+        builder.append("        const select = document.createElement('select');\n");
+        builder.append("        select.id = 'swagger-language';\n");
+        builder.append("        select.style.padding = '6px 10px';\n\n");
+
+        builder.append("        const english = document.createElement('option');\n");
+        builder.append("        english.value = 'en';\n");
+        builder.append("        english.textContent = 'English';\n");
+        builder.append("        select.appendChild(english);\n\n");
+
+        builder.append("        const greek = document.createElement('option');\n");
+        builder.append("        greek.value = 'el';\n");
+        builder.append("        greek.textContent = 'Greek';\n");
+        builder.append("        select.appendChild(greek);\n\n");
+
+        builder.append("        select.value = getLanguage();\n");
+        builder.append("        select.addEventListener('change', () => {\n");
+        builder.append("            localStorage.setItem(STORAGE_KEY, select.value);\n");
+        builder.append("        });\n\n");
+
+        builder.append("        container.appendChild(label);\n");
+        builder.append("        container.appendChild(select);\n");
+        builder.append("        authWrapper.parentNode.insertBefore(container, authWrapper);\n");
+        builder.append("    }\n\n");
+
+        builder.append("    function initialize() {\n");
+        builder.append("        createLanguageSelector();\n");
+        builder.append("        installRequestInterceptor();\n");
+        builder.append("    }\n\n");
+
+        builder.append("    const observer = new MutationObserver(initialize);\n");
+        builder.append("    observer.observe(document.documentElement, {\n");
+        builder.append("        childList: true,\n");
+        builder.append("        subtree: true\n");
+        builder.append("    });\n\n");
+
+        builder.append("    initialize();\n");
+        builder.append("})();\n");
+
+        GeneratorSupport.writeFile(file, builder.toString(), overwrite);
+    }
+
+
+    /**
+     * Generates the Swagger UI resource transformer used to load the custom
+     * global language selector into the Springdoc Swagger UI page.
+     *
+     * @param projectRoot generated project root directory
+     * @param basePackage generated project base package
+     * @param overwrite whether existing files should be overwritten
+     */
+    private void createSwaggerUiTransformer(Path projectRoot, String basePackage, boolean overwrite) {
+        Path configDir = PackageResolver.resolvePath(projectRoot.toString(), basePackage, "config");
+        GeneratorSupport.ensureDirectory(configDir);
+
+        Path file = configDir.resolve("SwaggerUiTransformer.java");
+        String configPackage = PackageResolver.resolvePackageName(basePackage, "config");
+
+        StringBuilder builder = new StringBuilder();
+
+        builder.append("package ").append(configPackage).append(";\n\n");
+
+        builder.append("import jakarta.servlet.http.HttpServletRequest;\n");
+        builder.append("import org.springdoc.core.properties.SwaggerUiConfigProperties;\n");
+        builder.append("import org.springdoc.core.properties.SwaggerUiOAuthProperties;\n");
+        builder.append("import org.springdoc.core.providers.ObjectMapperProvider;\n");
+        builder.append("import org.springdoc.webmvc.ui.SwaggerIndexPageTransformer;\n");
+        builder.append("import org.springdoc.webmvc.ui.SwaggerWelcomeCommon;\n");
+        builder.append("import org.springframework.core.io.Resource;\n");
+        builder.append("import org.springframework.web.servlet.resource.ResourceTransformerChain;\n");
+        builder.append("import org.springframework.web.servlet.resource.TransformedResource;\n\n");
+
+        builder.append("import java.io.IOException;\n");
+        builder.append("import java.nio.charset.StandardCharsets;\n\n");
+
+        builder.append("/**\n");
+        builder.append(" * Injects the global language selector script into Swagger UI.\n");
+        builder.append(" */\n");
+        builder.append("public class SwaggerUiTransformer extends SwaggerIndexPageTransformer {\n\n");
+
+        builder.append("    /**\n");
+        builder.append("     * Creates the Swagger UI transformer using Springdoc configuration.\n");
+        builder.append("     *\n");
+        builder.append("     * @param swaggerUiConfig Swagger UI configuration\n");
+        builder.append("     * @param swaggerUiOAuthProperties Swagger OAuth configuration\n");
+        builder.append("     * @param swaggerWelcomeCommon Springdoc Swagger welcome configuration\n");
+        builder.append("     * @param objectMapperProvider Springdoc object mapper provider\n");
+        builder.append("     */\n");
+        builder.append("    public SwaggerUiTransformer(\n");
+        builder.append("            SwaggerUiConfigProperties swaggerUiConfig,\n");
+        builder.append("            SwaggerUiOAuthProperties swaggerUiOAuthProperties,\n");
+        builder.append("            SwaggerWelcomeCommon swaggerWelcomeCommon,\n");
+        builder.append("            ObjectMapperProvider objectMapperProvider) {\n");
+        builder.append("        super(swaggerUiConfig, swaggerUiOAuthProperties, swaggerWelcomeCommon, objectMapperProvider);\n");
+        builder.append("    }\n\n");
+
+        builder.append("    /**\n");
+        builder.append("     * Injects the custom language script into the Swagger UI index page.\n");
+        builder.append("     *\n");
+        builder.append("     * @param request current HTTP request\n");
+        builder.append("     * @param resource Swagger UI resource\n");
+        builder.append("     * @param transformerChain resource transformer chain\n");
+        builder.append("     * @return transformed Swagger UI resource\n");
+        builder.append("     * @throws IOException when the resource cannot be read\n");
+        builder.append("     */\n");
+        builder.append("    @Override\n");
+        builder.append("    public Resource transform(HttpServletRequest request, Resource resource,\n");
+        builder.append("                              ResourceTransformerChain transformerChain) throws IOException {\n");
+        builder.append("        Resource transformedResource = super.transform(request, resource, transformerChain);\n\n");
+
+        builder.append("        if (!\"index.html\".equals(resource.getFilename())) {\n");
+        builder.append("            return transformedResource;\n");
+        builder.append("        }\n\n");
+
+        builder.append("        String html = transformedResource.getContentAsString(StandardCharsets.UTF_8);\n");
+        builder.append("        String script = \"<script src=\\\"/swagger-language.js\\\"></script>\";\n");
+        builder.append("        String transformedHtml = html.replace(\"</body>\", script + \"</body>\");\n\n");
+
+        builder.append("        return new TransformedResource(transformedResource, transformedHtml.getBytes(StandardCharsets.UTF_8));\n");
+        builder.append("    }\n");
+        builder.append("}\n");
+
+        GeneratorSupport.writeFile(file, builder.toString(), overwrite);
+    }
 
     /**
      * Generates the Spring Boot application entry point class.
@@ -491,7 +685,6 @@ public class ProjectScaffoldGenerator {
         builder.append("# MVC error handling\n");
         builder.append("############################\n");
         builder.append("spring.mvc.throw-exception-if-no-handler-found=true\n");
-        builder.append("spring.web.resources.add-mappings=false\n\n");
 
         builder.append("server.port=8081\n\n");
 
@@ -500,6 +693,12 @@ public class ProjectScaffoldGenerator {
         builder.append("############################\n");
         builder.append("security.jwt.secret=${JWT_SECRET}\n");
         builder.append("security.jwt.expiration-minutes=").append(jwtExpirationMinutes).append("\n\n");
+
+        builder.append("############################\n");
+        builder.append("# Internationalization\n");
+        builder.append("############################\n");
+        builder.append("spring.messages.fallback-to-system-locale=false\n\n");
+
 
         builder.append("############################\n");
         builder.append("# Swagger\n");
